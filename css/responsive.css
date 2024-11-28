@@ -78,16 +78,16 @@
     background-color: transparent;
   }
 
-  .theme-toggle{
-    display: none;
-  }
-
   .nav-list {
     display: none; /* Esconde o menu padrão */
   }
 
   .nav-list.fullscreen {
     display: flex; /* Permite o comportamento expansível */
+  }
+
+  .theme-toggle{
+    margin-right: 50px;
   }
 
   /* Tema claro: Ajustes do menu */
