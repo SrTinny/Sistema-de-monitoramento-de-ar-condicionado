@@ -75,6 +75,11 @@
 @media (max-width: 830px) {
   .menu-toggle {
     display: block; /* Exibe o botão de menu em telas menores */
+    background-color: transparent;
+  }
+
+  .theme-toggle{
+    display: none;
   }
 
   .nav-list {
@@ -95,8 +100,13 @@
   }
 
   body:not(.dark-mode) .menu-toggle {
-    background-color: var(--second-color); /* Botão de menu no tema claro */
+    background-color: transparent; /* Botão de menu no tema claro */
     color: white;
+  }
+
+  body:not(.dark-mode) .menu-toggle:hover {
+    background-color: var(--second-color); /* Fundo no hover */
+    color: var(--text-color); /* Cor do texto no hover */
   }
 
   body:not(.dark-mode) .nav-list.fullscreen a:hover {
