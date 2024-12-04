@@ -1,10 +1,10 @@
 // Endereço IP do ESP32
-const ESP_IP = "http://192.168.1.112";
+const ESP_IP = "http://192.168.1.110";
 
 // Função para ligar o LED
 async function ligarLED(acId) {
   try {
-    const response = await fetch(`${ESP_IP}/ligar`);
+    const response = await fetch(`${ESP_IP}/ligar?sala=${acId}`);
     if (!response.ok) {
       throw new Error("Erro ao ligar o LED no ESP32");
     }
@@ -27,7 +27,7 @@ async function ligarLED(acId) {
 // Função para desligar o LED
 async function desligarLED(acId) {
   try {
-    const response = await fetch(`${ESP_IP}/desligar`);
+    const response = await fetch(`${ESP_IP}/desligar?sala=${acId}`);
     if (!response.ok) {
       throw new Error("Erro ao desligar o LED no ESP32");
     }
