@@ -1,5 +1,5 @@
 // Endereço IP do ESP32
-const ESP_IP = "http://192.168.1.110";
+const ESP_IP = "http://192.168.1.112";
 
 // Função para ligar o LED
 async function ligarLED(acId) {
