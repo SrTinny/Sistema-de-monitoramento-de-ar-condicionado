@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <IRremoteESP8266.h>
+#include <IRsend.h>
 #include <IRrecv.h>
 #include <IRutils.h>
 
@@ -8,140 +9,36 @@
 const char* ssid = "Sobralnet-ENGENHARIA 1060";
 const char* password = "apartamento1060";
 
-// Pinos onde os LEDs estão conectados
-const int ledPins[] = {13, 12, 14}; // D13, D12, D14
-const int numLeds = sizeof(ledPins) / sizeof(ledPins[0]);
+// Configurações dos pinos
+const int ledPin = 2;         // Pino do LED (GPIO 2)
+const uint16_t kIrLed = 4;    // Pino para o emissor IR (GPIO 4)
+const uint16_t kRecvPin = 15; // Pino para o receptor IR (GPIO 15)
 
-// Pino onde o sensor IR está conectado
-const int irPin = 15;
-
-// Inicializa o receptor IR
-IRrecv irrecv(irPin);
+// Instâncias para controle IR
+IRsend irsend(kIrLed);
+IRrecv irrecv(kRecvPin);
 decode_results results;
 
-// Inicializa o servidor HTTP na porta 80
+// Intervalo para envio de sinais IR
+const unsigned long kSendInterval = 10000; // 5 segundos em milissegundos
+unsigned long lastSendTime = 0;
+
+// Inicializa o servidor HTTP
 WebServer server(80);
-
-// Fila para controlar os LEDs
-QueueHandle_t ledQueue;
-
-// Estrutura para representar uma ação de controle do LED
-struct LedAction {
-  int ledIndex;
-  bool state;
-};
 
 // ========================
 // Funções de controle do LED
 // ========================
-void ligarLED(int ledIndex) {
-  if (ledIndex >= 0 && ledIndex < numLeds) {
-    digitalWrite(ledPins[ledIndex], HIGH); // Liga o LED
-    Serial.printf("LED %d ligado\n", ledPins[ledIndex]);
-  }
+void ligarLED() {
+  digitalWrite(ledPin, HIGH); // Liga o LED
+  server.send(200, "text/plain", "LED ligado!");
+  Serial.println("LED ligado via HTTP.");
 }
 
-void desligarLED(int ledIndex) {
-  if (ledIndex >= 0 && ledIndex < numLeds) {
-    digitalWrite(ledPins[ledIndex], LOW); // Desliga o LED
-    Serial.printf("LED %d desligado\n", ledPins[ledIndex]);
-  }
-}
-
-// Handler para requisição HTTP de ligar o LED
-void handleLigarLED() {
-  if (server.hasArg("sala")) {
-    int sala = server.arg("sala").toInt();
-    if (sala >= 101 && sala < 101 + numLeds) {
-      int ledIndex = sala - 101;
-      LedAction action = {ledIndex, true};
-      xQueueSend(ledQueue, &action, portMAX_DELAY);
-      server.send(200, "text/plain", "LED ligado na Sala " + String(sala));
-      Serial.printf("Requisição recebida: Ligar LED da Sala %d\n", sala);
-    } else {
-      server.send(400, "text/plain", "Sala inválida!");
-      Serial.println("Erro: Sala inválida na requisição de ligar.");
-    }
-  } else {
-    server.send(400, "text/plain", "Parâmetro 'sala' ausente!");
-    Serial.println("Erro: Parâmetro 'sala' ausente na requisição de ligar.");
-  }
-}
-
-// Handler para requisição HTTP de desligar o LED
-void handleDesligarLED() {
-  if (server.hasArg("sala")) {
-    int sala = server.arg("sala").toInt();
-    if (sala >= 101 && sala < 101 + numLeds) {
-      int ledIndex = sala - 101;
-      LedAction action = {ledIndex, false};
-      xQueueSend(ledQueue, &action, portMAX_DELAY);
-      server.send(200, "text/plain", "LED desligado na Sala " + String(sala));
-      Serial.printf("Requisição recebida: Desligar LED da Sala %d\n", sala);
-    } else {
-      server.send(400, "text/plain", "Sala inválida!");
-      Serial.println("Erro: Sala inválida na requisição de desligar.");
-    }
-  } else {
-    server.send(400, "text/plain", "Parâmetro 'sala' ausente!");
-    Serial.println("Erro: Parâmetro 'sala' ausente na requisição de desligar.");
-  }
-}
-
-// ========================
-// Tarefas do FreeRTOS
-// ========================
-
-// Tarefa para processar requisições HTTP
-void taskHttpServer(void* parameter) {
-  for (;;) {
-    server.handleClient();
-    vTaskDelay(10 / portTICK_PERIOD_MS); // Pequeno delay para liberar a CPU
-  }
-}
-
-// Tarefa para gerenciar os LEDs
-void taskLedController(void* parameter) {
-  LedAction action;
-  for (;;) {
-    if (xQueueReceive(ledQueue, &action, portMAX_DELAY)) {
-      Serial.printf("Processando ação: LED %d, Estado: %s\n", ledPins[action.ledIndex], action.state ? "Ligado" : "Desligado");
-      if (action.state) {
-        ligarLED(action.ledIndex);
-      } else {
-        desligarLED(action.ledIndex);
-      }
-    }
-  }
-}
-
-// Tarefa para processar sinais IR
-void taskIRReceiver(void* parameter) {
-  for (;;) {
-    if (irrecv.decode(&results)) {
-      if (results.value != 0xFFFFFFFF) { // Ignora repetições de botão
-        Serial.printf("Código IR recebido: 0x%llx\n", results.value);
-      }
-      irrecv.resume(); // Reseta o receptor para o próximo sinal
-    }
-    vTaskDelay(100 / portTICK_PERIOD_MS); // Verifica sinais IR a cada 100ms
-  }
-}
-
-// Tarefa para monitorar o Wi-Fi
-void taskWiFiMonitor(void* parameter) {
-  for (;;) {
-    if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("Wi-Fi desconectado! Tentando reconectar...");
-      WiFi.begin(ssid, password);
-      while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-      }
-      Serial.println("\nWi-Fi reconectado!");
-    }
-    vTaskDelay(5000 / portTICK_PERIOD_MS); // Verifica o estado do Wi-Fi a cada 5 segundos
-  }
+void desligarLED() {
+  digitalWrite(ledPin, LOW); // Desliga o LED
+  server.send(200, "text/plain", "LED desligado!");
+  Serial.println("LED desligado via HTTP.");
 }
 
 // ========================
@@ -150,17 +47,15 @@ void taskWiFiMonitor(void* parameter) {
 void setup() {
   // Inicializa a comunicação serial
   Serial.begin(115200);
+  while (!Serial) delay(50);
 
-  // Configura os pinos dos LEDs como saída e garante que iniciem desligados
-  for (int i = 0; i < numLeds; i++) {
-    pinMode(ledPins[i], OUTPUT);
-    digitalWrite(ledPins[i], LOW);
-    Serial.printf("Configuração inicial: LED %d como saída, estado: Desligado\n", ledPins[i]);
-  }
+  // Configura o pino do LED como saída
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
 
-  // Configura o receptor IR
+  // Inicializa emissor e receptor IR
+  irsend.begin();
   irrecv.enableIRIn();
-  Serial.println("Receptor IR inicializado.");
 
   // Conecta ao Wi-Fi
   Serial.print("Conectando ao Wi-Fi");
@@ -169,39 +64,44 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
-
-  // Exibe informações da conexão Wi-Fi
   Serial.println("\nConectado ao Wi-Fi!");
   Serial.print("Endereço IP: ");
   Serial.println(WiFi.localIP());
 
-  // Define rotas HTTP para controle dos LEDs
-  server.on("/ligar", handleLigarLED);
-  server.on("/desligar", handleDesligarLED);
+  // Configura rotas HTTP
+  server.on("/ligar", ligarLED);
+  server.on("/desligar", desligarLED);
 
   // Inicia o servidor HTTP
   server.begin();
   Serial.println("Servidor HTTP iniciado!");
 
-  // Cria a fila para comunicação entre tarefas
-  ledQueue = xQueueCreate(10, sizeof(LedAction));
-  if (ledQueue == NULL) {
-    Serial.println("Erro ao criar a fila!");
-    while (1);
-  }
-
-  // Cria as tarefas do FreeRTOS
-  xTaskCreate(taskHttpServer, "HTTP Server", 4096, NULL, 1, NULL);
-  xTaskCreate(taskLedController, "LED Controller", 2048, NULL, 1, NULL);
-  xTaskCreate(taskIRReceiver, "IR Receiver", 2048, NULL, 1, NULL);
-  xTaskCreate(taskWiFiMonitor, "WiFi Monitor", 2048, NULL, 1, NULL);
-
-  Serial.println("Tarefas do FreeRTOS iniciadas!");
+  // Mensagem inicial
+  Serial.println("Sistema IR iniciado.");
+  Serial.printf("Receptor IR no pino %d\n", kRecvPin);
+  Serial.printf("Emissor IR no pino %d\n", kIrLed);
 }
 
 // ========================
 // Loop principal do ESP32
 // ========================
 void loop() {
-  // O loop principal está vazio, pois as tarefas são gerenciadas pelo FreeRTOS
+  // Processa requisições HTTP
+  server.handleClient();
+
+  // Envio periódico de sinal IR
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastSendTime >= kSendInterval) {
+    lastSendTime = currentMillis;
+    Serial.println("Enviando sinal IR NEC: 0xA000E098C3");
+    irsend.sendNEC(0xA000E098C3);
+  }
+
+  // Recebe e decodifica sinais IR
+  if (irrecv.decode(&results)) {
+    Serial.println("Sinal IR recebido:");
+    Serial.print(resultToHumanReadableBasic(&results));
+    Serial.println(resultToSourceCode(&results));
+    irrecv.resume(); // Prepara o receptor para o próximo sinal
+  }
 }
