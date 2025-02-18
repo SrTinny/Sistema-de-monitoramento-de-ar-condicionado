@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agendamentos - AirNet</title>
+    <!-- Estilos principais -->
+    <link rel="stylesheet" href="css/reset.css" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+  </head>
+
+  <body>
+    <!-- Header com navegação principal -->
+    <header class="header">
+      <nav class="nav">
+        <!-- Logo -->
+        <a href="index.html" class="logo-link">
+          <span class="logo-text">AirNet</span>
+        </a>
+
+        <!-- Botão de menu (aparece apenas em telas menores) -->
+        <button class="menu-toggle" onclick="openMenu()">☰</button>
+
+        <!-- Lista de navegação -->
+        <ul class="nav-list">
+          <li><a href="index.html">Simulador</a></li>
+          <li><a href="agendamentos.html">Agendamentos</a></li>
+        </ul>
+
+        <!-- Menu de navegação -->
+        <ul class="nav-list">
+          <li><a href="index.html" class="nav-link">Simulador</a></li>
+          <li>
+            <a href="agendamentos.html" class="nav-link active">Agendamentos</a>
+          </li>
+        </ul>
+
+        <!-- Botão para alternar entre temas -->
+        <button id="theme-toggle" class="theme-toggle">
+          <svg
+            id="theme-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            class="icon"
+          >
+            <!-- Caminho inicial para o sol -->
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 3v1m0 16v1m9-9h1M4 12H3m15.364 7.364l-.707-.707M6.343 6.343l-.707-.707m12.728 12.728l-.707-.707M6.343 17.657l-.707-.707M12 6a6 6 0 100 12 6 6 0 000-12z"
+            />
+          </svg>
+        </button>
+      </nav>
+    </header>
+
+    <!-- Conteúdo principal da página -->
+    <main class="container-agendamentos">
+      <!-- Formulário de agendamentos -->
+      <section class="schedule-panel">
+        <h2>Agendar Ação</h2>
+        <form id="schedule-form">
+          <!-- Seleção de sala -->
+          <label for="room-select">Sala:</label>
+          <select id="room-select" required>
+            <option value="101">Sala 101</option>
+            <option value="102">Sala 102</option>
+            <option value="103">Sala 103</option>
+          </select>
+
+          <!-- Seleção de ação -->
+          <label for="action-select">Ação:</label>
+          <select id="action-select" required>
+            <option value="ligar">Ligar</option>
+            <option value="desligar">Desligar</option>
+          </select>
+
+          <!-- Seleção de horário -->
+          <label for="schedule-time">Horário:</label>
+          <input type="time" id="schedule-time" required />
+
+          <!-- Botão de envio -->
+          <button type="submit">Agendar</button>
+        </form>
+      </section>
+
+      <!-- Lista de agendamentos -->
+      <section class="schedule-list">
+        <h2>Agendamentos</h2>
+        <ul id="schedule-items">
+          <!-- Itens de agendamento dinâmicos -->
+        </ul>
+      </section>
+    </main>
+
+    <!-- Rodapé da página -->
+    <footer class="footer">
+      <div class="footer-content">
+        <p>&copy; 2024 AirNet - Sistema de Gerenciamento de Ar-Condicionados</p>
+        <p>
+          Desenvolvido para a Universidade Federal do Ceará. Todos os direitos
+          reservados.
+        </p>
+      </div>
+    </footer>
+
+    <!-- Script principal -->
+    <script src="js/script.js"></script>
+  </body>
+</html>
