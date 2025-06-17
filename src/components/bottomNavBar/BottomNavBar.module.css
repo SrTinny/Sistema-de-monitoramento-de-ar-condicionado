@@ -1,0 +1,33 @@
+.navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: var(--form-background);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 10px 0;
+  box-shadow: 0 -2px 8px var(--shadow-color);
+  z-index: 100;
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 12px;
+  color: var(--font-color);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.navItem:hover {
+  color: var(--primary-color);
+}
+
+.navIcon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
