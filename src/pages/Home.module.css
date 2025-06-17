@@ -1,9 +1,130 @@
-/* src/pages/Home.module.css */
+/* Home.module.css */
+
+/* Layout base */
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 20px;
+  background-color: var(--background-color);
   display: flex;
-  flex-wrap: wrap;
-  gap: 30px;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 100vh;
+}
+
+/* Saudação no topo */
+.welcomeCard {
+  background-color: var(--form-background);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 6px 12px var(--shadow-color);
+  text-align: center;
+}
+
+.welcomeCard h2 {
+  font-size: 20px;
+  color: var(--primary-color);
+  margin-bottom: 5px;
+}
+
+.welcomeCard p {
+  font-size: 14px;
+  color: var(--highlight-color);
+}
+
+/* Seção de projetos */
+.projectsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: 10px;
+}
+
+/* Cartões de projeto */
+.projectCard {
+  background-color: var(--form-background);
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 4px 8px var(--shadow-color);
+  display: flex;
+  flex-direction: column;
   justify-content: space-between;
+}
+
+.projectCard h3 {
+  font-size: 16px;
+  color: var(--highlight-color);
+  margin-bottom: 10px;
+}
+
+.projectCard .progressBarContainer {
+  background-color: var(--row-hover-bg);
+  height: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+
+.projectCard .progressBar {
+  height: 8px;
+  border-radius: 8px;
+  background-color: var(--primary-color);
+  transition: width 0.3s ease;
+}
+
+/* Estilo do botão flutuante (+) */
+.floatingButton {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--primary-color);
+  color: white;
+  font-size: 28px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  box-shadow: 0 4px 8px var(--shadow-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 999;
+  transition: background-color 0.3s ease;
+}
+
+.floatingButton:hover {
+  background-color: var(--second-color);
+}
+
+/* Rodapé simples */
+.footer {
+  margin-top: auto;
+  text-align: center;
+  font-size: 12px;
+  color: var(--highlight-color);
+  padding: 20px 0;
+}
+
+/* Responsivo para tablets e acima */
+@media (min-width: 600px) {
+  .projectsSection {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .projectCard {
+    width: calc(50% - 10px);
+  }
+}
+
+/* Responsivo para desktops */
+@media (min-width: 900px) {
+  .projectCard {
+    width: calc(33.333% - 10px);
+  }
 }

@@ -14,17 +14,13 @@ export default function Home() {
 
   const updateStatus = (roomId, newStatus) => {
     setSalas((prev) =>
-      prev.map((s) =>
-        s.id === roomId ? { ...s, status: newStatus } : s
-      )
+      prev.map((s) => (s.id === roomId ? { ...s, status: newStatus } : s))
     );
   };
 
   const updateTemp = (roomId, newTemp) => {
     setSalas((prev) =>
-      prev.map((s) =>
-        s.id === roomId ? { ...s, temp: newTemp } : s
-      )
+      prev.map((s) => (s.id === roomId ? { ...s, temp: newTemp } : s))
     );
   };
 
@@ -46,17 +42,30 @@ export default function Home() {
 
   return (
     <main className={styles.container}>
-      {salas.map((sala) => (
-        <ACUnit
-          key={sala.id}
-          roomId={sala.id}
-          status={sala.status}
-          temperature={sala.temp}
-          onToggle={toggleAC}
-          onTempChange={updateTemp}
-        />
-      ))}
+      <div className={styles.headerText}>
+        <h2>Olá, João!</h2>
+      </div>
+
+      <div className={styles.unitsSection}>
+        {salas.map((sala) => (
+          <ACUnit
+            key={sala.id}
+            roomId={sala.id}
+            status={sala.status}
+            temperature={sala.temp}
+            onToggle={toggleAC}
+            onTempChange={updateTemp}
+          />
+        ))}
+      </div>
+
       <AddRoomForm />
+
+      <div className="styles.bottomNav">
+        <button className={styles.navBtn}>🏠</button>
+        <button className={styles.addBtn}>＋</button>
+        <button className={styles.navBtn}>👤</button>
+      </div>
     </main>
   );
 }
