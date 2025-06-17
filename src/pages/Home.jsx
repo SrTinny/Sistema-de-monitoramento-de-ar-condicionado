@@ -42,10 +42,6 @@ export default function Home() {
 
   return (
     <main className={styles.container}>
-      <div className={styles.headerText}>
-        <h2>Olá, João!</h2>
-      </div>
-
       <div className={styles.unitsSection}>
         {salas.map((sala) => (
           <ACUnit
