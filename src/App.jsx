@@ -14,7 +14,6 @@ function App() {
       <main>
         <Home />
       </main>
-      <Footer />
       <BottomNavBar />
     </>
   );
