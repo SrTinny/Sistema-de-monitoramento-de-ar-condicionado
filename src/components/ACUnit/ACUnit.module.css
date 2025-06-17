@@ -1,0 +1,72 @@
+.ac-unit {
+  flex: 1 1 calc(33.333% - 40px);
+  max-width: calc(33.333% - 40px);
+  border-radius: 10px;
+  box-shadow: 0 6px 12px var(--shadow-color);
+  padding: 25px;
+  text-align: center;
+  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+
+.ac-unit.ligado {
+  background-color: var(--status-ligado);
+}
+
+.ac-unit.desligado {
+  background-color: var(--status-desligado);
+}
+
+.ac-unit:hover {
+  transform: translateY(-10px);
+}
+
+.room-title {
+  font-weight: bold;
+  font-size: 1.6rem;
+  color: var(--highlight-color);
+}
+
+.settings-icon {
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--second-color);
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.settings-icon:hover {
+  transform: rotate(90deg);
+  color: var(--primary-color);
+}
+
+.status {
+  font-weight: bold;
+}
+
+.status.ligado {
+  color: var(--primary-color);
+}
+
+.status.desligado {
+  color: var(--second-color);
+}
+
+button {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  border: none;
+  padding: 12px 25px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin: 15px 0;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: var(--second-color);
+}
+
+input[type="range"] {
+  width: 100%;
+  margin-top: 15px;
+}

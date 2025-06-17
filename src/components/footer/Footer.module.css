@@ -1,0 +1,30 @@
+/* src/components/footer/Footer.module.css */
+.footer {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  padding: 20px 0;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.footerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.footerContent p {
+  margin: 5px 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.footerContent a {
+  color: var(--link-color);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.footerContent a:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,45 @@
+/* src/components/addRoomForm/AddRoomForm.module.css */
+.addRoomSection {
+  max-width: 800px;
+  margin: 30px auto;
+  padding: 25px;
+  background-color: var(--form-background);
+  border-radius: 8px;
+  box-shadow: 0 6px 12px var(--shadow-color);
+  text-align: center;
+}
+
+.addRoomSection h2 {
+  margin-bottom: 20px;
+  color: var(--highlight-color);
+}
+
+.addRoomSection form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.addRoomSection input,
+.addRoomSection button {
+  width: 100%;
+  max-width: 400px;
+  padding: 12px;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+  font-size: 1rem;
+}
+
+.addRoomSection button {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.addRoomSection button:hover {
+  background-color: var(--second-color);
+}
