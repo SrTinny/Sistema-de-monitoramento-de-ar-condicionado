@@ -1,5 +1,5 @@
 // src/pages/Home.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWebSocketESP } from "../hooks/useWebSocketESP";
 import ACUnit from "../components/ACUnit/ACUnit";
 import AddRoomForm from "../components/addRoomForm/AddRoomForm";
@@ -14,14 +14,30 @@ export default function Home() {
   ]);
   const [showAddForm, setShowAddForm] = useState(false);
 
-  const handleAddRoomClick = () => setShowAddForm((prev) => !prev);
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (e.target.classList.contains("overlay")) {
+        setShowAddForm(false);
+      }
+    };
+
+    if (showAddForm) {
+      window.addEventListener("click", handleOutsideClick);
+    }
+
+    return () => {
+      window.removeEventListener("click", handleOutsideClick);
+    };
+  }, [showAddForm]);
+
+  const handleAddRoomClick = () => setShowAddForm(true);
 
   const handleAddRoom = (roomId) => {
     setSalas((prev) => [
       ...prev,
       { id: roomId, status: "desligado", temp: 25 },
     ]);
-    setShowAddForm(false); // Oculta o formulário após adicionar
+    setShowAddForm(false);
   };
 
   const updateStatus = (roomId, newStatus) => {
@@ -68,10 +84,7 @@ export default function Home() {
       </div>
 
       {showAddForm && (
-        <AddRoomForm
-          onAddRoom={handleAddRoom}
-          onClose={() => setShowAddForm(false)}
-        />
+        <AddRoomForm onAddRoom={handleAddRoom} onClose={() => setShowAddForm(false)} />
       )}
 
       <BottomNavBar onAddClick={handleAddRoomClick} />
