@@ -1,45 +1,63 @@
 /* src/components/addRoomForm/AddRoomForm.module.css */
-.addRoomSection {
-  max-width: 800px;
-  margin: 30px auto;
-  padding: 25px;
-  background-color: var(--form-background);
-  border-radius: 8px;
-  box-shadow: 0 6px 12px var(--shadow-color);
-  text-align: center;
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
 }
 
-.addRoomSection h2 {
-  margin-bottom: 20px;
-  color: var(--highlight-color);
+.modal {
+  background: var(--background-color);
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 90%;
+  width: 400px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
 }
 
-.addRoomSection form {
+.closeButton {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 1.4rem;
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+form {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 15px;
+  gap: 1rem;
 }
 
-.addRoomSection input,
-.addRoomSection button {
-  width: 100%;
-  max-width: 400px;
-  padding: 12px;
-  border-radius: 5px;
-  border: 1px solid var(--border-color);
+input {
+  padding: 10px;
+  border: 1px solid var(--second-color);
+  border-radius: 6px;
   font-size: 1rem;
 }
 
-.addRoomSection button {
+button[type="submit"] {
   background-color: var(--primary-color);
   color: var(--text-color);
+  padding: 10px;
   border: none;
+  border-radius: 6px;
+  font-size: 1rem;
   cursor: pointer;
-  font-weight: bold;
   transition: background-color 0.3s ease;
 }
 
-.addRoomSection button:hover {
+button[type="submit"]:hover {
   background-color: var(--second-color);
 }

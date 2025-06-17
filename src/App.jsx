@@ -1,8 +1,6 @@
 // src/App.jsx
 import React from "react";
 import Header from "./components/header/Header";
-import Footer from "./components/footer/Footer";
-import BottomNavBar from "./components/bottomNavBar/BottomNavBar"; // ✅ Novo
 import Home from "./pages/Home";
 
 import "./index.css";
@@ -12,9 +10,8 @@ function App() {
     <>
       <Header />
       <main>
-        <Home />
+        <Home /> {/* Aqui está o BottomNavBar sendo renderizado dentro do Home */}
       </main>
-      <BottomNavBar />
     </>
   );
 }

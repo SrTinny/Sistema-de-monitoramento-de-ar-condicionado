@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useWebSocketESP } from "../hooks/useWebSocketESP";
 import ACUnit from "../components/ACUnit/ACUnit";
 import AddRoomForm from "../components/addRoomForm/AddRoomForm";
+import BottomNavBar from "../components/bottomNavBar/BottomNavBar";
 import styles from "./Home.module.css";
 
 export default function Home() {
@@ -11,6 +12,17 @@ export default function Home() {
     { id: "102", status: "desligado", temp: 25 },
     { id: "103", status: "desligado", temp: 25 },
   ]);
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  const handleAddRoomClick = () => setShowAddForm((prev) => !prev);
+
+  const handleAddRoom = (roomId) => {
+    setSalas((prev) => [
+      ...prev,
+      { id: roomId, status: "desligado", temp: 25 },
+    ]);
+    setShowAddForm(false); // Oculta o formulário após adicionar
+  };
 
   const updateStatus = (roomId, newStatus) => {
     setSalas((prev) =>
@@ -26,7 +38,7 @@ export default function Home() {
 
   useWebSocketESP((msg) => {
     if (msg.includes("Sinal IR enviado")) alert(msg);
-    else updateStatus("101", msg); // Aqui está fixo, ajuste conforme sua lógica real
+    else updateStatus("101", msg);
   });
 
   const toggleAC = async (roomId) => {
@@ -55,13 +67,14 @@ export default function Home() {
         ))}
       </div>
 
-      <AddRoomForm />
+      {showAddForm && (
+        <AddRoomForm
+          onAddRoom={handleAddRoom}
+          onClose={() => setShowAddForm(false)}
+        />
+      )}
 
-      <div className="styles.bottomNav">
-        <button className={styles.navBtn}>🏠</button>
-        <button className={styles.addBtn}>＋</button>
-        <button className={styles.navBtn}>👤</button>
-      </div>
+      <BottomNavBar onAddClick={handleAddRoomClick} />
     </main>
   );
 }

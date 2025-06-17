@@ -1,27 +1,29 @@
 // src/components/BottomNavBar.jsx
-import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { FiHome, FiPlusSquare, FiCalendar, FiSettings } from "react-icons/fi";
 import styles from "./BottomNavBar.module.css";
 
-export default function BottomNavBar() {
+export default function BottomNavBar({ onAddClick }) {
+  const navigate = useNavigate();
+
   return (
     <nav className={styles.navbar}>
-      <NavLink to="/" className={styles.navItem}>
+      <button className={styles.navItem} onClick={() => navigate("/")}>  
         <FiHome className={styles.icon} />
         <span>Início</span>
-      </NavLink>
-      <NavLink to="/add-room" className={styles.navItem}>
+      </button>
+      <button className={styles.navItem} onClick={onAddClick}>
         <FiPlusSquare className={styles.icon} />
         <span>Adicionar</span>
-      </NavLink>
-      <NavLink to="/agendamentos" className={styles.navItem}>
+      </button>
+      <button className={styles.navItem} onClick={() => navigate("/agendamentos")}>  
         <FiCalendar className={styles.icon} />
         <span>Agenda</span>
-      </NavLink>
-      <NavLink to="/config" className={styles.navItem}>
+      </button>
+      <button className={styles.navItem} onClick={() => navigate("/config")}>  
         <FiSettings className={styles.icon} />
         <span>Config</span>
-      </NavLink>
+      </button>
     </nav>
   );
 }
