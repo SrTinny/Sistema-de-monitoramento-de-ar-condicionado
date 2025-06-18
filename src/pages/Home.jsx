@@ -8,9 +8,10 @@ import styles from "./Home.module.css";
 
 export default function Home() {
   const [salas, setSalas] = useState([
-    { id: "101", status: "desligado", temp: 25 },
-    { id: "102", status: "desligado", temp: 25 },
-    { id: "103", status: "desligado", temp: 25 },
+    { id: "01", status: "desligado", temp: 25 },
+    { id: "02", status: "desligado", temp: 25 },
+    { id: "03", status: "desligado", temp: 25 },
+    { id: "04", status: "desligado", temp: 25 },
   ]);
   const [showAddForm, setShowAddForm] = useState(false);
 

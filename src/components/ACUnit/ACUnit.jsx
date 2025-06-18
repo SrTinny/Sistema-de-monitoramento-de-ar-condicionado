@@ -3,7 +3,13 @@ import { useState } from "react";
 import styles from "./ACUnit.module.css";
 import SettingsModal from "../settingsModal/SettingsModal";
 
-export default function ACUnit({ roomId, status, temperature, onToggle, onTempChange }) {
+export default function ACUnit({
+  roomId,
+  status,
+  temperature,
+  onToggle,
+  onTempChange,
+}) {
   const [showModal, setShowModal] = useState(false);
 
   return (
@@ -11,7 +17,9 @@ export default function ACUnit({ roomId, status, temperature, onToggle, onTempCh
       <div className={`${styles.unit} ${styles[status]}`} data-room={roomId}>
         <h2 className={styles.header}>
           <span className={styles.title}>Sala {roomId}</span>
-          <span className={styles.icon} onClick={() => setShowModal(true)}>⚙</span>
+          <span className={styles.icon} onClick={() => setShowModal(true)}>
+            ⚙
+          </span>
         </h2>
         <p>
           Status:{" "}
@@ -25,7 +33,9 @@ export default function ACUnit({ roomId, status, temperature, onToggle, onTempCh
         <p>
           Temperatura Atual: <span id={`temp-${roomId}`}>{temperature}°C</span>
         </p>
-        <button onClick={() => onToggle(roomId)}>Ligar/Desligar</button>
+        <button onClick={() => onToggle(roomId)}>
+          {status === "ligado" ? "Desligar" : "Ligar"}
+        </button>
         <input
           type="range"
           min="16"
