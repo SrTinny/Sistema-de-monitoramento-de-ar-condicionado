@@ -1,0 +1,15 @@
+.container {
+  padding: 20px;
+  padding-bottom: 80px;
+  background-color: var(--background-color);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.titulo {
+  color: var(--primary-color);
+  font-size: 24px;
+  font-weight: bold;
+}

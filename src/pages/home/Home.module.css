@@ -124,6 +124,11 @@
     flex: 1 1 calc(50% - 20px);
     max-width: calc(50% - 20px);
   }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
 }
 
 /* 3 salas por linha (desktop) */

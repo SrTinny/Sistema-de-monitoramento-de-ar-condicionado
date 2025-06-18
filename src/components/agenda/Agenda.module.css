@@ -1,0 +1,62 @@
+.agendaContainer {
+  background-color: var(--form-background);
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 8px var(--shadow-color);
+  margin-top: 20px;
+}
+
+.agendaContainer h2 {
+  margin-bottom: 16px;
+  color: var(--primary-color);
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-weight: bold;
+  color: var(--highlight-color);
+}
+
+input,
+select {
+  margin-top: 4px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.diasSemana {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.diaBotao {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--form-background);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.selecionado {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.botaoSalvar {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
