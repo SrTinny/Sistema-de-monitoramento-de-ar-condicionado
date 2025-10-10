@@ -1,72 +1,41 @@
-// src/App.jsx
-import { useState, useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import React, { useContext } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { AuthContext } from './contexts/AuthContext';
 
-import Header from "./components/header/Header";
-import BottomNavBar from "./components/bottomNavBar/BottomNavBar";
-import Home from "./pages/home/Home";
-import Agendamentos from "./pages/agendamentos/Agendamentos";
-import AddRoomForm from "./components/addRoomForm/AddRoomForm";
+// Layout
+import Layout from './components/Layout/Layout';
+
+// Páginas
+import Home from './pages/home/Home';
+import Login from './pages/Login/Login';
+import Agendamentos from './pages/agendamentos/Agendamentos';
+
+// Componente para proteger rotas
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated } = useContext(AuthContext);
+  return isAuthenticated ? children : <Navigate to="/login" />;
+};
 
 function App() {
-  const [salas, setSalas] = useState([
-    { id: "01", status: "desligado", temp: 25 },
-    { id: "02", status: "desligado", temp: 25 },
-    { id: "03", status: "desligado", temp: 25 },
-    { id: "04", status: "desligado", temp: 25 },
-  ]);
-
-  const [showAddForm, setShowAddForm] = useState(false);
-
-  const handleAddRoomClick = () => setShowAddForm(true);
-
-  const handleAddRoom = (roomId) => {
-    setSalas((prev) => [
-      ...prev,
-      { id: roomId, status: "desligado", temp: 25 },
-    ]);
-    setShowAddForm(false);
-  };
-
-  useEffect(() => {
-    const handleOutsideClick = (e) => {
-      if (e.target.classList.contains("overlay")) {
-        setShowAddForm(false);
-      }
-    };
-
-    if (showAddForm) {
-      window.addEventListener("click", handleOutsideClick);
-    }
-
-    return () => {
-      window.removeEventListener("click", handleOutsideClick);
-    };
-  }, [showAddForm]);
-
   return (
-    <>
-      <Header />
-      <main>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Home
-                salas={salas}
-                setSalas={setSalas}
-              />
-            }
-          />
-          <Route path="/agendamentos" element={<Agendamentos salas={salas} />} />
-        </Routes>
+    <Routes>
+      <Route path="/login" element={<Login />} />
 
-        {showAddForm && (
-          <AddRoomForm onAddRoom={handleAddRoom} onClose={() => setShowAddForm(false)} />
-        )}
-      </main>
-      <BottomNavBar onAddClick={handleAddRoomClick} />
-    </>
+      {/* Rotas Protegidas que usarão o Layout */}
+      <Route 
+        path="/" 
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        {/* Rotas filhas do Layout. O "index" é a rota padrão "/" */}
+        <Route index element={<Home />} />
+        <Route path="agendamentos" element={<Agendamentos />} />
+      </Route>
+      
+    </Routes>
   );
 }
 

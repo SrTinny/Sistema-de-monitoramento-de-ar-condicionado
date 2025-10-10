@@ -1,14 +1,19 @@
-// src/main.jsx
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App.jsx"; // Importa o componente principal do aplicativo
-import { BrowserRouter } from "react-router-dom"; // Importa o roteador do React Router
-import "./index.css"; // Importa o CSS global
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter as Router } from 'react-router-dom';
+import App from './App.jsx';
+import { AuthProvider } from './contexts/AuthContext.jsx';
+import { RoomProvider } from './contexts/RoomContext.jsx'; // 👈 Importe o RoomProvider
+import './index.css';
 
-ReactDOM.createRoot(document.getElementById("root")).render(
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
+    <Router>
+      <AuthProvider>
+        <RoomProvider> {/* 👈 Envolva o App com o RoomProvider */}
+          <App />
+        </RoomProvider>
+      </AuthProvider>
+    </Router>
+  </React.StrictMode>,
 );
