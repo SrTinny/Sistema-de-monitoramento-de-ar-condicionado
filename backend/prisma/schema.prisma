@@ -39,7 +39,7 @@ model AirConditioner {
   
   // Mecanismo de comando
   pendingCommand String?  // Guarda o próximo comando a ser executado: "ligar", "desligar"
-
+  lastHeartbeat  DateTime? // Último momento em que o dispositivo reportou dados
   // Timestamps
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt // Atualizado automaticamente em cada alteração
