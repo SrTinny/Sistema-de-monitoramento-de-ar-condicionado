@@ -1,0 +1,73 @@
+/* ========================
+   VARIÁVEIS DE TEMA GLOBAL
+======================== */
+:root {
+  --primary-color: #4caf50; /* Verde suave */
+  --second-color: #1976d2;  /* Azul moderno */
+  --text-color: #ffffff;
+  --background-color: #f5f7fa;
+  --status-ligado: #e8f5e9;
+  --status-desligado: #ffebee;
+  --form-background: #ffffff;
+  --font-color: #212121;
+  --highlight-color: #666;
+  --border-color: #e0e0e0;
+  --row-even-bg: #f9f9f9;
+  --row-odd-bg: #ffffff;
+  --row-hover-bg: #f1f1f1;
+  --link-color: #2196f3;
+  --shadow-color: rgba(0, 0, 0, 0.05);
+  --shadow-dark: rgba(0, 0, 0, 0.15);
+}
+
+body.dark-mode {
+  --primary-color: #333;
+  --second-color: #1976d2;
+  --text-color: #e0e0e0;
+  --background-color: #121212;
+  --status-ligado: #4caf50;
+  --status-desligado: #ef5350;
+  --form-background: #1e1e1e;
+  --font-color: #e0e0e0;
+  --highlight-color: #aaaaaa;
+  --border-color: #424242;
+  --row-even-bg: #1e1e1e;
+  --row-odd-bg: #191919;
+  --row-hover-bg: #2c2c2c;
+  --link-color: #64b5f6;
+  --shadow-color: rgba(255, 255, 255, 0.05);
+  --shadow-dark: rgba(255, 255, 255, 0.15);
+}
+
+/* ========================
+   RESET E BASE
+======================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Inter", "Segoe UI", "Helvetica Neue", sans-serif;
+  background-color: var(--background-color);
+  color: var(--font-color);
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+/* Estilo base para ícones */
+.icon {
+  width: 22px;
+  height: 22px;
+  color: var(--font-color);
+  transition: color 0.3s ease;
+}
+
+main {
+  padding-bottom: 70px; /* espaço para a barra de navegação */
+}
