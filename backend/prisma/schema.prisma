@@ -9,6 +9,22 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Define os modelos (tabelas) do banco de dados
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Armazene a senha hasheada
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // Define a estrutura das suas tabelas no banco de dados
 model AirConditioner {
   id             String   @id @default(cuid())
