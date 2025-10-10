@@ -1,0 +1,30 @@
+// prisma/schema.prisma
+// Informa ao Prisma para criar o cliente que você usará no seu código Node.js
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Informa ao Prisma como se conectar ao seu banco de dados
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+// Define a estrutura das suas tabelas no banco de dados
+model AirConditioner {
+  id             String   @id @default(cuid())
+  deviceId       String   @unique // Gerado pelo sistema, ex: "AC-SALA101-aBcDeF"
+  name           String   // Ex: "Ar Condicionado da Sala 101"
+  room           String   // Ex: "Sala 101 Bloco A"
+  
+  // Dados de monitoramento (reportados pelo ESP32)
+  status         String   @default("offline") // offline, desligado, ligado
+  temperature    Float?   // O '?' significa que o campo é opcional (pode ser nulo)
+  humidity       Float?   // Também opcional
+  
+  // Mecanismo de comando
+  pendingCommand String?  // Guarda o próximo comando a ser executado: "ligar", "desligar"
+
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt // Atualizado automaticamente em cada alteração
+}
