@@ -1,21 +1,29 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from '../header/Header';
 import BottomNavBar from '../bottomNavBar/BottomNavBar';
-// Importe o AddRoomForm e a lógica de exibição se quiser mantê-la aqui
+import AddRoomForm from '../addRoomForm/AddRoomForm'; // 👈 Importe o formulário
+import { RoomContext } from '../../contexts/RoomContext'; // 👈 Importe o contexto
 
 const Layout = () => {
-  // A lógica para exibir o AddRoomForm pode vir para cá
-  // ou ser gerenciada por um estado global no RoomContext
+  // Pega o estado e as funções do contexto
+  const { isFormOpen, addRoom, closeForm } = useContext(RoomContext);
 
   return (
     <>
       <Header />
       <main>
-        {/* O Outlet renderiza o componente da rota atual (Home, Agendamentos, etc.) */}
         <Outlet />
       </main>
-      <BottomNavBar /* onAddClick={...} */ />
+      <BottomNavBar />
+
+      {/* Renderização condicional do formulário */}
+      {isFormOpen && (
+        <AddRoomForm 
+          onAddRoom={addRoom} 
+          onClose={closeForm} 
+        />
+      )}
     </>
   );
 };
