@@ -4,7 +4,8 @@ import ACUnit from '../../components/ACUnit/ACUnit';
 import styles from './Home.module.css';
 
 export default function Home() {
-  const { rooms, loading, fetchRooms, sendCommand } = useRooms();
+  // Desestruturando as funções e estados do hook
+  const { rooms, loading, fetchRooms, sendCommand, updateRoom } = useRooms();
 
   useEffect(() => {
     fetchRooms();
@@ -32,12 +33,12 @@ export default function Home() {
     <div className={styles.container}>
       <div className={styles.unitsSection}>
         {rooms.map((sala) => (
-          // Note que agora passamos o objeto 'sala' inteiro como prop
           <ACUnit
             key={sala.id}
-            room={sala} // Passando o objeto completo 
+            room={sala}
             onToggle={toggleAC}
             onTempChange={handleTemperatureChange}
+            onUpdate={updateRoom} // 2. Passa a função como prop
           />
         ))}
       </div>

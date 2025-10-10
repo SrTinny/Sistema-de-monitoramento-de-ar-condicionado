@@ -1,61 +1,117 @@
+/* Animação de entrada para o modal */
+@keyframes fadeInScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .modal {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.6);
+  width: 100%; /* Em vez de 100vw para evitar problemas com a barra de rolagem */
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7); /* Um pouco mais escuro para mais contraste */
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 1rem; /* Adiciona um respiro para o conteúdo não colar nas bordas */
 }
 
 .modalContent {
   background-color: var(--form-background);
-  border-radius: 10px;
-  padding: 30px;
-  width: 350px;
-  box-shadow: 0 6px 12px var(--shadow-dark);
-  text-align: center;
+  border-radius: 12px; /* Bordas um pouco mais arredondadas */
+  padding: 2rem; /* Padding interno */
+  box-shadow: 0 8px 24px var(--shadow-dark);
+  
+  /* --- A MUDANÇA MAIS IMPORTANTE (RESPONSIVIDADE) --- */
+  width: 100%;      /* Ocupa a largura disponível (considerando o padding do .modal) */
+  max-width: 450px; /* Mas nunca passará de 450px de largura */
+  
+  position: relative; /* Necessário para posicionar o botão de fechar */
+  animation: fadeInScaleUp 0.3s ease-out forwards; /* Aplica a animação */
+}
+
+/* NOVO: Botão de fechar (X) */
+.closeButton {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: var(--second-color);
+  cursor: pointer;
+  line-height: 1;
 }
 
 .modalContent h3 {
-  margin-bottom: 25px;
+  margin-bottom: 1.5rem;
   font-size: 1.5rem;
+  text-align: center; /* Centraliza apenas o título */
 }
 
 .modalContent form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 1rem;
+}
+
+/* NOVO: Estilo para agrupar label e input */
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  text-align: left; /* Alinha os labels à esquerda */
+  gap: 0.5rem;
+}
+
+.inputGroup label {
+  font-weight: 500;
+  color: var(--font-color);
 }
 
 .modalContent input {
   padding: 12px;
-  border-radius: 5px;
+  border-radius: 8px; /* Bordas um pouco mais arredondadas */
   border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  color: var(--font-color);
+  font-size: 1rem;
 }
 
 .buttonGroup {
   display: flex;
-  gap: 10px;
-  justify-content: center;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-top: 1rem; /* Adiciona espaço acima dos botões */
 }
 
 .buttonGroup button {
+  flex: 1; /* Faz os botões ocuparem o espaço disponível igualmente */
   padding: 12px;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
+  font-size: 1rem;
   color: var(--text-color);
+  transition: opacity 0.2s;
 }
 
-.buttonGroup button:first-child {
+.buttonGroup button:hover {
+  opacity: 0.9;
+}
+
+.buttonGroup .saveButton {
   background-color: var(--primary-color);
 }
 
-.buttonGroup button:last-child {
+.buttonGroup .cancelButton {
   background-color: var(--second-color);
 }

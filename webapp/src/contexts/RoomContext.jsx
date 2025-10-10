@@ -44,6 +44,17 @@ export const RoomProvider = ({ children }) => {
     }
   };
 
+  // Função para atualizar os dados de uma sala (se necessário no futuro)
+  const updateRoom = async (roomId, dataToUpdate) => {
+    try {
+      await api.put(`/api/rooms/${roomId}`, dataToUpdate);
+      fetchRooms(); // Após atualizar, busca a lista para refletir as mudanças
+    } catch (error) {
+      console.error("Erro ao atualizar a sala:", error);
+      throw error;
+    }
+  };
+
   const openForm = () => setIsFormOpen(true);
   const closeForm = () => setIsFormOpen(false);
 
@@ -55,6 +66,7 @@ export const RoomProvider = ({ children }) => {
         fetchRooms,
         addRoom,
         sendCommand,
+        updateRoom,
         isFormOpen,
         openForm,
         closeForm,
