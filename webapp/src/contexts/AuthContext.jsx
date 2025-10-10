@@ -1,21 +1,22 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode'; 
 import api from '../services/api';
 
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null); // Poderia guardar dados do user decodificados
+  const [user, setUser] = useState(null); // Agora este estado será populado
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verifica se já existe um token no localStorage ao carregar o app
     const token = localStorage.getItem('authToken');
     if (token) {
+      const decodedUser = jwtDecode(token); // Decodifica o token
+      setUser(decodedUser); // Seta o usuário no estado
       setIsAuthenticated(true);
-      // Aqui você poderia decodificar o token para pegar dados do usuário
     }
     setLoading(false);
   }, []);
@@ -27,12 +28,13 @@ export const AuthProvider = ({ children }) => {
 
       if (token) {
         localStorage.setItem('authToken', token);
+        const decodedUser = jwtDecode(token); // Decodifica na hora do login
+        setUser(decodedUser); // Seta o usuário no estado
         setIsAuthenticated(true);
-        navigate('/'); // Redireciona para a Home após o login
+        navigate('/');
       }
     } catch (error) {
       console.error('Erro no login:', error);
-      // Lançar o erro para que o componente de login possa tratá-lo
       throw error;
     }
   };
@@ -41,11 +43,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('authToken');
     setIsAuthenticated(false);
     setUser(null);
-    navigate('/login'); // Redireciona para a página de login
+    navigate('/login');
   };
 
   if (loading) {
-    return <div>Carregando...</div>; // Ou um spinner de loading
+    return <div>Carregando...</div>;
   }
 
   return (

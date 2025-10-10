@@ -1,13 +1,20 @@
-// src/components/header/Header.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react"; // 1. Importa o useContext
 import styles from "./Header.module.css";
 import { Link } from "react-router-dom";
+import { AuthContext } from "../../contexts/AuthContext"; // 2. Importa nosso AuthContext
+import { FiLogOut } from "react-icons/fi"; // Ícone para o botão de logout
 
 export default function Header() {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  // 3. Acessa os dados do usuário e a função de logout do contexto
+  const { user, logout } = useContext(AuthContext);
 
   useEffect(() => {
-    setIsDarkMode(document.body.classList.contains("dark-mode"));
+    // A lógica do dark mode continua a mesma e funciona perfeitamente
+    const bodyHasDarkMode = document.body.classList.contains("dark-mode");
+    if (bodyHasDarkMode) {
+      setIsDarkMode(true);
+    }
   }, []);
 
   const toggleTheme = () => {
@@ -18,8 +25,9 @@ export default function Header() {
   return (
     <header className={styles.header}>
       <nav className={styles.nav}>
+        {/* 4. A saudação agora é dinâmica, usando o email do usuário logado */}
         <Link to="/" className={styles.logo}>
-          👋 Hi João!
+          {user ? `👋 Olá, ${user.email}` : "Sistema de AC"}
         </Link>
 
         <div className={styles.actions}>
@@ -48,6 +56,12 @@ export default function Header() {
               )}
             </svg>
           </button>
+
+          {user && (
+            <button onClick={logout} className={styles.logoutBtn} aria-label="Sair">
+              <FiLogOut />
+            </button>
+          )}
         </div>
       </nav>
     </header>

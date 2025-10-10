@@ -59,7 +59,7 @@ app.post('/auth/login', async (req, res) => {
   }
 
   const token = jwt.sign(
-    { userId: user.id, role: user.role },
+    { userId: user.id, email: user.email, role: user.role }, // Dados do usuário no payload
     process.env.JWT_SECRET,
     { expiresIn: '8h' }
   );

@@ -42,6 +42,28 @@
   color: var(--font-color);
 }
 
+.logoutBtn {
+  background-color: transparent;
+  border: none;
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.3s;
+  color: var(--font-color); /* Garante que o ícone tenha a cor correta */
+  display: flex; /* Para alinhar o ícone dentro do botão */
+  align-items: center;
+  justify-content: center;
+}
+
+.logoutBtn:hover {
+  background-color: var(--row-hover-bg);
+}
+
+.logoutBtn svg {
+  width: 22px; /* Ajuste o tamanho do ícone de logout se necessário */
+  height: 22px;
+}
+
 /* Tela maior (desktop) */
 @media (min-width: 768px) {
   .logo {
