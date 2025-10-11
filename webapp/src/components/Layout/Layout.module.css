@@ -1,0 +1,10 @@
+.layoutContainer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Garante que o layout ocupe no mínimo a altura total da tela */
+}
+
+.mainContent {
+  flex: 1; /* Faz com que o conteúdo principal cresça e ocupe o espaço disponível */
+  width: 100%;
+}

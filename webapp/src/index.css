@@ -1,47 +1,74 @@
-/* ========================
-   VARIÁVEIS DE TEMA GLOBAL
-======================== */
+/* ==========================================================
+   ARQUIVO GLOBAL DE ESTILOS - PALETA DE CORES ROBUSTA
+========================================================== */
+
+/* 1. VARIÁVEIS DE TEMA (THEME)
+   ---------------------------------------------------------- */
 :root {
-  --primary-color: #4caf50; /* Verde suave */
-  --second-color: #1976d2;  /* Azul moderno */
-  --text-color: #ffffff;
-  --background-color: #f5f7fa;
-  --status-ligado: #e8f5e9;
-  --status-desligado: #ffebee;
-  --form-background: #ffffff;
-  --font-color: #212121;
-  --highlight-color: #666;
-  --border-color: #e0e0e0;
-  --row-even-bg: #f9f9f9;
-  --row-odd-bg: #ffffff;
-  --row-hover-bg: #f1f1f1;
-  --link-color: #2196f3;
-  --shadow-color: rgba(0, 0, 0, 0.05);
-  --shadow-dark: rgba(0, 0, 0, 0.15);
+  /* Ações (Botões, links, etc) */
+  --primary: #007aff;         /* Azul vibrante da Apple */
+  --primary-hover: #005ecb;    /* Azul mais escuro para hover */
+  --secondary: #6c757d;      /* Cinza neutro para ações secundárias */
+  --secondary-hover: #5a6268;
+  --text-on-primary: #ffffff; /* Texto branco para botões primários e secundários */
+
+  /* Backgrounds */
+  --bg-primary: #f8f9fa;      /* Fundo principal da página (quase branco) */
+  --bg-secondary: #ffffff;    /* Fundo de cards, modais, etc. */
+
+  /* Textos */
+  --text-primary: #212529;    /* Texto principal (preto suave) */
+  --text-secondary: #6c757d;  /* Texto secundário (cinza) */
+
+  /* Outros */
+  --border: #dee2e6;          /* Cor de bordas */
+  --shadow: rgba(0, 0, 0, 0.08);
+
+  /* Status */
+  --status-success: #28a745;     /* Verde para 'ligado' */
+  --status-error: #dc3545;       /* Vermelho para 'desligado' */
+  --bg-status-success: #e9f7ef;
+  --bg-status-error: #fbebed;
+
+  /* ...outras variáveis... */
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+  --bg-hover: #e9ecef; 
 }
 
 body.dark-mode {
-  --primary-color: #333;
-  --second-color: #1976d2;
-  --text-color: #e0e0e0;
-  --background-color: #121212;
-  --status-ligado: #4caf50;
-  --status-desligado: #ef5350;
-  --form-background: #1e1e1e;
-  --font-color: #e0e0e0;
-  --highlight-color: #aaaaaa;
-  --border-color: #424242;
-  --row-even-bg: #1e1e1e;
-  --row-odd-bg: #191919;
-  --row-hover-bg: #2c2c2c;
-  --link-color: #64b5f6;
-  --shadow-color: rgba(255, 255, 255, 0.05);
-  --shadow-dark: rgba(255, 255, 255, 0.15);
+  /* Ações */
+  --primary: #0a84ff;         /* Azul um pouco mais brilhante para o modo escuro */
+  --primary-hover: #0060d1;
+  --secondary: #8e8e93;      /* Cinza mais claro */
+  --secondary-hover: #636366;
+  --text-on-primary: #ffffff;
+
+  /* Backgrounds */
+  --bg-primary: #000000;      /* Fundo preto puro (melhor para telas OLED) */
+  --bg-secondary: #1c1c1e;    /* Fundo de cards (cinza muito escuro) */
+  
+  /* Textos */
+  --text-primary: #f2f2f7;     /* Texto principal (quase branco) */
+  --text-secondary: #8e8e93;  /* Texto secundário (cinza claro) */
+  
+  /* Outros */
+  --border: #38383a;
+  --shadow: rgba(255, 255, 255, 0.1);
+
+  /* Status */
+  --status-success: #30d158;
+  --status-error: #ff453a;
+  --bg-status-success: #1c3d25;
+  --bg-status-error: #4f1d20;
+
+  /* ...outras variáveis... */
+  --overlay-bg: rgba(0, 0, 0, 0.8);
+  --bg-hover: #2c2c2e;  
 }
 
-/* ========================
-   RESET E BASE
-======================== */
+
+/* 2. RESET BÁSICO E ESTILOS GLOBAIS (sem alterações no seu código existente)
+   ---------------------------------------------------------- */
 * {
   margin: 0;
   padding: 0;
@@ -50,24 +77,34 @@ body.dark-mode {
 
 html {
   scroll-behavior: smooth;
+  height: 100%;
 }
 
 body {
   font-family: "Inter", "Segoe UI", "Helvetica Neue", sans-serif;
-  background-color: var(--background-color);
-  color: var(--font-color);
+  background-color: var(--bg-primary); /* USA A NOVA VARIÁVEL */
+  color: var(--text-primary);       /* USA A NOVA VARIÁVEL */
   line-height: 1.6;
   font-size: 16px;
-}
-
-/* Estilo base para ícones */
-.icon {
-  width: 22px;
-  height: 22px;
-  color: var(--font-color);
-  transition: color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100%;
 }
 
 main {
-  padding-bottom: 70px; /* espaço para a barra de navegação */
+  padding-bottom: 80px; 
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  /* ADICIONADO: Cor padrão para texto de botão */
+  color: var(--primary);
 }

@@ -110,7 +110,6 @@
   padding: 20px 0;
 }
 
-
 .unitsSection {
   display: flex;
   flex-wrap: wrap;
@@ -118,42 +117,17 @@
   justify-content: center;
 }
 
-/* 2 salas por linha (mobile/tablet) */
-@media (min-width: 0px) {
-  .unitsSection > * {
-    flex: 1 1 calc(50% - 20px);
-    max-width: calc(50% - 20px);
-  }
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
 
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
+  padding: 1.5rem;
 }
 
-/* 3 salas por linha (desktop) */
-@media (min-width: 900px) {
-  .unitsSection > * {
-    flex: 1 1 calc(33.333% - 20px);
-    max-width: calc(33.333% - 20px);
-  }
-}
-
-/* Responsivo para tablets e acima */
-@media (min-width: 600px) {
-  .projectsSection {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .projectCard {
-    width: calc(50% - 10px);
-  }
-}
-
-/* Responsivo para desktops */
-@media (min-width: 900px) {
-  .projectCard {
-    width: calc(33.333% - 10px);
-  }
+.unitsSection {
+  display: grid;
+  /* Cria colunas que têm no mínimo 300px, e se ajustam para preencher o espaço. 
+     Isso cria uma grade responsiva sem precisar de media queries! */
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem; /* Espaçamento consistente entre todos os cards */
 }

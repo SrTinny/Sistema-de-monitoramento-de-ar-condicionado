@@ -2,29 +2,32 @@ import React, { useContext } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from '../header/Header';
 import BottomNavBar from '../bottomNavBar/BottomNavBar';
-import AddRoomForm from '../addRoomForm/AddRoomForm'; // 👈 Importe o formulário
-import { RoomContext } from '../../contexts/RoomContext'; // 👈 Importe o contexto
+import AddRoomForm from '../addRoomForm/AddRoomForm';
+import { RoomContext } from '../../contexts/RoomContext';
+import styles from './Layout.module.css';
 
 const Layout = () => {
-  // Pega o estado e as funções do contexto
   const { isFormOpen, addRoom, closeForm } = useContext(RoomContext);
 
   return (
-    <>
+    // 👇 Envolvemos tudo em um container principal
+    <div className={styles.layoutContainer}>
       <Header />
-      <main>
+      
+      {/* 👇 O <main> agora tem uma classe para fazê-lo crescer */}
+      <main className={styles.mainContent}>
         <Outlet />
       </main>
+      
       <BottomNavBar />
 
-      {/* Renderização condicional do formulário */}
       {isFormOpen && (
         <AddRoomForm 
           onAddRoom={addRoom} 
           onClose={closeForm} 
         />
       )}
-    </>
+    </div>
   );
 };
 

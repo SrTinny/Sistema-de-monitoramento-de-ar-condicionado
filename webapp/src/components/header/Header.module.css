@@ -1,77 +1,67 @@
 .header {
-  background-color: var(--background-color);
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-secondary); /* Usa o fundo de cards/modais */
+  padding: 1rem 1.5rem; /* Espaçamento com 'rem' */
+  border-bottom: 1px solid var(--border);
+  position: sticky; /* Faz o header ficar fixo no topo ao rolar a página */
+  top: 0;
+  z-index: 100;
 }
 
 .nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  max-width: 1200px; /* Limita a largura do conteúdo em telas grandes */
+  margin: 0 auto; /* Centraliza o conteúdo */
 }
 
 .logo {
-  font-size: 20px;
-  font-weight: bold;
-  color: var(--font-color);
+  font-size: 1.25rem; /* ~20px */
+  font-weight: 600;
+  color: var(--text-primary);
   text-decoration: none;
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.5rem; /* Espaçamento entre os botões */
 }
 
-.toggleBtn {
+/* ==============================================
+   MELHORIA: CLASSE ÚNICA PARA BOTÕES DE AÇÃO
+============================================== */
+.actionButton {
   background-color: transparent;
   border: none;
-  padding: 8px;
+  padding: 0.5rem; /* 8px */
   border-radius: 50%;
   cursor: pointer;
-  transition: background 0.3s;
-}
-
-.toggleBtn:hover {
-  background-color: var(--row-hover-bg);
-}
-
-.icon {
-  width: 24px;
-  height: 24px;
-  color: var(--font-color);
-}
-
-.logoutBtn {
-  background-color: transparent;
-  border: none;
-  padding: 8px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background 0.3s;
-  color: var(--font-color); /* Garante que o ícone tenha a cor correta */
-  display: flex; /* Para alinhar o ícone dentro do botão */
+  transition: background-color 0.2s ease;
+  display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.logoutBtn:hover {
-  background-color: var(--row-hover-bg);
+.actionButton:hover {
+  background-color: var(--bg-hover); /* Usa a nova variável de hover */
 }
 
-.logoutBtn svg {
-  width: 22px; /* Ajuste o tamanho do ícone de logout se necessário */
-  height: 22px;
+.actionButton .icon {
+  width: 24px;
+  height: 24px;
+  color: var(--text-secondary); /* Cor sutil para ícones */
+  transition: color 0.2s ease;
 }
 
-/* Tela maior (desktop) */
-@media (min-width: 768px) {
-  .logo {
-    font-size: 24px;
-  }
-
-  .icon {
-    width: 28px;
-    height: 28px;
-  }
+.actionButton:hover .icon {
+  color: var(--text-primary); /* Cor mais forte no hover */
 }
+
+
+/* ==============================================
+   MEDIA QUERY REMOVIDA
+   O layout já é fluido e não precisa de ajustes
+   de tamanho de ícone para essa pequena variação.
+   Isso simplifica o código.
+============================================== */

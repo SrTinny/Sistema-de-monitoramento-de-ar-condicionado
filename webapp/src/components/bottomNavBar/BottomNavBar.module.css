@@ -3,31 +3,43 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  background-color: var(--form-background);
-  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-secondary); /* Usa o fundo de cards/modais */
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 12px var(--shadow);
   display: flex;
   justify-content: space-around;
-  align-items: center;
-  padding: 10px 0;
-  box-shadow: 0 -2px 8px var(--shadow-color);
+  align-items: stretch; /* Faz os itens esticarem verticalmente */
+  height: 65px; /* Altura fixa para melhor ergonomia */
   z-index: 100;
 }
 
+/* Estilo base para todos os itens, sejam links (a) ou botões (button) */
 .navItem {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 12px;
-  color: var(--font-color);
+  justify-content: center;
+  flex: 1; /* Faz cada item ocupar o mesmo espaço */
+  gap: 4px;
+  font-size: 0.75rem; /* 12px */
+  color: var(--text-secondary); /* Cor padrão para itens inativos */
   text-decoration: none;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
+  padding: 0.5rem 0;
 }
 
 .navItem:hover {
-  color: var(--primary-color);
+  color: var(--text-primary); /* Escurece um pouco no hover */
 }
 
-.navIcon {
-  font-size: 24px;
-  margin-bottom: 4px;
+/* ==============================================
+   A MELHORIA MAIS IMPORTANTE: O ESTADO ATIVO
+============================================== */
+.active {
+  color: var(--primary); /* Usa a cor primária para o item ativo! */
+  font-weight: 600;
+}
+
+.icon {
+  font-size: 1.5rem; /* 24px */
 }

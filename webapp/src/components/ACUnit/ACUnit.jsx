@@ -29,7 +29,7 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
 
         <p>
           Status:{" "}
-          <span className={`${styles.status} ${styles[status]}`}>
+          <span className={`${styles.statusText} ${styles[status]}`}>
             {status === "ligado" ? "Ligado" : "Desligado"}
           </span>
         </p>

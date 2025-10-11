@@ -1,18 +1,18 @@
-import { useState } from 'react';
-import styles from './AddRoomForm.module.css';
+import { useState } from "react";
+import styles from "./AddRoomForm.module.css";
 
 // O componente agora recebe as funções de adicionar e fechar como props
 export default function AddRoomForm({ onAddRoom, onClose }) {
-  const [name, setName] = useState('');
-  const [room, setRoom] = useState('');
-  const [error, setError] = useState('');
+  const [name, setName] = useState("");
+  const [room, setRoom] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(''); // Limpa erros antigos
+    setError(""); // Limpa erros antigos
 
     if (!name.trim() || !room.trim()) {
-      setError('Por favor, preencha todos os campos.');
+      setError("Por favor, preencha todos os campos.");
       return;
     }
 
@@ -22,16 +22,29 @@ export default function AddRoomForm({ onAddRoom, onClose }) {
       // O onClose já é chamado dentro do addRoom no contexto, mas podemos garantir aqui também
       onClose();
     } catch (err) {
-      setError('Ocorreu um erro ao adicionar a sala.');
+      setError("Ocorreu um erro ao adicionar a sala.");
       console.error(err);
     }
   };
 
   return (
-    // A classe 'overlay' permite fechar o modal clicando fora (lógica do App.jsx antigo)
-    <div className={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={styles.modal}>
-        <h2>Adicionar Nova Sala</h2>
+    // Renomeamos para .modalOverlay para clareza
+    <div
+      className={styles.modalOverlay}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      {/* Renomeamos para .modalContent */}
+      <div className={styles.modalContent}>
+        {/* 👇 ESTRUTURA DE CABEÇALHO ADICIONADA, IGUAL AO SETTINGSMODAL 👇 */}
+        <div className={styles.modalHeader}>
+          <h2>Adicionar Nova Sala</h2>
+          <button onClick={onClose} className={styles.closeButton}>
+            &times;
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit}>
           <div className={styles.inputGroup}>
             <label htmlFor="name">Nome do Ar (Ex: AC Sala 101)</label>
@@ -41,6 +54,7 @@ export default function AddRoomForm({ onAddRoom, onClose }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Digite o nome"
+              required
             />
           </div>
           <div className={styles.inputGroup}>
@@ -51,15 +65,20 @@ export default function AddRoomForm({ onAddRoom, onClose }) {
               value={room}
               onChange={(e) => setRoom(e.target.value)}
               placeholder="Digite o local"
+              required
             />
           </div>
           {error && <p className={styles.error}>{error}</p>}
           <div className={styles.buttonGroup}>
-            <button type="button" onClick={onClose} className={styles.cancelButton}>
-              Cancelar
-            </button>
-            <button type="submit" className={styles.addButton}>
+            <button type="submit" className={styles.saveButton}>
               Adicionar
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className={styles.cancelButton}
+            >
+              Cancelar
             </button>
           </div>
         </form>

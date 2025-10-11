@@ -1,93 +1,130 @@
 .unit {
-  width: 100%;
-  border-radius: 12px;
-  box-shadow: 0 6px 12px var(--shadow-color);
-  padding: 20px;
-  text-align: center;
-  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out;
-  margin-bottom: 20px;
+  background-color: var(--bg-secondary);   /* ANTES: --form-background */
+  border-radius: 16px;
+  border: 1px solid var(--border);         /* ANTES: --border-color */
+  box-shadow: 0 4px 12px var(--shadow);    /* ANTES: --shadow-color */
+  padding: 1.5rem;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .unit:hover {
-  transform: translateY(-8px);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px var(--shadow); /* Sombra um pouco mais forte no hover */
 }
 
+/* Os status agora usam as novas variáveis de background */
 .ligado {
-  background-color: var(--status-ligado);
+  background-color: var(--bg-status-success);
 }
-
 .desligado {
-  background-color: var(--status-desligado);
+  background-color: var(--bg-status-error);
+}
+.offline {
+  /* O estado offline agora usa o fundo padrão, parecendo "desativado" */
+  background-color: var(--bg-secondary);
+  opacity: 0.7; /* Adiciona uma opacidade para indicar inatividade */
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 0.5rem;
 }
 
 .title {
-  font-size: 1.4rem;
-  font-weight: bold;
-  color: var(--highlight-color);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary); /* ANTES: --font-color */
 }
 
 .icon {
   font-size: 1.5rem;
   cursor: pointer;
-  color: var(--second-color);
+  color: var(--text-secondary); /* ANTES: --highlight-color */
   transition: transform 0.3s ease, color 0.3s ease;
 }
 
 .icon:hover {
   transform: rotate(90deg);
-  color: var(--primary-color);
+  color: var(--primary); /* ANTES: --primary-color */
 }
 
-.status {
+.location {
+  font-size: 0.9rem;
+  color: var(--text-secondary); /* ANTES: --highlight-color */
+  margin-top: -12px;
+  margin-bottom: 0.5rem;
+}
+
+.statusText {
   font-weight: bold;
 }
-
-.status.ligado {
-  color: var(--primary-color);
+/* Cores do texto de status agora usam as variáveis diretas para alto contraste */
+.statusText.ligado {
+  color: var(--status-success); /* ANTES: Cor hardcoded #388e3c */
 }
-
-.status.desligado {
-  color: var(--second-color);
+.statusText.desligado {
+  color: var(--status-error); /* ANTES: Cor hardcoded #d32f2f */
+}
+.statusText.offline {
+  color: var(--text-secondary); /* ANTES: --highlight-color */
 }
 
 button {
-  background-color: var(--primary-color);
-  color: var(--text-color);
+  background-color: var(--primary);        /* ANTES: --primary-color */
+  color: var(--text-on-primary);           /* ANTES: --text-color. Garante o contraste. */
   border: none;
-  padding: 10px 20px;
+  padding: 12px 20px;
   border-radius: 8px;
   cursor: pointer;
-  margin: 15px 0;
-  font-size: 16px;
-  transition: background-color 0.3s ease;
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  width: 100%;
 }
 
 button:hover {
-  background-color: var(--second-color);
+  background-color: var(--primary-hover); /* ANTES: --second-color. Agora temos uma cor específica para hover. */
+  transform: scale(1.02);
 }
 
+/* ====================================
+   ESTILIZAÇÃO DO SLIDER DE TEMPERATURA
+==================================== */
 input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  margin-top: 10px;
+  height: 8px;
+  background: var(--border); /* ANTES: --border-color */
+  border-radius: 5px;
+  outline: none;
+  margin-top: 1rem;
 }
 
-/* Tablet */
-@media (min-width: 600px) {
-  .unit {
-    width: calc(50% - 10px);
-  }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--primary); /* ANTES: --second-color. Agora usa a cor primária. */
+  cursor: pointer;
+  border-radius: 50%;
+  border: 3px solid var(--bg-secondary); /* ANTES: --form-background */
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
 }
 
-/* Desktop */
-@media (min-width: 900px) {
-  .unit {
-    width: calc(33.333% - 20px);
-  }
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  cursor: pointer;
+  border-radius: 50%;
+  border: 3px solid var(--bg-secondary);
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
 }

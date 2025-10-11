@@ -31,7 +31,7 @@ export default function Header() {
         </Link>
 
         <div className={styles.actions}>
-          <button onClick={toggleTheme} className={styles.toggleBtn} aria-label="Alternar tema">
+          <button onClick={toggleTheme} className={styles.actionButton} aria-label="Alternar tema">
             <svg className={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
               {isDarkMode ? (
                 <path
@@ -58,8 +58,8 @@ export default function Header() {
           </button>
 
           {user && (
-            <button onClick={logout} className={styles.logoutBtn} aria-label="Sair">
-              <FiLogOut />
+            <button onClick={logout} className={styles.actionButton} aria-label="Sair">
+              <FiLogOut className={styles.icon} />
             </button>
           )}
         </div>
