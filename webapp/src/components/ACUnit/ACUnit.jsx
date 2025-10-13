@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
+import ReactDOM from "react-dom";
 import styles from "./ACUnit.module.css";
 import SettingsModal from "../settingsModal/SettingsModal";
+import { AuthContext } from "../../contexts/AuthContext";
 
 export default function ACUnit({ room, onToggle, onTempChange }) {
   const [showModal, setShowModal] = useState(false);
+  const { user } = useContext(AuthContext);
 
   const { name, room: roomLocation, status, temperature, deviceId } = room;
 
@@ -20,9 +23,12 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
       >
         <h2 className={styles.header}>
           <span className={styles.title}>{name}</span>
-          <span className={styles.icon} onClick={() => setShowModal(true)}>
-            ⚙
-          </span>
+          {/* 👇 4. CONDIÇÃO: Renderiza o ícone APENAS se o usuário for ADMIN 👇 */}
+          {user && user.role === "ADMIN" && (
+            <span className={styles.icon} onClick={() => setShowModal(true)}>
+              ⚙
+            </span>
+          )}
         </h2>
 
         <p className={styles.location}>{roomLocation}</p>

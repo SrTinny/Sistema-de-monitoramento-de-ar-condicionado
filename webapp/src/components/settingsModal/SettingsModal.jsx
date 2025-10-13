@@ -93,11 +93,15 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
             </button>
           </div>
         </form>
-        <div className={styles.deleteSection}>
-          <button onClick={handleDelete} className={styles.deleteButton}>
-            Deletar Sala
-          </button>
-        </div>
+
+        {/* 5. BOTÃO DE DELETAR, VISÍVEL APENAS PARA ADMIN */}
+        {user && user.role === "ADMIN" && (
+          <div className={styles.deleteSection}>
+            <button onClick={handleDelete} className={styles.deleteButton}>
+              Deletar Sala
+            </button>
+          </div>
+        )}
       </div>
     </div>,
     document.getElementById("modal-root") // 👈 3. ONDE O PORTAL VAI RENDERIZAR
