@@ -1,107 +1,110 @@
-# 🌎 Sistema de Monitoramento e Controle de Ar-Condicionado Inteligente ❄️  
+# 🌎 Sistema de Monitoramento e Controle de Ar-Condicionado via IoT ❄️
 
-Este projeto consiste em um **sistema web inteligente** integrado com um **ESP32** para **monitorar e controlar** ar-condicionados remotamente. Utilizando **sinais infravermelhos (IR)**, o sistema permite **ligar e desligar** o ar-condicionado via **interface web responsiva**, além de exibir **o estado em tempo real** e permitir **configurações dinâmicas**.  
+Bem-vindo ao Sistema de Monitoramento e Controle de Ar-Condicionado, um projeto full-stack desenvolvido como Trabalho de Conclusão de Curso (TCC). Esta aplicação web permite o gerenciamento e controle remoto de múltiplos aparelhos de ar-condicionado utilizando hardware ESP32, com uma arquitetura moderna e escalável de três camadas.
 
-🚀 **Tecnologias modernas como WebSockets, React.js e Node.js** garantem uma experiência fluida e comunicação eficiente com o ESP32.  
-
----
-
-## 🖥️ **Funcionalidades**
-✅ **Controle remoto via interface web** 🔄  
-✅ **Envio de comandos IR para o ar-condicionado** 📡  
-✅ **Monitoramento do estado em tempo real (ligado/desligado)** ⚡  
-✅ **Atualização automática via WebSockets** 🔥  
-✅ **Suporte a múltiplas salas e personalização da interface** 🏢  
-✅ **Design responsivo e alternância entre tema claro e escuro** 🌗  
+O sistema conta com autenticação de usuários, controle de acesso baseado em papéis (Administrador e Usuário Comum) e uma interface reativa e intuitiva construída com React.
 
 ---
 
-## 🛠️ **Tecnologias Utilizadas**
-### **🌐 Frontend**
-- **React.js** ⚛️ - Interface dinâmica e reativa.  
-- **TailwindCSS** 🎨 - Estilização moderna e responsiva.  
-- **WebSockets (Socket.io)** 📡 - Comunicação em tempo real.  
-- **Fetch API** 🔄 - Requisições HTTP para comunicação com o ESP32.  
+### ✨ Funcionalidades Principais
 
-### **🔧 Backend**
-- **Node.js + Express** 🌍 - API para gerenciamento das requisições.  
-- **Socket.io** 📡 - Comunicação bidirecional com a interface.  
-- **ESP32 WebServer** 🔥 - Processamento de comandos e envio de sinais IR.  
-
-### **📡 Hardware**
-- **ESP32** 🤖 - Microcontrolador responsável pelo envio dos comandos IR.  
-- **Módulo IR** 📡 - Transmissão e recepção de sinais infravermelhos.  
-- **Sensores e LEDs** 💡 - Simulação do controle de dispositivos.  
+* **autenticação Segura:** Sistema completo de registro e login com senhas criptografadas e tokens JWT.
+* **Painel de Controle Dinâmico:** Dashboard que exibe o status em tempo real de todos os aparelhos de ar-condicionado cadastrados.
+* **Controle de Acesso por Papel (Roles):**
+    * **Administradores:** Acesso total ao sistema, incluindo o gerenciamento completo (CRUD) dos aparelhos.
+    * **Usuários Comuns:** Acesso de visualização e controle básico (ligar/desligar, mudar temperatura).
+* **Gerenciamento Completo (CRUD):** Administradores podem adicionar, visualizar, editar e deletar salas/aparelhos através de modais interativos.
+* **Interface Adaptativa:** A UI esconde/mostra funcionalidades de acordo com o nível de permissão do usuário logado.
+* **Feedback Instantâneo:** Notificações "toast" para todas as ações (sucesso, erro, carregando), melhorando a experiência do usuário.
+* **Design Responsivo e Moderno:** Interface com tema claro e escuro, totalmente adaptável a desktops e dispositivos móveis.
 
 ---
 
-## 🚀 **Instalação e Configuração**
-### **1️⃣ Configuração do ESP32**
-1. **Instale o [PlatformIO](https://platformio.org/) no VS Code**.  
-2. Clone este repositório e abra a pasta no PlatformIO.  
-3. Configure o arquivo `platformio.ini`:  
-```ini
-[env:esp32dev]
-platform = espressif32
-board = esp32dev
-framework = arduino
-monitor_speed = 115200
+### 🛠️ Tecnologias Utilizadas
 
-lib_deps =
-    z3t0/IRremote@^3.9.0
-    Links2004/WebSockets@^2.3.3
-    bblanchon/ArduinoJson@^6.19.4
-```
-4. Compile e faça upload do código para o ESP32.  
+#### **🌐 Frontend (`webapp`)**
+* **React.js (Vite):** Para uma interface de usuário rápida e reativa.
+* **React Router:** Para gerenciamento de rotas e criação de rotas protegidas.
+* **Context API:** Para gerenciamento de estado global de forma escalável (`AuthContext`, `RoomContext`).
+* **Axios:** Para comunicação centralizada e segura com a API do backend.
+* **CSS Modules:** Para estilização de componentes de forma isolada e organizada.
+* **React Hot Toast:** Para notificações elegantes e informativas.
+
+#### **🔧 Backend**
+* **Node.js & Express.js:** Para a construção de uma API REST robusta e eficiente.
+* **Prisma:** Como ORM para uma interação moderna e segura com o banco de dados.
+* **PostgreSQL (Neon):** Banco de dados relacional, escalável e hospedado na nuvem.
+* **JSON Web Token (JWT):** Para a implementação de autenticação stateless.
+* **Bcrypt:** Para a criptografia segura de senhas de usuários.
+
+#### **📡 Firmware (Hardware)**
+* **ESP32:** Microcontrolador com conectividade Wi-Fi.
+* **Arduino C++ (PlatformIO):** Para a programação do firmware.
+* **Bibliotecas:** `HTTPClient` para comunicação com o backend e `IRremote` para controle do ar-condicionado.
 
 ---
 
-### **2️⃣ Configuração do Servidor Backend (Opcional)**
-Se estiver utilizando um **servidor Node.js** para gerenciar requisições, siga estes passos:  
+### 🏗️ Arquitetura do Sistema
+
+O projeto opera em uma arquitetura de três camadas, onde o Backend atua como o cérebro central.
+
+`[Frontend (React)] ↔️ [Backend API (Node.js)] ↔️ [Firmware (ESP32)]`
+
+1.  **Cadastro:** Um **Administrador** cadastra uma nova sala no sistema web. O backend gera um `deviceId` único para o aparelho.
+2.  **Provisionamento:** O `deviceId` gerado é gravado no código do **ESP32**, que é então instalado na sala correspondente.
+3.  **Comunicação (Heartbeat):** O **ESP32** conecta-se ao Wi-Fi e envia periodicamente um "heartbeat" para a API do backend, reportando seu status atual.
+4.  **Comando:** Um **Usuário** (Admin ou Comum) envia um comando (ex: "Ligar") através do **Frontend**. A requisição vai para o backend.
+5.  **Enfileiramento:** O **Backend** armazena o comando como um "comando pendente" no banco de dados para aquele `deviceId`.
+6.  **Execução:** No próximo heartbeat, o **ESP32** recebe o comando pendente na resposta da API, o executa (enviando o sinal IR correspondente) e, no heartbeat seguinte, reporta seu novo status.
+
+---
+
+### 🚀 Instalação e Execução
+
+**Pré-requisitos:**
+* Node.js (v18 ou superior)
+* Git
+* VS Code com a extensão PlatformIO
+
+**1. Clone o Repositório**
 ```sh
-git clone https://github.com/seu-repo/sistema-monitoramento-ar-condicionado.git
+git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
+cd seu-repositorio
+```
+
+**2. Configure o Backend**
+```sh
 cd backend
+
+# Crie um arquivo .env a partir do exemplo e adicione suas variáveis
+# (DATABASE_URL do Neon e um JWT_SECRET)
+cp .env.example .env 
+
+# Instale as dependências
 npm install
-node server.js
+
+# Aplique as migrações do banco de dados
+npx prisma migrate dev
+
+# Inicie o servidor de desenvolvimento
+npm run dev
 ```
-Isso iniciará o servidor na porta `3000`, permitindo comunicação com o ESP32.  
+O backend estará rodando em `http://localhost:3001`.
 
----
-
-### **3️⃣ Configuração do Frontend**
-Se estiver usando **React.js** como interface, siga estes passos:  
+**3. Configure o Frontend**
 ```sh
-git clone https://github.com/seu-repo/frontend-controle-ar.git
-cd frontend
+cd webapp
+
+# Instale as dependências
 npm install
-npm start
+
+# Inicie o servidor de desenvolvimento
+npm run dev
 ```
-Isso iniciará o frontend na porta `3000`, pronto para conectar ao ESP32.  
+O frontend estará acessível em `http://localhost:5173`.
 
----
-
-## 📡 **Como Funciona?**
-1️⃣ **O ESP32 cria um servidor HTTP** e aceita comandos para ligar/desligar o ar-condicionado.  
-2️⃣ **Os sinais IR são enviados pelo ESP32** para o controle do AC.  
-3️⃣ **A interface web comunica-se com o ESP32** via WebSockets, garantindo **atualizações instantâneas**.  
-4️⃣ **Os botões físicos no ESP32 também alteram o estado** e refletem no site automaticamente.  
-
----
-
-## 📌 **Melhorias Futuras**
-🔹 **Automação baseada em sensores de temperatura e presença**  
-🔹 **Integração com assistentes virtuais (Alexa, Google Assistant)**  
-🔹 **Monitoramento de consumo energético em tempo real**  
-🔹 **Compatibilidade com múltiplos modelos de ar-condicionado**  
-
----
-
-## 🤝 **Contribuição**
-Contribuições são bem-vindas! Para colaborar:  
-1️⃣ Faça um fork do repositório.  
-2️⃣ Crie uma branch (`feature-nova-funcionalidade`).  
-3️⃣ Envie um pull request!  
-
-📩 **Dúvidas? Contate-me em** [victor.eng.dev@gmail.com](mailto:victor.eng.dev@gmail.com)  
-
-
+**4. Configure o Firmware**
+1.  Abra a pasta `firmware` no VS Code com o PlatformIO instalado.
+2.  No arquivo `src/main.cpp`, atualize as credenciais do seu Wi-Fi.
+3.  Atualize a variável `deviceId` com um ID gerado pelo backend ao cadastrar uma nova sala.
+4.  Compile e faça o upload do código para o seu ESP32.
