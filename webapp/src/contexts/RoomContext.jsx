@@ -55,6 +55,18 @@ export const RoomProvider = ({ children }) => {
     }
   };
 
+  const deleteRoom = async (roomId) => {
+    try {
+      await api.delete(`/api/rooms/${roomId}`);
+      // Após deletar, atualizamos a lista de salas removendo a que foi deletada
+      // É mais rápido do que buscar tudo do servidor novamente
+      setRooms((prevRooms) => prevRooms.filter((room) => room.id !== roomId));
+    } catch (error) {
+      console.error("Erro ao deletar a sala:", error);
+      throw error; // Lança o erro para a UI poder tratá-lo
+    }
+  };
+
   const openForm = () => setIsFormOpen(true);
   const closeForm = () => setIsFormOpen(false);
 
@@ -67,6 +79,7 @@ export const RoomProvider = ({ children }) => {
         addRoom,
         sendCommand,
         updateRoom,
+        deleteRoom,
         isFormOpen,
         openForm,
         closeForm,

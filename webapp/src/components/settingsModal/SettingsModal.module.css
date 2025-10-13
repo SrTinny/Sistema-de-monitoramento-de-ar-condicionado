@@ -12,13 +12,13 @@
 .modal {
   position: fixed;
   /* 'inset: 0' é uma forma moderna de dizer top, right, bottom e left = 0 */
-  inset: 0; 
+  inset: 0;
   background-color: var(--overlay-bg);
-  
+
   /* Essas 3 linhas são responsáveis pela centralização */
   display: flex;
   justify-content: center; /* Centraliza horizontalmente */
-  align-items: center;     /* Centraliza verticalmente */
+  align-items: center; /* Centraliza verticalmente */
 
   z-index: 1000;
   padding: 1rem;
@@ -104,4 +104,30 @@
 }
 .buttonGroup .cancelButton:hover {
   background-color: var(--secondary-hover); /* EFEITO DE HOVER! */
+}
+
+.deleteSection {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.deleteButton {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1rem;
+
+  /* Cor vermelha para indicar perigo, com texto branco */
+  background-color: var(--status-error);
+  color: var(--text-on-primary);
+
+  transition: opacity 0.2s;
+}
+
+.deleteButton:hover {
+  opacity: 0.85;
 }
