@@ -39,20 +39,34 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  gap: 1rem; /* ADICIONADO: Garante um espaço seguro entre o título e o botão */
 }
 
+.modalHeader h2, /* Ajustado para funcionar com h2 ou h3 */
 .modalHeader h3 {
-  font-size: 1.25rem;
+  font-size: 1.125rem; /* REDUZIDO: ~18px, um tamanho mais elegante para modais */
   font-weight: 600;
-  color: var(--text-primary); /* ANTES: Sem cor específica */
+  color: var(--text-primary);
+  margin: 0;
+  padding-right: 0; /* REMOVIDO: Não precisamos mais do padding, o 'gap' cuida disso */
+  line-height: 1.4; /* Melhora a legibilidade se o título ainda quebrar em 2 linhas */
 }
 
-.closeButton {
-  /* ... */
-  color: var(--text-secondary); /* ANTES: --highlight-color */
+.modalHeader .closeButton {
+  background: none !important;
+  color: var(--text-secondary);
+  font-size: 1.5rem; /* REDUZIDO: O 'X' fica mais sutil e moderno */
+  font-weight: normal;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem; /* Padding para facilitar a área de clique */
+  flex-shrink: 0; /* Impede que o botão seja espremido */
+  transition: color 0.2s;
 }
-.closeButton:hover {
-  color: var(--text-primary); /* ANTES: --font-color */
+
+.modalHeader .closeButton:hover {
+  color: var(--text-primary);
+  background: none;
 }
 
 /* ... (inputGroup sem alteração) ... */

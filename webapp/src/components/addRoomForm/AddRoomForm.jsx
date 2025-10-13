@@ -39,7 +39,7 @@ export default function AddRoomForm({ onAddRoom, onClose }) {
       <div className={styles.modalContent}>
         {/* 👇 ESTRUTURA DE CABEÇALHO ADICIONADA, IGUAL AO SETTINGSMODAL 👇 */}
         <div className={styles.modalHeader}>
-          <h2>Adicionar Nova Sala</h2>
+          <h3>Adicionar Nova Sala</h3>
           <button onClick={onClose} className={styles.closeButton}>
             &times;
           </button>
