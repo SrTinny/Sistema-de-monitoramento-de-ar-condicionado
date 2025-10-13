@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useCallback } from "react";
+import toast from "react-hot-toast";
 import api from "../services/api";
 
 export const RoomContext = createContext(null);
@@ -21,15 +22,21 @@ export const RoomProvider = ({ children }) => {
     }
   }, []);
 
-  // Função para adicionar uma nova sala (vamos usar no AddRoomForm)
+  // Função para adicionar uma nova sala
   const addRoom = async (name, room) => {
-    try {
-      await api.post("/api/rooms", { name, room });
-      fetchRooms(); // Após adicionar, busca a lista atualizada
-    } catch (error) {
-      console.error("Erro ao adicionar sala:", error);
-      throw error;
-    }
+    const promise = api.post("/api/rooms", { name, room });
+
+    toast.promise(promise, {
+      loading: "Adicionando nova sala...",
+      success: (response) => {
+        fetchRooms(); // Atualiza a lista após o sucesso
+        closeForm();
+        return "Sala adicionada com sucesso!";
+      },
+      error: "Erro ao adicionar a sala.",
+    });
+
+    return promise; // Retorna a promise para tratamento adicional se necessário
   };
 
   // Função para enviar um comando para um AC
@@ -44,27 +51,36 @@ export const RoomProvider = ({ children }) => {
     }
   };
 
-  // Função para atualizar os dados de uma sala (se necessário no futuro)
-  const updateRoom = async (roomId, dataToUpdate) => {
-    try {
-      await api.put(`/api/rooms/${roomId}`, dataToUpdate);
-      fetchRooms(); // Após atualizar, busca a lista para refletir as mudanças
-    } catch (error) {
-      console.error("Erro ao atualizar a sala:", error);
-      throw error;
-    }
+  // Função para atualizar os dados de uma sala
+ const updateRoom = async (roomId, dataToUpdate) => {
+    const promise = api.put(`/api/rooms/${roomId}`, dataToUpdate);
+
+    toast.promise(promise, {
+      loading: 'Salvando alterações...',
+      success: (response) => {
+        fetchRooms(); // Atualiza a lista após o sucesso
+        return 'Alterações salvas com sucesso!';
+      },
+      error: 'Erro ao salvar as alterações.',
+    });
+
+    return promise;
   };
 
+  // Função para deletar uma sala
   const deleteRoom = async (roomId) => {
-    try {
-      await api.delete(`/api/rooms/${roomId}`);
-      // Após deletar, atualizamos a lista de salas removendo a que foi deletada
-      // É mais rápido do que buscar tudo do servidor novamente
-      setRooms((prevRooms) => prevRooms.filter((room) => room.id !== roomId));
-    } catch (error) {
-      console.error("Erro ao deletar a sala:", error);
-      throw error; // Lança o erro para a UI poder tratá-lo
-    }
+    const promise = api.delete(`/api/rooms/${roomId}`);
+
+    toast.promise(promise, {
+      loading: 'Deletando sala...',
+      success: () => {
+        setRooms((prevRooms) => prevRooms.filter((room) => room.id !== roomId));
+        return 'Sala deletada com sucesso!';
+      },
+      error: 'Erro ao deletar a sala.',
+    });
+    
+    return promise;
   };
 
   const openForm = () => setIsFormOpen(true);

@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useContext } from "react";
-import ReactDOM from "react-dom"; // 👈 1. IMPORTE O ReactDOM
+import ReactDOM from "react-dom";
 import styles from "./SettingsModal.module.css";
 import { RoomContext } from "../../contexts/RoomContext";
+import { AuthContext } from "../../contexts/AuthContext";
 
 export default function SettingsModal({ visible, room, onClose, onSave }) {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const { deleteRoom } = useContext(RoomContext);
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
     if (room && visible) {
@@ -33,7 +35,7 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
         await deleteRoom(room.id);
         onClose(); // Fecha o modal após deletar com sucesso
       } catch (error) {
-        alert("Ocorreu um erro ao deletar a sala."); // Feedback de erro simples
+        console.error("Erro no componente ao deletar:", error);
       }
     }
   };
