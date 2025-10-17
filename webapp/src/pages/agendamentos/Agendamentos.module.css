@@ -1,15 +1,125 @@
-.container {
-  padding: 20px;
-  padding-bottom: 80px;
-  background-color: var(--background-color);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.container{
+  padding: 1.5rem;
+  min-height: calc(100vh - 64px);
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
-.titulo {
-  color: var(--primary-color);
-  font-size: 24px;
-  font-weight: bold;
+.title{
+  font-size: 1.6rem;
+  margin-bottom: 1rem;
+}
+
+.grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 800px){
+  .grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+.form{
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 6px 18px var(--shadow);
+}
+
+.label{
+  display: block;
+  margin-bottom: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.select, .input{
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  margin-top: 0.35rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.submit{
+  margin-top: 0.75rem;
+  width: 100%;
+  padding: 0.65rem;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-hover));
+  color: var(--text-on-primary);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.listContainer{
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.subTitle{
+  margin: 0 0 0.5rem 0;
+  color: var(--text-secondary);
+}
+
+.list{
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.item{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+}
+
+.itemTitle{
+  font-weight: 700;
+}
+
+.itemMeta{
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.itemDate{
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.itemAction{
+  margin-top: 0.25rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.deleteButton{
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  color: var(--status-error);
+  cursor: pointer;
+}
+
+.empty{
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
 }
