@@ -204,6 +204,57 @@ app.post('/api/command', authenticateToken, async (req, res) => {
   }
 });
 
+// --- ROTAS CRUD PARA AGENDAMENTOS ---
+
+// ROTA 'CREATE': Criar um novo agendamento
+app.post('/api/schedules', authenticateToken, async (req, res) => {
+  const { airConditionerId, action, scheduledAt } = req.body;
+  try {
+    const newSchedule = await prisma.schedule.create({
+      data: {
+        airConditionerId,
+        action,
+        scheduledAt: new Date(scheduledAt),
+      },
+    });
+    res.status(201).json(newSchedule);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Não foi possível criar o agendamento.' });
+  }
+});
+
+// ROTA 'READ': Listar agendamentos pendentes
+app.get('/api/schedules', authenticateToken, async (req, res) => {
+  try {
+    const schedules = await prisma.schedule.findMany({
+      where: { status: 'PENDENTE' },
+      orderBy: { scheduledAt: 'asc' },
+      include: {
+        airConditioner: { // Inclui o nome e a sala para exibição no frontend
+          select: { name: true, room: true },
+        },
+      },
+    });
+    res.status(200).json(schedules);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Não foi possível buscar os agendamentos.' });
+  }
+});
+
+// ROTA 'DELETE': Deletar um agendamento
+app.delete('/api/schedules/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.schedule.delete({ where: { id } });
+    res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    res.status(404).json({ error: 'Agendamento não encontrado.' });
+  }
+});
+
 
 // ==========================================================
 // ROTA PÚBLICA PARA OS ESP32s (DISPOSITIVOS IoT)

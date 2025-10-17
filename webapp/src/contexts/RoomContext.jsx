@@ -7,6 +7,7 @@ export const RoomContext = createContext(null);
 export const RoomProvider = ({ children }) => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [schedules, setSchedules] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false); // Estado para controlar o formulário
 
   // Função para buscar todas as salas do backend
@@ -19,6 +20,16 @@ export const RoomProvider = ({ children }) => {
       console.error("Erro ao buscar salas:", error);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchSchedules = useCallback(async () => {
+    try {
+      const response = await api.get('/api/schedules');
+      setSchedules(response.data);
+    } catch (error) {
+      console.error("Erro ao buscar agendamentos:", error);
+      toast.error("Não foi possível carregar os agendamentos.");
     }
   }, []);
 
@@ -86,16 +97,46 @@ export const RoomProvider = ({ children }) => {
   const openForm = () => setIsFormOpen(true);
   const closeForm = () => setIsFormOpen(false);
 
+  const addSchedule = async (scheduleData) => {
+    const promise = api.post('/api/schedules', scheduleData);
+    toast.promise(promise, {
+      loading: 'Criando agendamento...',
+      success: () => {
+        fetchSchedules(); // Atualiza a lista
+        return 'Agendamento criado com sucesso!';
+      },
+      error: 'Erro ao criar agendamento.',
+    });
+    return promise;
+  };
+
+  const deleteSchedule = async (scheduleId) => {
+    const promise = api.delete(`/api/schedules/${scheduleId}`);
+    toast.promise(promise, {
+      loading: 'Cancelando agendamento...',
+      success: () => {
+        setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
+        return 'Agendamento cancelado!';
+      },
+      error: 'Erro ao cancelar agendamento.',
+    });
+    return promise;
+  };
+
   return (
     <RoomContext.Provider
       value={{
         rooms,
         loading,
+        schedules,
+        fetchSchedules,
         fetchRooms,
         addRoom,
         sendCommand,
         updateRoom,
         deleteRoom,
+        addSchedule,
+        deleteSchedule,
         isFormOpen,
         openForm,
         closeForm,
