@@ -16,6 +16,17 @@ enum Role {
   ADMIN
 }
 
+enum ScheduleAction {
+  LIGAR
+  DESLIGAR
+}
+
+enum ScheduleStatus {
+  PENDENTE
+  EXECUTADO
+  CANCELADO
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -43,4 +54,19 @@ model AirConditioner {
   // Timestamps
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt // Atualizado automaticamente em cada alteração
+  
+  // Relação com agendamentos (schedules)
+  schedules      Schedule[]
+}
+
+model Schedule {
+  id               String         @id @default(cuid())
+  scheduledAt      DateTime
+  action           ScheduleAction
+  status           ScheduleStatus @default(PENDENTE)
+  createdAt        DateTime       @default(now())
+
+  // Relação com o Ar Condicionado
+  airConditionerId String
+  airConditioner   AirConditioner @relation(fields: [airConditionerId], references: [id], onDelete: Cascade)
 }
