@@ -111,12 +111,17 @@
 }
 
 .deleteButton{
-  background: transparent;
-  border: 1px solid var(--border);
-  padding: 0.5rem 0.7rem;
+  background: var(--status-error);
+  border: none;
+  padding: 0.5rem 0.9rem;
   border-radius: 8px;
-  color: var(--status-error);
+  color: #fff;
   cursor: pointer;
+  font-weight: 600;
+}
+
+.deleteButton:hover{
+  filter: brightness(0.95);
 }
 
 .empty{

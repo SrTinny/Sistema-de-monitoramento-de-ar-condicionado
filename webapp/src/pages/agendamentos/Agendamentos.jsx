@@ -57,6 +57,9 @@ export default function Agendamentos() {
   };
 
   const handleDelete = async (id) => {
+    const confirmed = window.confirm('Confirma o cancelamento deste agendamento?');
+    if (!confirmed) return;
+
     try {
       await deleteSchedule(id);
     } catch (err) {
