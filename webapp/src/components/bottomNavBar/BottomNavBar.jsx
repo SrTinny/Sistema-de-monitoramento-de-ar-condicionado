@@ -35,8 +35,6 @@ export default function BottomNavBar() {
         <FiCalendar className={styles.icon} />
         <span>Agenda</span>
       </NavLink>
-
-      {/* botão de Config removido conforme solicitado */}
     </nav>
   );
 }
