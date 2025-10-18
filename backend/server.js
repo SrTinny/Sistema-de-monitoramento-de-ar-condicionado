@@ -299,3 +299,46 @@ app.post('/api/heartbeat', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
 });
+
+// ==========================================================
+// EXECUTOR DE AGENDAMENTOS (RODA A CADA 30s)
+// ==========================================================
+const executePendingSchedules = async () => {
+  try {
+    const now = new Date();
+    const pending = await prisma.schedule.findMany({
+      where: {
+        status: 'PENDENTE',
+        scheduledAt: {
+          lte: now,
+        },
+      },
+    });
+
+    if (!pending || pending.length === 0) return;
+
+    for (const s of pending) {
+      try {
+        // Determina o comando a enviar para o AC (string em português, compatível com pendingCommand existente)
+        const command = s.action === 'LIGAR' ? 'ligar' : 'desligar';
+
+        // Faz a atualização em transação: marca schedule como EXECUTADO e seta pendingCommand no AC
+        await prisma.$transaction([
+          prisma.schedule.update({ where: { id: s.id }, data: { status: 'EXECUTADO' } }),
+          prisma.airConditioner.update({ where: { id: s.airConditionerId }, data: { pendingCommand: command } }),
+        ]);
+
+        console.log(`⏱️ Executado agendamento ${s.id} -> dispositivo ${s.airConditionerId} comando=${command}`);
+      } catch (innerErr) {
+        console.error('Erro ao processar agendamento', s.id, innerErr);
+        // Opcional: continuar com os próximos
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao buscar/agendar schedules:', err);
+  }
+};
+
+// Executa uma vez na inicialização e depois a cada 30 segundos
+executePendingSchedules();
+setInterval(executePendingSchedules, 30 * 1000);
