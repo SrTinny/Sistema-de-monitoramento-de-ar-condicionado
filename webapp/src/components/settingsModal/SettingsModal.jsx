@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import ReactDOM from "react-dom";
+import { createPortal } from "react-dom"; // Usando createPortal em vez de ReactDOM
 import styles from "./SettingsModal.module.css";
 import { RoomContext } from "../../contexts/RoomContext";
 import { AuthContext } from "../../contexts/AuthContext";
@@ -25,7 +25,6 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
   };
 
   const handleDelete = async () => {
-    // Adiciona a confirmação
     if (
       window.confirm(
         `Tem certeza que deseja deletar a sala "${room.name}"? Esta ação não pode ser desfeita.`
@@ -33,17 +32,16 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
     ) {
       try {
         await deleteRoom(room.id);
-        onClose(); // Fecha o modal após deletar com sucesso
+        onClose();
       } catch (error) {
         console.error("Erro no componente ao deletar:", error);
       }
     }
   };
 
-  // 2. ENVOLVEMOS O JSX NO ReactDOM.createPortal()
-  return ReactDOM.createPortal(
+  return createPortal(
     <div
-      className={styles.modal}
+      className={styles.modalOverlay} // Renomeado para consistência
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -51,13 +49,16 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
       <div className={styles.modalContent}>
         <div className={styles.modalHeader}>
           <h3>Configurações da Sala</h3>
-          <button onClick={onClose} className={styles.closeButton}>
+          <button
+            onClick={onClose}
+            className={styles.closeButton}
+            aria-label="Fechar modal" // Adicionada acessibilidade
+          >
             &times;
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* O conteúdo do formulário permanece o mesmo */}
           <div className={styles.inputGroup}>
             <label htmlFor="room-name">Nome do Ar</label>
             <input
@@ -67,6 +68,7 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              autoFocus // Adicionado foco automático para melhor UX
             />
           </div>
 
@@ -96,7 +98,6 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
           </div>
         </form>
 
-        {/* 5. BOTÃO DE DELETAR, VISÍVEL APENAS PARA ADMIN */}
         {user && user.role === "ADMIN" && (
           <div className={styles.deleteSection}>
             <button onClick={handleDelete} className={styles.deleteButton}>
@@ -106,6 +107,6 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
         )}
       </div>
     </div>,
-    document.getElementById("modal-root") // 👈 3. ONDE O PORTAL VAI RENDERIZAR
+    document.getElementById("modal-root")
   );
 }
