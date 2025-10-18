@@ -3,6 +3,8 @@ import { useRooms } from "../../contexts/RoomContext";
 import BottomNavBar from "../../components/bottomNavBar/BottomNavBar";
 import styles from "./Agendamentos.module.css";
 import toast from "react-hot-toast";
+import format from 'date-fns/format';
+import parseISO from 'date-fns/parseISO';
 
 export default function Agendamentos() {
   const {
@@ -19,6 +21,28 @@ export default function Agendamentos() {
     action: "LIGAR",
     scheduledAt: "",
   });
+
+  // Gera string no formato YYYY-MM-DDTHH:mm (local) para usar no atributo `min` do input datetime-local
+  const getMinDateTimeLocal = () => {
+    const dt = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const year = dt.getFullYear();
+    const month = pad(dt.getMonth() + 1);
+    const day = pad(dt.getDate());
+    const hours = pad(dt.getHours());
+    const minutes = pad(dt.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+  const [minDateTime, setMinDateTime] = useState(getMinDateTimeLocal());
+
+  // Recalcula minDateTime a cada minuto para evitar que o usuário selecione datas passadas
+  useEffect(() => {
+    const id = setInterval(() => {
+      setMinDateTime(getMinDateTimeLocal());
+    }, 60 * 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetchRooms();
@@ -108,6 +132,7 @@ export default function Agendamentos() {
               name="scheduledAt"
               type="datetime-local"
               value={form.scheduledAt}
+              min={minDateTime}
               onChange={handleChange}
               className={styles.input}
             />
@@ -128,7 +153,7 @@ export default function Agendamentos() {
                     <div className={styles.itemTitle}>{s.airConditioner?.name || '—'}</div>
                     <div className={styles.itemMeta}>{s.airConditioner?.room || '—'}</div>
                     <div className={styles.itemDate}>
-                      {new Date(s.scheduledAt).toLocaleString()}
+                      {s.scheduledAt ? format(parseISO(s.scheduledAt), 'dd/MM/yyyy HH:mm') : '—'}
                     </div>
                     <div className={styles.itemAction}>{s.action}</div>
                   </div>

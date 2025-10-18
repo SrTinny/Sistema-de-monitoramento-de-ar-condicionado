@@ -304,48 +304,46 @@ app.listen(PORT, () => {
 // EXECUTOR DE AGENDAMENTOS (RODA A CADA 30s)
 // ==========================================================
 const executePendingSchedules = async () => {
-  console.log('🕒 Verificando agendamentos pendentes...');
   try {
     const now = new Date();
-    const pendingSchedules = await prisma.schedule.findMany({
+    console.log('🕒 [executor] now =', now.toISOString());
+    const pending = await prisma.schedule.findMany({
       where: {
         status: 'PENDENTE',
         scheduledAt: {
           lte: now,
         },
       },
+      orderBy: { scheduledAt: 'asc' },
     });
 
-    if (!pendingSchedules || pendingSchedules.length === 0) return;
+    console.log(`🕒 [executor] found ${pending.length} pending schedules`);
 
-    console.log(`[DEBUG] Hora atual do servidor (UTC presumida): ${now.toISOString()}`);
-    console.log(`[DEBUG] Encontrado(s) ${pendingSchedules.length} agendamento(s) com data anterior ou igual a agora.`);
+    if (!pending || pending.length === 0) return;
 
-    for (const schedule of pendingSchedules) {
+    for (const s of pending) {
       try {
+        console.log(`🕒 [executor] processing schedule id=${s.id} scheduledAt=${s.scheduledAt ? new Date(s.scheduledAt).toISOString() : s.scheduledAt}`);
         // Determina o comando a enviar para o AC (string em português, compatível com pendingCommand existente)
-        const command = schedule.action.toLowerCase();
+        const command = s.action === 'LIGAR' ? 'ligar' : 'desligar';
 
         // Faz a atualização em transação: marca schedule como EXECUTADO e seta pendingCommand no AC
         await prisma.$transaction([
-          prisma.airConditioner.update({
-            where: { id: schedule.airConditionerId },
-            data: { pendingCommand: command },
-          }),
-          prisma.schedule.update({
-            where: { id: schedule.id },
-            data: { status: 'EXECUTADO' },
-          }),
+          prisma.schedule.update({ where: { id: s.id }, data: { status: 'EXECUTADO' } }),
+          prisma.airConditioner.update({ where: { id: s.airConditionerId }, data: { pendingCommand: command } }),
         ]);
 
-        console.log(`✅ EXECUTADO: Agendamento ${schedule.id} | Ação: ${command}`);
-      } catch (error) {
-        console.error('❌ Erro ao executar agendamentos:', error);
+        console.log(`⏱️ Executado agendamento ${s.id} -> dispositivo ${s.airConditionerId} comando=${command}`);
+      } catch (innerErr) {
+        console.error('Erro ao processar agendamento', s.id, innerErr);
+        // Opcional: continuar com os próximos
       }
     }
-  } catch (error) {
-    console.error('❌ Erro ao buscar agendamentos pendentes:', error);
+  } catch (err) {
+    console.error('Erro ao buscar/agendar schedules:', err);
   }
 };
 
-setInterval(executePendingSchedules, 30000); // 30000 ms = 30 segundos
+// Executa uma vez na inicialização e depois a cada 30 segundos
+executePendingSchedules();
+setInterval(executePendingSchedules, 30 * 1000);
