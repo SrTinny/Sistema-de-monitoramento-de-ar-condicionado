@@ -1,5 +1,6 @@
+// PONTO DE MELHORIA 1: Importar o 'createPortal' e remover o 'ReactDOM' que não era usado
 import { useState, useContext } from "react";
-import ReactDOM from "react-dom";
+import { createPortal } from "react-dom";
 import styles from "./ACUnit.module.css";
 import SettingsModal from "../settingsModal/SettingsModal";
 import { AuthContext } from "../../contexts/AuthContext";
@@ -11,7 +12,6 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
   const { name, room: roomLocation, status, temperature, deviceId } = room;
 
   const handleTempChange = (e) => {
-    // Chamamos a função do pai (onTempChange) que veio via props
     onTempChange(deviceId, e.target.value);
   };
 
@@ -21,15 +21,22 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
         className={`${styles.unit} ${styles[status]}`}
         data-device-id={deviceId}
       >
-        <h2 className={styles.header}>
-          <span className={styles.title}>{name}</span>
-          {/* 👇 4. CONDIÇÃO: Renderiza o ícone APENAS se o usuário for ADMIN 👇 */}
+        <div className={styles.header}>
+          <h2 className={styles.title}>{name}</h2>
+          
+          {/* PONTO DE MELHORIA 2: Acessibilidade */}
+          {/* Usar <button> em vez de <span> para o ícone clicável. */}
+          {/* É semanticamente correto e acessível para teclados. */}
           {user && user.role === "ADMIN" && (
-            <span className={styles.icon} onClick={() => setShowModal(true)}>
-              ⚙
-            </span>
+            <button
+              className={styles.iconButton}
+              onClick={() => setShowModal(true)}
+              aria-label="Abrir configurações da sala" // Adiciona um rótulo para leitores de tela
+            >
+              <span className={styles.icon} aria-hidden="true">⚙</span>
+            </button>
           )}
-        </h2>
+        </div>
 
         <p className={styles.location}>{roomLocation}</p>
 
@@ -40,10 +47,10 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
           </span>
         </p>
         <p>
-          Temperatura Atual: <span>{temperature || "--"}°C</span>
+          Temperatura Atual: <span>{temperature ?? "--"}°C</span>
         </p>
 
-        <button onClick={() => onToggle(room)}>
+        <button className={styles.mainButton} onClick={() => onToggle(room)}>
           {status === "ligado" ? "Desligar" : "Ligar"}
         </button>
 
@@ -51,21 +58,25 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
           type="range"
           min="16"
           max="30"
-          value={temperature || 22}
-          onChange={handleTempChange} // A função agora é encontrada!
+          // PONTO DE MELHORIA 3: Usar '??' (Nullish Coalescing)
+          // Evita bugs se a temperatura for 0 (embora não seja o caso aqui).
+          value={temperature ?? 22}
+          onChange={handleTempChange}
         />
       </div>
-
-      <SettingsModal
-        visible={showModal}
-        room={room} // Passando o room para o modal
-        onClose={() => setShowModal(false)}
-        onSave={
-          // Você precisará passar a função de update para cá depois
-          (roomId, data) =>
+      
+      {/* PONTO DE MELHORIA 1 (Continuação): Renderizando o Modal com Portal */}
+      {showModal && createPortal(
+        <SettingsModal
+          visible={showModal}
+          room={room}
+          onClose={() => setShowModal(false)}
+          onSave={(roomId, data) =>
             console.log("Salvar ainda a ser implementado", roomId, data)
-        }
-      />
+          }
+        />,
+        document.getElementById("modal-root") // O modal será renderizado aqui
+      )}
     </>
   );
 }

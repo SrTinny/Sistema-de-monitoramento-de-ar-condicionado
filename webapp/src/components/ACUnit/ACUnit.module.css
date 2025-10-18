@@ -38,12 +38,43 @@
 .title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--text-primary); /* ANTES: --font-color */
+  color: var(--text-primary);
+  margin: 0;
+  flex-grow: 1;
+  margin-right: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ícone do status com animação ao passar o mouse */
+.iconButton {
+  background: none;
+  border: none;
+  padding: 0.25rem; /* Reduz o padding para uma área de clique mais compacta */
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0; /* IMPEDIR QUE O BOTÃO ENCOLHA OU SE ESTIQUE */
+  height: 2.25rem; /* Define uma altura e largura fixas para o botão */
+  width: 2.25rem;
+  transition: background-color 0.2s ease; /* Adiciona transição para o fundo */
+}
+
+.iconButton:hover {
+  background-color: var(--bg-hover); /* Uma cor de fundo suave no hover */
+}
+
+.iconButton:hover .icon {
+  transform: rotate(90deg);
+  color: var(--primary);
 }
 
 .icon {
   font-size: 1.5rem;
-  cursor: pointer;
   color: var(--text-secondary); /* ANTES: --highlight-color */
   transition: transform 0.3s ease, color 0.3s ease;
 }
@@ -74,9 +105,9 @@
   color: var(--text-secondary); /* ANTES: --highlight-color */
 }
 
-button {
-  background-color: var(--primary);        /* ANTES: --primary-color */
-  color: var(--text-on-primary);           /* ANTES: --text-color. Garante o contraste. */
+.mainButton {
+  background-color: var(--primary);
+  color: var(--text-on-primary);
   border: none;
   padding: 12px 20px;
   border-radius: 8px;
@@ -88,7 +119,7 @@ button {
   width: 100%;
 }
 
-button:hover {
+.mainButton:hover {
   background-color: var(--primary-hover); /* ANTES: --second-color. Agora temos uma cor específica para hover. */
   transform: scale(1.02);
 }
