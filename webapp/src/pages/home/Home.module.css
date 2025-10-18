@@ -1,133 +1,31 @@
-/* Home.module.css */
-
-/* Layout base */
-.container {
-  padding: 20px;
-  background-color: var(--background-color);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-height: 100vh;
-}
-
-/* Saudação no topo */
-.welcomeCard {
-  background-color: var(--form-background);
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 6px 12px var(--shadow-color);
-  text-align: center;
-}
-
-.welcomeCard h2 {
-  font-size: 20px;
-  color: var(--primary-color);
-  margin-bottom: 5px;
-}
-
-.welcomeCard p {
-  font-size: 14px;
-  color: var(--highlight-color);
-}
-
-/* Seção de projetos */
-.projectsSection {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.sectionTitle {
-  font-size: 18px;
-  font-weight: bold;
-  color: var(--primary-color);
-  margin-bottom: 10px;
-}
-
-/* Cartões de projeto */
-.projectCard {
-  background-color: var(--form-background);
-  border-radius: 15px;
-  padding: 15px;
-  box-shadow: 0 4px 8px var(--shadow-color);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.projectCard h3 {
-  font-size: 16px;
-  color: var(--highlight-color);
-  margin-bottom: 10px;
-}
-
-.projectCard .progressBarContainer {
-  background-color: var(--row-hover-bg);
-  height: 8px;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-top: 5px;
-}
-
-.projectCard .progressBar {
-  height: 8px;
-  border-radius: 8px;
-  background-color: var(--primary-color);
-  transition: width 0.3s ease;
-}
-
-/* Estilo do botão flutuante (+) */
-.floatingButton {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: var(--primary-color);
-  color: white;
-  font-size: 28px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: none;
-  box-shadow: 0 4px 8px var(--shadow-dark);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 999;
-  transition: background-color 0.3s ease;
-}
-
-.floatingButton:hover {
-  background-color: var(--second-color);
-}
-
-/* Rodapé simples */
-.footer {
-  margin-top: auto;
-  text-align: center;
-  font-size: 12px;
-  color: var(--highlight-color);
-  padding: 20px 0;
-}
-
-.unitsSection {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: center;
-}
-
+/* Container principal da página */
 .container {
   max-width: 1200px;
   margin: 0 auto;
-
   padding: 1.5rem;
 }
 
+/* Título da página */
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+
+/* Seção que contém os cards dos ares-condicionados */
 .unitsSection {
   display: grid;
-  /* Cria colunas que têm no mínimo 300px, e se ajustam para preencher o espaço. 
-     Isso cria uma grade responsiva sem precisar de media queries! */
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem; /* Espaçamento consistente entre todos os cards */
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem; /* Espaçamento consistente entre os cards */
+}
+
+/* Estilo para a mensagem de carregamento */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh; /* Ocupa uma boa parte da tela */
+  color: var(--text-secondary);
+  font-size: 1.125rem;
 }
