@@ -2,72 +2,77 @@
    ARQUIVO GLOBAL DE ESTILOS - PALETA DE CORES ROBUSTA
 ========================================================== */
 
+/* 0. IMPORTAÇÃO DA FONTE
+   ---------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 /* 1. VARIÁVEIS DE TEMA (THEME)
    ---------------------------------------------------------- */
 :root {
   /* Ações (Botões, links, etc) */
-  --primary: #007aff;         /* Azul vibrante da Apple */
-  --primary-hover: #005ecb;    /* Azul mais escuro para hover */
-  --secondary: #6c757d;      /* Cinza neutro para ações secundárias */
+  --primary: #007aff;
+  --primary-hover: #005ecb;
+  --secondary: #6c757d;
   --secondary-hover: #5a6268;
-  --text-on-primary: #ffffff; /* Texto branco para botões primários e secundários */
+  --text-on-primary: #ffffff;
+  /* ADICIONADO: Sombra para o foco dos inputs */
+  --primary-focus-shadow: rgba(0, 122, 255, 0.25);
 
   /* Backgrounds */
-  --bg-primary: #f8f9fa;      /* Fundo principal da página (quase branco) */
-  --bg-secondary: #ffffff;    /* Fundo de cards, modais, etc. */
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --bg-hover: #e9ecef;
 
   /* Textos */
-  --text-primary: #212529;    /* Texto principal (preto suave) */
-  --text-secondary: #6c757d;  /* Texto secundário (cinza) */
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
 
   /* Outros */
-  --border: #dee2e6;          /* Cor de bordas */
+  --border: #dee2e6;
   --shadow: rgba(0, 0, 0, 0.08);
+  --overlay-bg: rgba(0, 0, 0, 0.7);
 
   /* Status */
-  --status-success: #28a745;     /* Verde para 'ligado' */
-  --status-error: #dc3545;       /* Vermelho para 'desligado' */
+  --status-success: #28a745;
+  --status-error: #dc3545;
   --bg-status-success: #e9f7ef;
   --bg-status-error: #fbebed;
-
-  /* ...outras variáveis... */
-  --overlay-bg: rgba(0, 0, 0, 0.7);
-  --bg-hover: #e9ecef; 
+  /* ADICIONADO: Cores de hover para status */
+  --status-error-hover: #c82333;
 }
 
 body.dark-mode {
   /* Ações */
-  --primary: #0a84ff;         /* Azul um pouco mais brilhante para o modo escuro */
+  --primary: #0a84ff;
   --primary-hover: #0060d1;
-  --secondary: #8e8e93;      /* Cinza mais claro */
+  --secondary: #8e8e93;
   --secondary-hover: #636366;
   --text-on-primary: #ffffff;
+  --primary-focus-shadow: rgba(10, 132, 255, 0.3);
 
   /* Backgrounds */
-  --bg-primary: #000000;      /* Fundo preto puro (melhor para telas OLED) */
-  --bg-secondary: #1c1c1e;    /* Fundo de cards (cinza muito escuro) */
-  
+  --bg-primary: #000000;
+  --bg-secondary: #1c1c1e;
+  --bg-hover: #2c2c2e;
+
   /* Textos */
-  --text-primary: #f2f2f7;     /* Texto principal (quase branco) */
-  --text-secondary: #8e8e93;  /* Texto secundário (cinza claro) */
-  
+  --text-primary: #f2f2f7;
+  --text-secondary: #8e8e93;
+
   /* Outros */
   --border: #38383a;
   --shadow: rgba(255, 255, 255, 0.1);
+  --overlay-bg: rgba(0, 0, 0, 0.8);
 
   /* Status */
   --status-success: #30d158;
   --status-error: #ff453a;
   --bg-status-success: #1c3d25;
   --bg-status-error: #4f1d20;
-
-  /* ...outras variáveis... */
-  --overlay-bg: rgba(0, 0, 0, 0.8);
-  --bg-hover: #2c2c2e;  
+  --status-error-hover: #e0342a;
 }
 
-
-/* 2. RESET BÁSICO E ESTILOS GLOBAIS (sem alterações no seu código existente)
+/* 2. RESET BÁSICO E ESTILOS GLOBAIS
    ---------------------------------------------------------- */
 * {
   margin: 0;
@@ -82,8 +87,8 @@ html {
 
 body {
   font-family: "Inter", "Segoe UI", "Helvetica Neue", sans-serif;
-  background-color: var(--bg-primary); /* USA A NOVA VARIÁVEL */
-  color: var(--text-primary);       /* USA A NOVA VARIÁVEL */
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   line-height: 1.6;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
@@ -92,7 +97,8 @@ body {
 }
 
 main {
-  padding-bottom: 80px; 
+  /* Adiciona padding para o BottomNavBar não cobrir o conteúdo */
+  padding-bottom: 80px;
 }
 
 a {
@@ -105,6 +111,32 @@ button {
   border: none;
   background: none;
   cursor: pointer;
-  /* ADICIONADO: Cor padrão para texto de botão */
-  color: var(--primary);
+  color: var(--primary); /* Cor padrão para texto de botão, mantido */
+}
+
+/* 3. REFINAMENTOS DE UX (OPCIONAL, MAS RECOMENDADO)
+   ---------------------------------------------------------- */
+/* Cor da seleção de texto */
+::selection {
+  background-color: var(--primary);
+  color: var(--text-on-primary);
+}
+
+/* Estilização da barra de rolagem */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
