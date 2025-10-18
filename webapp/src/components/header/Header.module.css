@@ -1,8 +1,8 @@
 .header {
-  background-color: var(--bg-secondary); /* Usa o fundo de cards/modais */
-  padding: 1rem 1.5rem; /* Espaçamento com 'rem' */
+  background-color: var(--bg-secondary);
+  padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--border);
-  position: sticky; /* Faz o header ficar fixo no topo ao rolar a página */
+  position: sticky;
   top: 0;
   z-index: 100;
 }
@@ -11,30 +11,32 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1200px; /* Limita a largura do conteúdo em telas grandes */
-  margin: 0 auto; /* Centraliza o conteúdo */
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .logo {
-  font-size: 1.25rem; /* ~20px */
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--text-primary);
   text-decoration: none;
+
+  /* 2. ADICIONADO: Garante que a saudação não quebre o layout */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* Espaçamento entre os botões */
+  gap: 0.5rem;
 }
 
-/* ==============================================
-   MELHORIA: CLASSE ÚNICA PARA BOTÕES DE AÇÃO
-============================================== */
 .actionButton {
   background-color: transparent;
   border: none;
-  padding: 0.5rem; /* 8px */
+  padding: 0.5rem;
   border-radius: 50%;
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -44,24 +46,23 @@
 }
 
 .actionButton:hover {
-  background-color: var(--bg-hover); /* Usa a nova variável de hover */
+  background-color: var(--bg-hover);
+}
+
+/* 3. ADICIONADO: Melhora a acessibilidade para navegação por teclado */
+.actionButton:focus-visible {
+  outline: none;
+  background-color: var(--bg-hover);
+  box-shadow: 0 0 0 3px var(--primary-focus-shadow);
 }
 
 .actionButton .icon {
   width: 24px;
   height: 24px;
-  color: var(--text-secondary); /* Cor sutil para ícones */
+  color: var(--text-secondary);
   transition: color 0.2s ease;
 }
 
 .actionButton:hover .icon {
-  color: var(--text-primary); /* Cor mais forte no hover */
+  color: var(--text-primary);
 }
-
-
-/* ==============================================
-   MEDIA QUERY REMOVIDA
-   O layout já é fluido e não precisa de ajustes
-   de tamanho de ícone para essa pequena variação.
-   Isso simplifica o código.
-============================================== */
