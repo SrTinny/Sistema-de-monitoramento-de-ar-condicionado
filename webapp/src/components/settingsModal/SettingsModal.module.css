@@ -27,10 +27,10 @@
 .modalContent {
   background-color: var(--bg-secondary); /* ANTES: --form-background */
   border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 8px 24px var(--shadow); /* ANTES: --shadow-dark */
+  padding: 1.5rem 1.25rem;
+  box-shadow: 0 12px 36px rgba(8, 15, 30, 0.28); /* sombra mais suave e moderna */
   width: 100%;
-  max-width: 450px;
+  max-width: 520px;
   animation: fadeInScaleUp 0.2s ease-out forwards;
 }
 
@@ -78,18 +78,53 @@
 }
 
 .modalContent input {
-  /* ... */
+  /* ajuste leve para inputs */
   border: 1px solid var(--border); /* ANTES: --border-color */
   background-color: var(--bg-primary); /* ANTES: --background-color */
   color: var(--text-primary); /* ANTES: --font-color */
 }
 
+.inputGroup {
+  margin-bottom: 1rem;
+}
+
+.inputGroup label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.modalContent input,
+.modalContent select,
+.modalContent textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  outline: none;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.modalContent input:focus,
+.modalContent select:focus,
+.modalContent textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(16, 96, 255, 0.08);
+}
+
 .buttonGroup button {
-  /* ... */
-  font-weight: bold;
-  font-size: 1rem;
-  color: var(--text-on-primary); /* ANTES: --text-color. GARANTE O CONTRASTE! */
-  transition: opacity 0.2s;
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: var(--text-on-primary); /* GARANTE O CONTRASTE */
+  transition: transform 0.08s ease, opacity 0.15s ease;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
 }
 
 .buttonGroup .saveButton {
@@ -105,7 +140,6 @@
 .buttonGroup .cancelButton:hover {
   background-color: var(--secondary-hover); /* EFEITO DE HOVER! */
 }
-
 .deleteSection {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
@@ -130,4 +164,52 @@
 
 .deleteButton:hover {
   opacity: 0.85;
+}
+
+/* Responsividade: menor modal em telas pequenas */
+@media (max-width: 420px) {
+  .modalContent {
+    padding: 1rem;
+    max-width: 360px;
+  }
+  .modalHeader h3 {
+    font-size: 1rem;
+  }
+}
+
+/* Overlay melhora a percepção de profundidade */
+.modal {
+  backdrop-filter: blur(3px) saturate(1.05);
+}
+
+/* novos estilos para organização dos botões */
+.buttonGroup {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+.deleteSection {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.deleteButton {
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.98rem;
+  background-color: var(--status-error);
+  color: var(--text-on-primary);
+  transition: transform 0.08s ease, opacity 0.12s ease;
+}
+
+.deleteButton:active,
+.buttonGroup button:active {
+  transform: translateY(1px);
 }

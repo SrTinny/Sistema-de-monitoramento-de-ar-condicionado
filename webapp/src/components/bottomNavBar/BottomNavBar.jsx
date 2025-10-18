@@ -1,7 +1,7 @@
 // 1. Importar o useContext e o RoomContext
 import { useContext } from "react";
 import { NavLink } from "react-router-dom";
-import { FiHome, FiPlusSquare, FiCalendar, FiSettings } from "react-icons/fi";
+import { FiHome, FiPlusSquare, FiCalendar } from "react-icons/fi";
 import styles from "./BottomNavBar.module.css";
 import { RoomContext } from "../../contexts/RoomContext";
 import { AuthContext } from "../../contexts/AuthContext";
@@ -36,10 +36,7 @@ export default function BottomNavBar() {
         <span>Agenda</span>
       </NavLink>
 
-      <NavLink to="/config" className={getNavLinkClass}>
-        <FiSettings className={styles.icon} />
-        <span>Config</span>
-      </NavLink>
+      {/* botão de Config removido conforme solicitado */}
     </nav>
   );
 }

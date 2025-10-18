@@ -7,8 +7,8 @@
   border-top: 1px solid var(--border);
   box-shadow: 0 -4px 12px var(--shadow);
   display: flex;
-  justify-content: space-around;
-  align-items: stretch; /* Faz os itens esticarem verticalmente */
+  justify-content: center; /* Centraliza os itens agora que são 3 */
+  align-items: center;
   height: 65px; /* Altura fixa para melhor ergonomia */
   z-index: 100;
 }
@@ -19,13 +19,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 1; /* Faz cada item ocupar o mesmo espaço */
   gap: 4px;
   font-size: 0.75rem; /* 12px */
   color: var(--text-secondary); /* Cor padrão para itens inativos */
   text-decoration: none;
   transition: color 0.2s ease;
-  padding: 0.5rem 0;
+  padding: 0.5rem 0 0.25rem 0;
+  min-width: 72px; /* garante largura mínima para melhor toque */
 }
 
 .navItem:hover {
