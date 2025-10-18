@@ -304,9 +304,10 @@ app.listen(PORT, () => {
 // EXECUTOR DE AGENDAMENTOS (RODA A CADA 30s)
 // ==========================================================
 const executePendingSchedules = async () => {
+  console.log('🕒 Verificando agendamentos pendentes...');
   try {
     const now = new Date();
-    const pending = await prisma.schedule.findMany({
+    const pendingSchedules = await prisma.schedule.findMany({
       where: {
         status: 'PENDENTE',
         scheduledAt: {
@@ -315,30 +316,36 @@ const executePendingSchedules = async () => {
       },
     });
 
-    if (!pending || pending.length === 0) return;
+    if (!pendingSchedules || pendingSchedules.length === 0) return;
 
-    for (const s of pending) {
+    console.log(`[DEBUG] Hora atual do servidor (UTC presumida): ${now.toISOString()}`);
+    console.log(`[DEBUG] Encontrado(s) ${pendingSchedules.length} agendamento(s) com data anterior ou igual a agora.`);
+
+    for (const schedule of pendingSchedules) {
       try {
         // Determina o comando a enviar para o AC (string em português, compatível com pendingCommand existente)
-        const command = s.action === 'LIGAR' ? 'ligar' : 'desligar';
+        const command = schedule.action.toLowerCase();
 
         // Faz a atualização em transação: marca schedule como EXECUTADO e seta pendingCommand no AC
         await prisma.$transaction([
-          prisma.schedule.update({ where: { id: s.id }, data: { status: 'EXECUTADO' } }),
-          prisma.airConditioner.update({ where: { id: s.airConditionerId }, data: { pendingCommand: command } }),
+          prisma.airConditioner.update({
+            where: { id: schedule.airConditionerId },
+            data: { pendingCommand: command },
+          }),
+          prisma.schedule.update({
+            where: { id: schedule.id },
+            data: { status: 'EXECUTADO' },
+          }),
         ]);
 
-        console.log(`⏱️ Executado agendamento ${s.id} -> dispositivo ${s.airConditionerId} comando=${command}`);
-      } catch (innerErr) {
-        console.error('Erro ao processar agendamento', s.id, innerErr);
-        // Opcional: continuar com os próximos
+        console.log(`✅ EXECUTADO: Agendamento ${schedule.id} | Ação: ${command}`);
+      } catch (error) {
+        console.error('❌ Erro ao executar agendamentos:', error);
       }
     }
-  } catch (err) {
-    console.error('Erro ao buscar/agendar schedules:', err);
+  } catch (error) {
+    console.error('❌ Erro ao buscar agendamentos pendentes:', error);
   }
 };
 
-// Executa uma vez na inicialização e depois a cada 30 segundos
-executePendingSchedules();
-setInterval(executePendingSchedules, 30 * 1000);
+setInterval(executePendingSchedules, 30000); // 30000 ms = 30 segundos
