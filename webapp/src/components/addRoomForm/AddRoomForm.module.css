@@ -29,42 +29,66 @@
   box-shadow: 0 8px 24px var(--shadow);
   width: 100%;
   max-width: 450px;
+  position: relative; /* torna o modal o contêiner para posicionamento absoluto */
   animation: fadeInScaleUp 0.2s ease-out forwards;
 }
 
 .modalHeader {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   margin-bottom: 1.5rem;
-  gap: 1rem; /* ADICIONADO: Garante um espaço seguro entre o título e o botão */
+  gap: 1rem;
 }
 
-.modalHeader h2, /* Ajustado para funcionar com h2 ou h3 */
+.modalHeader h2,
 .modalHeader h3 {
-  font-size: 1.125rem; /* REDUZIDO: ~18px, um tamanho mais elegante para modais */
+  font-size: 1.125rem; /* ~18px */
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
-  padding-right: 0; /* REMOVIDO: Não precisamos mais do padding, o 'gap' cuida disso */
-  line-height: 1.4; /* Melhora a legibilidade se o título ainda quebrar em 2 linhas */
+  /* Faz o título ocupar o máximo de espaço disponível, mas permitir quebra */
+  flex: 1 1 auto;
+  min-width: 0; /* importante para flex items dentro de containers restritos */
+  white-space: normal; /* permite quebra de linha se necessário */
+  overflow: visible;
+  text-overflow: clip;
+  padding-right: 0.6rem; /* espaço pequeno para garantir sem sobreposição */
 }
 
 .modalHeader .closeButton {
-  background: none !important;
+  position: absolute;
+  right: 12px; /* alinhamento fino: 12px do canto */
+  top: 12px; /* alinhamento fino: 12px do topo */
+  transform: none;
+  background: none;
   color: var(--text-secondary);
-  font-size: 1.5rem; /* REDUZIDO: O 'X' fica mais sutil e moderno */
-  font-weight: normal;
+  font-size: 1.25rem;
+  font-weight: 600;
   cursor: pointer;
   line-height: 1;
-  padding: 0.25rem; /* Padding para facilitar a área de clique */
-  flex-shrink: 0; /* Impede que o botão seja espremido */
+  padding: 0; /* padding zero para evitar alargamento */
+  flex-shrink: 0; /* Impede que o botão seja "esmagado" pelo título */
+  z-index: 1000; /* garantir acima de tudo */
+  display: inline-flex; /* garante tamanho apenas o necessário */
+  align-items: center;
+  justify-content: center;
+  width: 44px; /* hit-area maior */
+  height: 44px; /* hit-area maior */
+  box-sizing: border-box;
+  border-radius: 9999px; /* circular */
   transition: color 0.2s;
 }
 
 .modalHeader .closeButton:hover {
   color: var(--text-primary);
-  background: none;
+  background-color: var(--bg-hover);
+}
+
+.modalHeader .closeButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.14);
+  background-color: var(--bg-hover);
 }
 .modalContent form {
   display: flex;
@@ -92,6 +116,13 @@
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.modalContent input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-focus-shadow); /* Ex: rgba(59, 130, 246, 0.3) */
 }
 
 .error {

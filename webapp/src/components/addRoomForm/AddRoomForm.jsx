@@ -1,7 +1,6 @@
 import { useState } from "react";
 import styles from "./AddRoomForm.module.css";
 
-// O componente agora recebe as funções de adicionar e fechar como props
 export default function AddRoomForm({ onAddRoom, onClose }) {
   const [name, setName] = useState("");
   const [room, setRoom] = useState("");
@@ -9,7 +8,7 @@ export default function AddRoomForm({ onAddRoom, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Limpa erros antigos
+    setError("");
 
     if (!name.trim() || !room.trim()) {
       setError("Por favor, preencha todos os campos.");
@@ -17,10 +16,8 @@ export default function AddRoomForm({ onAddRoom, onClose }) {
     }
 
     try {
-      // Chama a função 'addRoom' que veio do contexto!
       await onAddRoom(name, room);
-      // O onClose já é chamado dentro do addRoom no contexto, mas podemos garantir aqui também
-      onClose();
+      onClose(); // Fechar o modal após o sucesso
     } catch (err) {
       setError("Ocorreu um erro ao adicionar a sala.");
       console.error(err);
@@ -28,19 +25,21 @@ export default function AddRoomForm({ onAddRoom, onClose }) {
   };
 
   return (
-    // Renomeamos para .modalOverlay para clareza
     <div
       className={styles.modalOverlay}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      {/* Renomeamos para .modalContent */}
       <div className={styles.modalContent}>
-        {/* 👇 ESTRUTURA DE CABEÇALHO ADICIONADA, IGUAL AO SETTINGSMODAL 👇 */}
         <div className={styles.modalHeader}>
           <h3>Adicionar Nova Sala</h3>
-          <button onClick={onClose} className={styles.closeButton}>
+          {/* MELHORIA 1: Acessibilidade do botão de fechar */}
+          <button
+            onClick={onClose}
+            className={styles.closeButton}
+            aria-label="Fechar modal" /* Adiciona um rótulo para leitores de tela */
+          >
             &times;
           </button>
         </div>
@@ -55,6 +54,7 @@ export default function AddRoomForm({ onAddRoom, onClose }) {
               onChange={(e) => setName(e.target.value)}
               placeholder="Digite o nome"
               required
+              autoFocus /* MELHORIA 2: Foco automático para UX */
             />
           </div>
           <div className={styles.inputGroup}>
