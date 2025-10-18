@@ -3,18 +3,11 @@ import { useRooms } from "../../contexts/RoomContext";
 import BottomNavBar from "../../components/bottomNavBar/BottomNavBar";
 import styles from "./Agendamentos.module.css";
 import toast from "react-hot-toast";
-import format from 'date-fns/format';
-import parseISO from 'date-fns/parseISO';
+import { format, parseISO } from 'date-fns';
+import { FiTrash2 } from 'react-icons/fi'; // 1. Ícone para o botão de deletar
 
 export default function Agendamentos() {
-  const {
-    rooms,
-    fetchRooms,
-    schedules,
-    fetchSchedules,
-    addSchedule,
-    deleteSchedule,
-  } = useRooms();
+  const { rooms, fetchRooms, schedules, fetchSchedules, addSchedule, deleteSchedule } = useRooms();
 
   const [form, setForm] = useState({
     airConditionerId: "",
@@ -22,26 +15,18 @@ export default function Agendamentos() {
     scheduledAt: "",
   });
 
-  // Gera string no formato YYYY-MM-DDTHH:mm (local) para usar no atributo `min` do input datetime-local
+  // A lógica para o minDateTime já está ótima, sem alterações
   const getMinDateTimeLocal = () => {
     const dt = new Date();
+    dt.setMinutes(dt.getMinutes() + 1); // Garante que o mínimo seja sempre no futuro
     const pad = (n) => String(n).padStart(2, '0');
-    const year = dt.getFullYear();
-    const month = pad(dt.getMonth() + 1);
-    const day = pad(dt.getDate());
-    const hours = pad(dt.getHours());
-    const minutes = pad(dt.getMinutes());
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
   };
   const [minDateTime, setMinDateTime] = useState(getMinDateTimeLocal());
 
-  // Recalcula minDateTime a cada minuto para evitar que o usuário selecione datas passadas
   useEffect(() => {
-    const id = setInterval(() => {
-      setMinDateTime(getMinDateTimeLocal());
-    }, 60 * 1000);
+    const id = setInterval(() => setMinDateTime(getMinDateTimeLocal()), 60 * 1000);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -63,31 +48,17 @@ export default function Agendamentos() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.airConditionerId || !form.scheduledAt || !form.action) {
+    if (!form.airConditionerId || !form.scheduledAt) {
       toast.error("Preencha todos os campos do formulário.");
       return;
     }
-
-    try {
-      await addSchedule({
-        airConditionerId: form.airConditionerId,
-        action: form.action,
-        scheduledAt: form.scheduledAt,
-      });
-      setForm((f) => ({ ...f, scheduledAt: "" }));
-    } catch (err) {
-      console.error("Erro ao criar agendamento:", err);
-    }
+    await addSchedule(form);
+    setForm((f) => ({ ...f, scheduledAt: "" }));
   };
 
   const handleDelete = async (id) => {
-    const confirmed = window.confirm('Confirma o cancelamento deste agendamento?');
-    if (!confirmed) return;
-
-    try {
+    if (window.confirm('Confirma o cancelamento deste agendamento?')) {
       await deleteSchedule(id);
-    } catch (err) {
-      console.error("Erro ao deletar agendamento:", err);
     }
   };
 
@@ -96,73 +67,68 @@ export default function Agendamentos() {
       <h1 className={styles.title}>Agendamentos</h1>
 
       <section className={styles.grid}>
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <label className={styles.label}>
-            Sala
-            <select
-              name="airConditionerId"
-              value={form.airConditionerId}
-              onChange={handleChange}
-              className={styles.select}
-            >
-              {rooms.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name} — {r.room}
-                </option>
-              ))}
-            </select>
-          </label>
+        {/* Card do Formulário */}
+        <div className={styles.card}>
+          <h2 className={styles.subTitle}>Novo Agendamento</h2>
+          <form className={styles.form} onSubmit={handleSubmit}>
+            {/* 2. ESTRUTURA REFEITA USANDO O PADRÃO 'inputGroup' */}
+            <div className={styles.inputGroup}>
+              <label htmlFor="ac-select">Sala</label>
+              <select id="ac-select" name="airConditionerId" value={form.airConditionerId} onChange={handleChange}>
+                {rooms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} — {r.room}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <label className={styles.label}>
-            Ação
-            <select
-              name="action"
-              value={form.action}
-              onChange={handleChange}
-              className={styles.select}
-            >
-              <option value="LIGAR">Ligar</option>
-              <option value="DESLIGAR">Desligar</option>
-            </select>
-          </label>
+            <div className={styles.inputGroup}>
+              <label htmlFor="action-select">Ação</label>
+              <select id="action-select" name="action" value={form.action} onChange={handleChange}>
+                <option value="LIGAR">Ligar</option>
+                <option value="DESLIGAR">Desligar</option>
+              </select>
+            </div>
 
-          <label className={styles.label}>
-            Data e hora
-            <input
-              name="scheduledAt"
-              type="datetime-local"
-              value={form.scheduledAt}
-              min={minDateTime}
-              onChange={handleChange}
-              className={styles.input}
-            />
-          </label>
+            <div className={styles.inputGroup}>
+              <label htmlFor="datetime-input">Data e hora</label>
+              <input
+                id="datetime-input"
+                name="scheduledAt"
+                type="datetime-local"
+                value={form.scheduledAt}
+                min={minDateTime}
+                onChange={handleChange}
+              />
+            </div>
 
-          <button type="submit" className={styles.submit}>
-            Criar Agendamento
-          </button>
-        </form>
+            <button type="submit" className={styles.submitButton}>
+              Criar Agendamento
+            </button>
+          </form>
+        </div>
 
-        <div className={styles.listContainer}>
+        {/* Card da Lista */}
+        <div className={styles.card}>
           <h2 className={styles.subTitle}>Agendamentos Pendentes</h2>
           {schedules && schedules.length > 0 ? (
             <ul className={styles.list}>
               {schedules.map((s) => (
                 <li key={s.id} className={styles.item}>
-                  <div>
-                    <div className={styles.itemTitle}>{s.airConditioner?.name || '—'}</div>
-                    <div className={styles.itemMeta}>{s.airConditioner?.room || '—'}</div>
-                    <div className={styles.itemDate}>
-                      {s.scheduledAt ? format(parseISO(s.scheduledAt), 'dd/MM/yyyy HH:mm') : '—'}
-                    </div>
-                    <div className={styles.itemAction}>{s.action}</div>
+                  <div className={styles.itemInfo}>
+                    <span className={styles.itemTitle}>{s.airConditioner?.name || 'Sala desconhecida'}</span>
+                    <span className={styles.itemMeta}>
+                      {s.scheduledAt ? format(parseISO(s.scheduledAt), 'dd/MM/yyyy HH:mm') : 'Data inválida'}
+                    </span>
                   </div>
-                  <div>
-                    <button
-                      className={styles.deleteButton}
-                      onClick={() => handleDelete(s.id)}
-                    >
-                      Cancelar
+                  <div className={styles.itemActions}>
+                    <span className={`${styles.itemAction} ${styles[s.action.toLowerCase()]}`}>
+                      {s.action === 'LIGAR' ? 'Ligar' : 'Desligar'}
+                    </span>
+                    {/* 3. BOTÃO DE DELETAR AGORA É UM ÍCONE */}
+                    <button className={styles.deleteButton} onClick={() => handleDelete(s.id)} aria-label="Cancelar agendamento">
+                      <FiTrash2 />
                     </button>
                   </div>
                 </li>
