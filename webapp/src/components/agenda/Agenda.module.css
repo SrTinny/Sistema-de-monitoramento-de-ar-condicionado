@@ -1,62 +1,111 @@
 .agendaContainer {
-  background-color: var(--form-background);
-  padding: 20px;
+  background-color: var(--bg-secondary);
+  padding: 1.5rem;
   border-radius: 16px;
-  box-shadow: 0 4px 8px var(--shadow-color);
-  margin-top: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px var(--shadow);
+  margin-top: 1.5rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .agendaContainer h2 {
-  margin-bottom: 16px;
-  color: var(--primary-color);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 0;
+  margin-bottom: 1.5rem;
 }
 
-form {
+.agendaForm {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 1.25rem;
 }
 
-label {
+.inputGroup {
   display: flex;
   flex-direction: column;
-  font-weight: bold;
-  color: var(--highlight-color);
+  gap: 0.5rem;
 }
 
-input,
-select {
-  margin-top: 4px;
-  padding: 8px;
+.inputGroup label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Estilo unificado para inputs e selects */
+.agendaForm input,
+.agendaForm select {
+  padding: 12px;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.agendaForm input:focus,
+.agendaForm select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-focus-shadow);
 }
 
 .diasSemana {
   display: flex;
-  gap: 8px;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .diaBotao {
-  padding: 6px 10px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background-color: var(--form-background);
+  flex: 1; /* Faz os botões se esticarem para preencher o espaço */
+  min-width: 45px;
+  padding: 0.75rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.diaBotao:hover {
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .selecionado {
-  background-color: var(--primary-color);
-  color: white;
+  background-color: var(--primary);
+  color: var(--text-on-primary);
+  border-color: var(--primary);
+}
+
+.selecionado:hover {
+  background-color: var(--primary-hover);
+  color: var(--text-on-primary);
+  border-color: var(--primary-hover);
 }
 
 .botaoSalvar {
-  background-color: var(--primary-color);
-  color: white;
+  background-color: var(--primary);
+  color: var(--text-on-primary);
   border: none;
-  padding: 10px;
+  padding: 14px;
   border-radius: 8px;
   cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  margin-top: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.botaoSalvar:hover {
+  background-color: var(--primary-hover);
 }
