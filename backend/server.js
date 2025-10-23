@@ -152,6 +152,9 @@ app.put('/api/rooms/:id', authenticateToken, isAdmin, async (req, res) => {
   }
 
   try {
+    // Log para depuração em ambiente dev
+    console.log('[rooms:update] user=', req.user && { id: req.user.userId, email: req.user.email, role: req.user.role });
+    console.log('[rooms:update] body=', { name, room });
     const updatedAC = await prisma.airConditioner.update({
       where: { id },
       data: { name, room },
@@ -163,6 +166,12 @@ app.put('/api/rooms/:id', authenticateToken, isAdmin, async (req, res) => {
     }
     res.status(500).json({ error: 'Não foi possível atualizar o aparelho.' });
   }
+});
+
+// Rota útil para debug: retorna dados do usuário a partir do token
+app.get('/auth/me', authenticateToken, (req, res) => {
+  // Não retorna dados sensíveis
+  res.json({ userId: req.user.userId, email: req.user.email, role: req.user.role });
 });
 
 // ROTA 'DELETE': Deletar um aparelho por ID. (PROTEGIDA - ADMIN)

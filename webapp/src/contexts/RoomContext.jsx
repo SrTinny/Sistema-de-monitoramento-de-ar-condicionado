@@ -64,18 +64,18 @@ export const RoomProvider = ({ children }) => {
 
   // Função para atualizar os dados de uma sala
  const updateRoom = async (roomId, dataToUpdate) => {
-    const promise = api.put(`/api/rooms/${roomId}`, dataToUpdate);
-
-    toast.promise(promise, {
-      loading: 'Salvando alterações...',
-      success: (response) => {
-        fetchRooms(); // Atualiza a lista após o sucesso
-        return 'Alterações salvas com sucesso!';
-      },
-      error: 'Erro ao salvar as alterações.',
-    });
-
-    return promise;
+    try {
+      const response = await api.put(`/api/rooms/${roomId}`, dataToUpdate);
+      fetchRooms(); // Atualiza a lista após o sucesso
+      toast.success('Alterações salvas com sucesso!');
+      return response;
+    } catch (err) {
+      // mostra a mensagem de erro retornada pelo backend, quando presente
+      const msg = err?.response?.data?.error || err.message || 'Erro ao salvar as alterações.';
+      toast.error(msg);
+      console.error('Erro ao atualizar sala:', err);
+      throw err;
+    }
   };
 
   // Função para deletar uma sala

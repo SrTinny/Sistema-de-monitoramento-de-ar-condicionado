@@ -4,10 +4,12 @@ import { createPortal } from "react-dom";
 import styles from "./ACUnit.module.css";
 import SettingsModal from "../settingsModal/SettingsModal";
 import { AuthContext } from "../../contexts/AuthContext";
+import { useRooms } from "../../contexts/RoomContext";
 
 export default function ACUnit({ room, onToggle, onTempChange }) {
   const [showModal, setShowModal] = useState(false);
   const { user } = useContext(AuthContext);
+  const { updateRoom } = useRooms();
 
   const { name, room: roomLocation, status, temperature, deviceId } = room;
 
@@ -71,9 +73,16 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
           visible={showModal}
           room={room}
           onClose={() => setShowModal(false)}
-          onSave={(roomId, data) =>
-            console.log("Salvar ainda a ser implementado", roomId, data)
-          }
+          onSave={async (roomId, data) => {
+            try {
+              // usa o contexto de salas para atualizar no backend
+              await updateRoom(roomId, data);
+              setShowModal(false);
+            } catch (err) {
+              // deixa o modal aberto para o usuário tentar de novo
+              console.error('Erro ao salvar configurações da sala:', err);
+            }
+          }}
         />,
         document.getElementById("modal-root") // O modal será renderizado aqui
       )}
