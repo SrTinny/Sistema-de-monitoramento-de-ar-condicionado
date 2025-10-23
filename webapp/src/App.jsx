@@ -4,6 +4,7 @@ import { AuthContext } from './contexts/AuthContext';
 
 // Layout
 import Layout from './components/Layout/Layout';
+import EnvWarning from './components/EnvWarning/EnvWarning';
 
 // Páginas
 import Home from './pages/home/Home';
@@ -18,6 +19,9 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
+  <>
+    <EnvWarning />
+      
     <Routes>
       <Route path="/login" element={<Login />} />
 
@@ -36,6 +40,7 @@ function App() {
       </Route>
       
     </Routes>
+  </>
   );
 }
 
