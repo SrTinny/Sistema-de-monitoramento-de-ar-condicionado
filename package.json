@@ -1,0 +1,15 @@
+{
+  "name": "sistema-monitoramento-ac-root",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "install:backend": "cd backend && npm install",
+    "install:webapp": "cd webapp && npm install",
+    "build:webapp": "cd webapp && npm run build",
+    "start:backend": "cd backend && npm run start",
+    "start": "npm run install:backend && npm run install:webapp && npm run build:webapp && npm run start:backend"
+  }
+}
