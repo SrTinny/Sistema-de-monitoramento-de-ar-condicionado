@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// Use a variável de ambiente VITE_API_URL quando disponível (configuração para produção)
+// Em desenvolvimento, o fallback é http://localhost:3001
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 const api = axios.create({
-  baseURL: 'http://localhost:3001', // URL base da API
+  baseURL, // URL base da API (pode ser configurada no ambiente de deploy)
 });
 
 // Adiciona o token de autenticação em cada requisição, se disponível
