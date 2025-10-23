@@ -13,4 +13,20 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// Interceptor de resposta: trata 401/403 removendo token e forçando login
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      // Limpa o token local e redireciona para a tela de login
+      localStorage.removeItem('authToken');
+      // Se estiver em ambiente de navegador, redireciona
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;

@@ -1,16 +1,46 @@
-// prisma/schema.prisma
-// Informa ao Prisma para criar o cliente que você usará no seu código Node.js
 generator client {
   provider = "prisma-client-js"
 }
 
-// Informa ao Prisma como se conectar ao seu banco de dados
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Define os modelos (tabelas) do banco de dados
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AirConditioner {
+  id             String     @id @default(cuid())
+  deviceId       String     @unique
+  name           String
+  room           String
+  status         String     @default("offline")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  humidity       Float?
+  pendingCommand String?
+  temperature    Float?
+  lastHeartbeat  DateTime?
+  schedules      Schedule[]
+}
+
+model Schedule {
+  id               String         @id @default(cuid())
+  scheduledAt      DateTime
+  action           ScheduleAction
+  status           ScheduleStatus @default(PENDENTE)
+  createdAt        DateTime       @default(now())
+  airConditionerId String
+  airConditioner   AirConditioner @relation(fields: [airConditionerId], references: [id], onDelete: Cascade)
+}
+
 enum Role {
   USER
   ADMIN
@@ -25,48 +55,4 @@ enum ScheduleStatus {
   PENDENTE
   EXECUTADO
   CANCELADO
-}
-
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String   // Armazene a senha hasheada
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// Define a estrutura das suas tabelas no banco de dados
-model AirConditioner {
-  id             String   @id @default(cuid())
-  deviceId       String   @unique // Gerado pelo sistema, ex: "AC-SALA101-aBcDeF"
-  name           String   // Ex: "Ar Condicionado da Sala 101"
-  room           String   // Ex: "Sala 101 Bloco A"
-  
-  // Dados de monitoramento (reportados pelo ESP32)
-  status         String   @default("offline") // offline, desligado, ligado
-  temperature    Float?   // O '?' significa que o campo é opcional (pode ser nulo)
-  humidity       Float?   // Também opcional
-  
-  // Mecanismo de comando
-  pendingCommand String?  // Guarda o próximo comando a ser executado: "ligar", "desligar"
-  lastHeartbeat  DateTime? // Último momento em que o dispositivo reportou dados
-  // Timestamps
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt // Atualizado automaticamente em cada alteração
-  
-  // Relação com agendamentos (schedules)
-  schedules      Schedule[]
-}
-
-model Schedule {
-  id               String         @id @default(cuid())
-  scheduledAt      DateTime
-  action           ScheduleAction
-  status           ScheduleStatus @default(PENDENTE)
-  createdAt        DateTime       @default(now())
-
-  // Relação com o Ar Condicionado
-  airConditionerId String
-  airConditioner   AirConditioner @relation(fields: [airConditionerId], references: [id], onDelete: Cascade)
 }
