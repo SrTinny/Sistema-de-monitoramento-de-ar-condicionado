@@ -45,26 +45,33 @@ app.post('/auth/register', async (req, res) => {
 });
 
 app.post('/auth/login', async (req, res) => {
-  const { email, password } = req.body;
-  const user = await prisma.user.findUnique({ where: { email } });
+  try {
+    const { email, password } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
 
-  if (!user) {
-    return res.status(401).json({ error: 'Credenciais inválidas.' });
+    if (!user) {
+      return res.status(401).json({ error: 'Credenciais inválidas.' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Credenciais inválidas.' });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role }, // Dados do usuário no payload
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
+    res.json({ token });
+  } catch (err) {
+    // Log detalhado para debugging de produção (aparecerá nos logs do host)
+    console.error('[auth:login] erro ao processar login:', err && err.stack ? err.stack : err);
+    // Retorna uma mensagem genérica para o cliente, mas registre o erro completo no servidor
+    res.status(500).json({ error: 'Erro interno ao processar login.' });
   }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-
-  if (!isPasswordValid) {
-    return res.status(401).json({ error: 'Credenciais inválidas.' });
-  }
-
-  const token = jwt.sign(
-    { userId: user.id, email: user.email, role: user.role }, // Dados do usuário no payload
-    process.env.JWT_SECRET,
-    { expiresIn: '8h' }
-  );
-
-  res.json({ token });
 });
 
 // ==========================================================
@@ -307,6 +314,16 @@ app.post('/api/heartbeat', async (req, res) => {
 // Inicia o servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+});
+
+// Handlers globais para capturar erros não tratados e rejeições de promise
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception thrown:', err && err.stack ? err.stack : err);
+  // Opcional: fechar o processo ou notificar
 });
 
 // ==========================================================
