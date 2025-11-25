@@ -1,5 +1,7 @@
 // backend/server.js
-require('dotenv').config();
+// Carrega variáveis de ambiente do .env
+// Em desenvolvimento, permitimos que o .env sobrescreva variáveis já definidas na sessão
+require('dotenv').config({ override: process.env.NODE_ENV === 'development' });
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
@@ -311,10 +313,59 @@ app.post('/api/heartbeat', async (req, res) => {
   }
 });
 
-// Inicia o servidor
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-});
+// Inicialização segura: valida variáveis e conecta ao banco antes de iniciar o servidor
+const init = async () => {
+  // Verifica variáveis essenciais
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.includes('<')) {
+    console.error('Falta JWT_SECRET válido no ambiente. Configure JWT_SECRET antes de iniciar.');
+    process.exit(1);
+  }
+
+  try {
+    console.log('Conectando ao banco de dados...');
+    // Mostrar uma versão mascarada da DATABASE_URL para ajudar no diagnóstico (não exibe senha)
+    try {
+      const raw = process.env.DATABASE_URL || '';
+      const masked = raw.replace(/(postgresql:\/\/[^:]+:)([^@]+)(@)/, '$1***$3');
+      console.log('DATABASE_URL preview:', masked);
+
+      // Tenta parsear a URL para detectar portas inválidas antes do Prisma
+      try {
+        const parsed = new URL(raw);
+        if (parsed.port && Number.isNaN(Number(parsed.port))) {
+          console.error('O valor da porta na DATABASE_URL não é numérico:', parsed.port);
+        }
+      } catch (parseErr) {
+        // Se new URL falhar, registra uma mensagem útil
+        console.warn('Aviso: não foi possível parsear a DATABASE_URL com URL(), pode não seguir o formato URL padrão. Detalhes:', parseErr && parseErr.message ? parseErr.message : parseErr);
+      }
+
+    } catch (maskErr) {
+      console.warn('Erro ao mascarar DATABASE_URL para debug:', maskErr);
+    }
+
+    await prisma.$connect();
+    console.log('Conectado ao banco com sucesso.');
+  } catch (err) {
+    console.error('Falha ao conectar ao banco de dados:', err && err.stack ? err.stack : err);
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+  });
+
+  // Executa o executor após a conexão bem-sucedida
+  try {
+    await executePendingSchedules();
+  } catch (err) {
+    console.error('Erro ao executar agendamentos iniciais:', err && err.stack ? err.stack : err);
+  }
+  setInterval(executePendingSchedules, 30 * 1000);
+};
+
+// Inicia o processo de inicialização
+init();
 
 // Handlers globais para capturar erros não tratados e rejeições de promise
 process.on('unhandledRejection', (reason, promise) => {
