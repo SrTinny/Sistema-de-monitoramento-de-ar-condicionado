@@ -1,0 +1,13 @@
+/.pio
+/.vscode
+/lib/README
+/.pioenvs
+/.cache
+.pio/build
+.pio/libdeps
+.pio/packages
+.pio/package
+.pio/testresults
+.elf
+.bin
+.pio/build/*

@@ -3,10 +3,16 @@
 #include <WebSocketsServer.h>
 #include <Arduino.h>
 #include <IRremote.h>
+#include <ArduinoJson.h>
+#include <HTTPClient.h>
 
 // Configurações de WiFi
 const char *ssid = "Sobralnet-ENGENHARIA 1060";
 const char *password = "apartamento1060";
+
+// Configuração do servidor backend
+const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
+const char *deviceId = "esp32-dev-ac-01"; // ID único do dispositivo
 
 // Definição dos pinos e constantes
 #define maxLen 800
@@ -27,7 +33,7 @@ uint16_t irSignalLigar[] = {4372, 4336, 568, 1572, 564, 528, 568, 1572, 568, 157
 uint16_t irSignalDesligar[] = {4376, 4336, 568, 1596, 540, 556, 540, 1596, 544, 1596, 540, 556, 540, 556, 540, 1596, 544, 528, 564, 528, 568, 1596, 544, 552, 544, 552, 540, 1596, 544, 1596, 544, 552, 540, 1596, 544, 552, 544, 1596, 540, 1596, 544, 1596, 540, 1596, 544, 556, 540, 1596, 544, 1596, 540, 1596, 540, 532, 564, 532, 564, 556, 540, 532, 564, 1596, 540, 536, 560, 556, 540, 1596, 544, 1592, 544, 1596, 544, 552, 544, 552, 540, 556, 540, 556, 540, 552, 544, 528, 568, 552, 544, 528, 564, 1596, 544, 1596, 540, 1596, 544, 1596, 544, 1596, 540, 5196, 4376, 4340, 564, 1596, 540, 552, 544, 1596, 540, 1600, 540, 556, 540, 552, 544, 1596, 540, 556, 540, 552, 544, 1596, 544, 528, 564, 556, 540, 1596, 544, 1596, 540, 552, 544, 1596, 544, 532, 560, 1600, 540, 1596, 544, 1596, 540, 1596, 544, 528, 568, 1596, 540, 1596, 544, 1596, 540, 556, 544, 528, 564, 552, 544, 528, 568, 1596, 540, 556, 540, 556, 540, 1596, 540, 1596, 544, 1596, 544, 552, 544, 552, 540, 552, 544, 528, 568, 552, 544, 552, 564, 532, 540, 556, 540, 1596, 544, 1596, 540, 1596, 544, 1596, 544, 1592, 544}; // Sinal IR para desligar
 
 // Variáveis voláteis para interrupções IR
-volatile uint16_t irBuffer[maxLen];
+volatile unsigned long irBuffer[maxLen];
 volatile unsigned int x = 0;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -64,7 +70,8 @@ void handleIRReception(void *pvParameters) {
         if (x > 0) {
             Serial.println("\n📡 Sinal IR recebido:");
             for (unsigned int i = 1; i < x; i++) {
-                Serial.print(irBuffer[i] - irBuffer[i - 1]);
+                unsigned long delta = irBuffer[i] - irBuffer[i - 1];
+                Serial.print(delta);
                 Serial.print(i < x - 1 ? ", " : "\n");
             }
             x = 0; // Reseta o buffer
@@ -79,6 +86,71 @@ void handleRequests(void *pvParameters) {
         server.handleClient();
         webSocket.loop();
         vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+}
+
+// Tarefa que faz polling do backend para verificar comandos pendentes
+void handleBackendPolling(void *pvParameters) {
+    HTTPClient http;
+    unsigned long lastHeartbeat = 0;
+    
+    while (true) {
+        // Faz heartbeat a cada 30 segundos
+        if (millis() - lastHeartbeat > 30000) {
+            lastHeartbeat = millis();
+            
+            http.begin(backendURL);
+            http.addHeader("Content-Type", "application/json");
+            
+            // Cria JSON com o deviceId e estado atual
+            StaticJsonDocument<256> doc;
+            doc["deviceId"] = deviceId;
+            doc["isOn"] = estadoAC;
+            
+            String jsonBody;
+            serializeJson(doc, jsonBody);
+            
+            // Envia POST para /api/heartbeat
+            int httpCode = http.POST(jsonBody);
+            
+            if (httpCode == 200) {
+                String response = http.getString();
+                
+                // Parseia resposta JSON
+                StaticJsonDocument<512> responseDoc;
+                DeserializationError error = deserializeJson(responseDoc, response);
+                
+                if (!error) {
+                    const char* command = responseDoc["command"];
+                    
+                    // Processa comando recebido
+                    if (command != nullptr && String(command) != "none") {
+                        Serial.println("📡 Comando recebido do backend: " + String(command));
+                        
+                        if (String(command) == "TURN_ON" && !estadoAC) {
+                            Serial.println("🟢 Executando: LIGAR");
+                            IrSender.sendRaw(irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]), 38);
+                            estadoAC = true;
+                            sendStateToClients();
+                            sendIRSignalToClients("Ligar", irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]));
+                        } 
+                        else if (String(command) == "TURN_OFF" && estadoAC) {
+                            Serial.println("🔴 Executando: DESLIGAR");
+                            IrSender.sendRaw(irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]), 38);
+                            estadoAC = false;
+                            sendStateToClients();
+                            sendIRSignalToClients("Desligar", irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]));
+                        }
+                    }
+                }
+            } else {
+                Serial.println("❌ Erro na requisição heartbeat: " + String(httpCode));
+            }
+            
+            http.end();
+        }
+        
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -157,12 +229,13 @@ void setup() {
     pinMode(ligarPin, INPUT_PULLDOWN);
     pinMode(desligarPin, INPUT_PULLDOWN);
 
-    IrSender.begin(txPinIR, ENABLE_LED_FEEDBACK, 38);
+    IrSender.begin(txPinIR, ENABLE_LED_FEEDBACK);
     attachInterrupt(digitalPinToInterrupt(rxPinIR), rxIR_Interrupt_Handler, CHANGE);
 
     xTaskCreatePinnedToCore(handleRequests, "Tarefa Requisições", 4096, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(handleIRCommands, "Tarefa IR", 4096, NULL, 1, NULL, 0);
     xTaskCreatePinnedToCore(handleIRReception, "Tarefa Recebimento IR", 4096, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(handleBackendPolling, "Tarefa Backend Polling", 8192, NULL, 1, NULL, 0);
 }
 
 void loop() { vTaskDelay(portMAX_DELAY); }
