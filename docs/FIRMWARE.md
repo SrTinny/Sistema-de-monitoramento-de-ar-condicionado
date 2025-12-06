@@ -1,191 +1,187 @@
-# Documentação do Firmware (ESP32)
+# Especificação do Software Embarcado (Firmware) para ESP32
 
-## Visão Geral
+## 1 Requisitos de Hardware
 
-Firmware completo para ESP32 que:
-- Se conecta ao WiFi
-- Faz polling do backend a cada 30 segundos
-- Controla AC via sinais IR
-- Monitorar botões físicos
-- Expõe WebServer local e WebSocket
+### 1.1 Microcontrolador
 
-## Hardware
+| Especificação | Valor |
+|---|---|
+| Modelo | ESP32-DevKit-C ou equivalente |
+| Processador | Dual-core Xtensa 32-bit |
+| Frequência | 160-240 MHz (configurável) |
+| RAM | 320 KB (SRAM) |
+| Flash | 4 MB (típico) |
+| WiFi | 802.11 b/g/n (2.4 GHz) |
+| Bluetooth | BLE 4.2 |
 
-### Componentes Necessários
+### 1.2 Componentes Periféricos Necessários
 
-| Componente | Pino | Função |
-|---|---|---|
-| **Transmissor IR** | GPIO 26 | Enviar sinais para AC |
-| **Receptor IR** | GPIO 4 | Capturar sinais para aprendizado |
-| **Botão LIGAR** | GPIO 12 | Pressionar para ligar (pull-down) |
-| **Botão DESLIGAR** | GPIO 2 | Pressionar para desligar (pull-down) |
-| **LED Status** | GPIO 5 | (Opcional) LED de status |
+#### 1.2.1 Transmissor Infravermelhos
 
-### Circuito IR Transmissor (5V)
+- **Componente**: LED IR (comprimento de onda: 950 nm)
+- **Pino**: GPIO 26 do ESP32
+- **Resistor de Proteção**: 100Ω (obrigatório)
+- **Transistor NPN**: 2N2222 ou equivalente (para amplificar sinal)
 
+**Esquema de Conexão**:
 ```
-           VCC (5V)
-            |
-            R1 (100Ω)
-            |
-GPIO26 ----+---[MOSFET]---+---- GND
-                           |
-                          LED IR
-                           |
-                          GND
+GPIO26 → 10kΩ → Base transistor NPN
+Emissor transistor → GND
+Coletor transistor → LED IR (+) → 100Ω → 3.3V
+LED IR (-) → GND
 ```
 
-### Circuito IR Receptor (3.3V)
+#### 1.2.2 Receptor Infravermelhos
 
+- **Componente**: Fotodiodo IR com demodulador (TSOP38238 ou equivalente)
+- **Pino**: GPIO 4 do ESP32
+- **Alimentação**: 5V (com regulador LDO se necessário)
+
+**Esquema de Conexão**:
 ```
-         VCC (3.3V)
-            |
-            R1 (10kΩ)
-            |
-GPIO4 ------+---- Receptor TSOP38238
-                    |
-                   GND
-```
-
-### Botões (Pull-down)
-
-```
-GPIO12 ----[Button]---- VCC (3.3V)
-           |
-           R1 (10kΩ)
-           |
-          GND
-
-GPIO2 ----[Button]---- VCC (3.3V)
-          |
-          R1 (10kΩ)
-          |
-         GND
+5V → TSOP38238 (VCC)
+GPIO4 → TSOP38238 (OUT)
+GND → TSOP38238 (GND)
 ```
 
-## Software
+#### 1.2.3 Botões de Controle Manual
 
-### Dependências
+- **Botão Ligar**: GPIO 12 → GND
+- **Botão Desligar**: GPIO 2 → GND
+- **Resistor Pull-up**: Interno (habilitado em código)
 
-```ini
-lib_deps = 
-  z3t0/IRremote@^3.9.0           # Controle IR
-  bblanchon/ArduinoJson@^6.19.4  # Parsing JSON
-  links2004/WebSockets@^2.6.1    # WebSocket real-time
+**Proteção Recomendada**: Capacitor 100nF entre pino e GND para debouncing
+
+### 1.3 Alimentação
+
+- **Fonte de Energia**: USB 5V (durante desenvolvimento)
+- **Produção**: Fonte 5V 2A com regulador 3.3V (AMS1117 ou equivalente)
+- **Capacitores de Desacoplamento**: 100µF e 100nF próximos ao ESP32
+
+## 2 Arquitetura do Software
+
+### 2.1 Estrutura Geral
+
+O firmware é organizado em camadas:
+
+```
+┌─────────────────────────────────────────┐
+│     Interface Aplicação (API REST)      │
+├─────────────────────────────────────────┤
+│         Camada de Lógica de Negócio     │
+│  - Execução de comandos IR              │
+│  - Comunicação com backend              │
+├─────────────────────────────────────────┤
+│         Camada de Drivers de Hardware   │
+│  - Transmissão IR (IRremote)            │
+│  - Receptor IR (IRremote)               │
+│  - WiFi (Arduino WiFi)                  │
+├─────────────────────────────────────────┤
+│         FreeRTOS Scheduler              │
+│  - Gerenciamento de Tasks               │
+│  - Sincronização entre núcleos          │
+└─────────────────────────────────────────┘
 ```
 
-### Configurações Iniciais
+### 2.2 Estrutura de Tasks FreeRTOS
 
-Editar `src/main.cpp`:
+O firmware executa 4 tasks simultâneas:
+
+| Task | Núcleo | Prioridade | Stack (bytes) | Função |
+|------|--------|-----------|---|----------|
+| `handleRequests` | 1 | 1 | 4096 | HTTP server + WebSocket |
+| `handleBackendPolling` | 0 | 1 | 8192 | Polling /api/heartbeat (30s) |
+| `handleIRCommands` | 0 | 1 | 4096 | Monitoramento botões físicos |
+| `handleIRReception` | 0 | 1 | 4096 | Captura de sinais IR |
+
+**Alocação Total**: ~20 KB de stack (disponível)
+
+### 2.3 Fluxo de Execução Principal
 
 ```cpp
-// WiFi
-const char *ssid = "SEU_SSID";
-const char *password = "SUA_SENHA";
+void setup() {
+  // 1. Inicialização serial
+  Serial.begin(115200);
+  
+  // 2. Inicialização de hardwares
+  IR.begin();
+  WiFi.begin();
+  
+  // 3. Criação de tasks FreeRTOS
+  xTaskCreatePinnedToCore(handleRequests, ...);
+  xTaskCreatePinnedToCore(handleBackendPolling, ...);
+  xTaskCreatePinnedToCore(handleIRCommands, ...);
+  xTaskCreatePinnedToCore(handleIRReception, ...);
+  
+  // 4. Scheduler FreeRTOS inicia automaticamente
+}
 
-// Backend
-const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
-const char *deviceId = "esp32-dev-ac-01";  // ID único
-```
-
-### Pinos
-
-```cpp
-#define rxPinIR 4       // Pino receptor IR
-#define txPinIR 26      // Pino transmissor IR
-#define ligarPin 12     // Botão LIGAR
-#define desligarPin 2   // Botão DESLIGAR
-```
-
-## Arquitetura
-
-### Tasks (FreeRTOS)
-
-```
-┌─────────────────────────────────────────────────────┐
-│                   ESP32 (240MHz)                    │
-├─────────────────────────────────────────────────────┤
-│ Core 0          │          │      Core 1            │
-├─────────────────┤          ├──────────────────────┤
-│ handleIRReception            │ handleRequests      │
-│ (Processa IR)                │ (HTTP + WebSocket)  │
-├─────────────────┤            ├──────────────────┤
-│ handleIRCommands             │ handleBackendPolling
-│ (Monitora botões)            │ (Polling 30s)       │
-└─────────────────────────────────────────────────────┘
-```
-
-### Task: handleRequests
-
-**Função**: Processa HTTP GET/POST e WebSocket
-
-**Loop:**
-```cpp
-while(true) {
-  server.handleClient();    // Processa HTTP
-  webSocket.loop();         // Processa WebSocket
-  vTaskDelay(10ms);
+void loop() {
+  // Loop vazio - FreeRTOS controla execução
+  delay(1000);
 }
 ```
 
-**Rotas HTTP:**
-- `GET /ligar` - Liga AC
-- `GET /desligar` - Desliga AC
+## 3 Módulos Principais
 
-**Resposta:**
-```
-HTTP/1.1 200 OK
-Access-Control-Allow-Origin: *
-Content-Type: text/plain
+### 3.1 Módulo de Transmissão IR
 
-OK
-```
+**Função**: `void transmitCommand(const char *command)`
 
-**WebSocket:**
-- Broadcast: `"ligado"` quando AC liga
-- Broadcast: `"desligado"` quando AC desliga
-- Broadcast: Sinal IR enviado
+**Descrição**: Transmite sinal infravermelhos para ligar/desligar AC.
 
-### Task: handleIRCommands
+**Parâmetros**:
+- `command`: String "TURN_ON" ou "TURN_OFF"
 
-**Função**: Monitora botões físicos
-
-**Comportamento:**
-- Lê GPIO12 (LIGAR)
-- Lê GPIO2 (DESLIGAR)
-- Se pressionado e estado diferente:
-  - Chama `IrSender.sendRaw(...)`
-  - Atualiza `estadoAC`
-  - Broadcast WebSocket
-
-**Debouncing:** 500ms delay entre pressionamentos
-
-### Task: handleIRReception
-
-**Função**: Captura e processa sinais IR recebidos
-
-**Hardware:** Interrupção em GPIO4 (receptor IR)
-
-**Processo:**
-1. Interrupção captura timestamp (micros)
-2. Armazena em `irBuffer[maxLen]`
-3. Task processa a cada 100ms
-4. Calcula deltas entre timestamps
-5. Imprime no serial
-
-**Output:**
-```
-📡 Sinal IR recebido:
-4372, 4336, 568, 1572, 564, 528, 568, 1572, ...
+**Implementação**:
+```cpp
+void transmitCommand(const char *command) {
+  if (strcmp(command, "TURN_ON") == 0) {
+    IrSender.sendRaw(irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]), 38);
+    Serial.println("📡 Transmitindo sinal IR: LIGAR");
+  } else if (strcmp(command, "TURN_OFF") == 0) {
+    IrSender.sendRaw(irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]), 38);
+    Serial.println("📡 Transmitindo sinal IR: DESLIGAR");
+  }
+}
 ```
 
-### Task: handleBackendPolling
+**Frequência**: 38 kHz (padrão para controles IR)
 
-**Função**: Faz polling do backend a cada 30 segundos
+### 3.2 Módulo de Comunicação WiFi
 
-**Período:** 30s
+**Função**: `void setupWiFi()`
 
-**Payload enviado:**
+**Descrição**: Conecta ESP32 à rede WiFi.
+
+**Processo**:
+1. Aguarda conexão com timeout de 20 segundos
+2. Se conectado: exibe IP local
+3. Se falho: reinicia loop de tentativa
+
+**Logs Esperados**:
+```
+WiFi connecting...
+Connected! IP: 192.168.1.100
+```
+
+### 3.3 Módulo de Polling Backend
+
+**Função**: `void handleBackendPolling(void *pvParameters)`
+
+**Descrição**: Task que realiza polling periódico com backend.
+
+**Frequência**: A cada 30 segundos
+
+**Processo**:
+1. Cria cliente HTTP
+2. Monta JSON: `{"deviceId": "...", "isOn": bool}`
+3. Envia POST para `/api/heartbeat`
+4. Parseia resposta JSON
+5. Se comando presente: executa `transmitCommand()`
+6. Aguarda 30 segundos e repete
+
+**JSON de Requisição**:
 ```json
 {
   "deviceId": "esp32-dev-ac-01",
@@ -193,239 +189,256 @@ OK
 }
 ```
 
-**Resposta esperada:**
+**JSON de Resposta Esperada**:
 ```json
 {
   "command": "TURN_ON",
   "isOn": true,
-  "lastHeartbeat": "2025-12-05T14:30:00.000Z"
+  "lastHeartbeat": "2025-12-05T14:30:15.000Z"
 }
 ```
 
-**Processamento de comando:**
-- Se `command == "TURN_ON"` e `estadoAC == false`:
-  - Chama `IrSender.sendRaw(irSignalLigar, ...)`
-  - Seta `estadoAC = true`
-  - Broadcast WebSocket
-- Se `command == "TURN_OFF"` e `estadoAC == true`:
-  - Chama `IrSender.sendRaw(irSignalDesligar, ...)`
-  - Seta `estadoAC = false`
-  - Broadcast WebSocket
-- Se `command == "none"`:
-  - Nenhuma ação
+### 3.4 Módulo de HTTP Server Local
 
-**Erros:**
-- HTTP 4xx/5xx: Log de erro, tenta novamente em 30s
-- Parse error: Log de erro, continua
+**Função**: `void handleRequests(void *pvParameters)`
 
-## Sinais IR
+**Descrição**: Servidor web local para testes e interface.
 
-### Formato
+**Portas**:
+- HTTP: 80 (main server)
+- WebSocket: 81 (para broadcast de estado)
 
-Array `uint16_t` contendo durações em microsegundos:
+**Rotas Locais Disponíveis**:
 
-```cpp
-uint16_t irSignalLigar[] = {
-  4372,    // Burst 1 (on)
-  4336,    // Burst 1 (off)
-  568,     // Burst 2 (on)
-  1572,    // Burst 2 (off)
-  564,     // ...
-  // ... mais valores
-};
+#### GET `/status`
+Retorna estado atual do AC.
+
+```json
+{
+  "deviceId": "esp32-dev-ac-01",
+  "isOn": true,
+  "signal": "good",
+  "ip": "192.168.1.100"
+}
 ```
 
-### Como Capturar Sinais Reais
+#### GET `/ligar`
+Aciona transmissão de sinal IR de ligar (teste).
 
-1. Carregar firmware com receptor IR configurado
-2. Conectar serial monitor: `pio device monitor`
-3. Pressionar botão de LIGAR do controle remoto perto do receptor
-4. Copiar valores impressos:
-   ```
-   📡 Sinal IR recebido:
-   4372, 4336, 568, 1572, ...
-   ```
-5. Substituir em `irSignalLigar[]`
-6. Repetir para DESLIGAR
-7. Recompile e re-upload
+#### GET `/desligar`
+Aciona transmissão de sinal IR de desligar (teste).
 
-### Status Atual
+#### GET `/ir`
+Interface para captura de sinais IR (seção 4.5).
 
-**Sinais usados são de teste** - não garantem funcionamento com seu AC real.
+### 3.5 Módulo de Recepção IR
 
-## Serial Output
+**Função**: `void handleIRReception(void *pvParameters)`
 
-### Baud Rate
-115200
+**Descrição**: Monitora receptor IR para captura de sinais.
 
-### Inicialização
+**Uso**: Calibração de sinais reais do AC.
 
-```
-✅ Conectado ao Wi-Fi!
-Endereço IP: 192.168.1.100
-```
+## 4 Procedimentos Operacionais
 
-### Polling (a cada 30s)
-
-```
-🕒 [backend] Enviando heartbeat: deviceId=esp32-dev-ac-01, isOn=true
-📡 Resposta: {"command":"TURN_ON","isOn":true,"lastHeartbeat":"..."}
-```
-
-### Comando Recebido
-
-```
-📡 Comando recebido do backend: TURN_ON
-🟢 Executando: LIGAR
-➡️ Sinal IR enviado para Ligar: 4372, 4336, 568, ...
-```
-
-### Botão Físico
-
-```
-🟢 Botão físico pressionado: LIGAR
-➡️ Sinal IR enviado para Ligar: 4372, 4336, 568, ...
-```
-
-### Erro
-
-```
-❌ Erro na requisição heartbeat: 404
-[Tentará novamente em 30s]
-```
-
-## Compilação
-
-### Build
+### 4.1 Compilação
 
 ```bash
 cd firmware
 pio run -e esp32dev
 ```
 
-**Expected Output:**
+**Saída Esperada**:
 ```
-Building in release mode
-...
-RAM:   [==        ]  16.4% (used 53752 bytes from 327680 bytes)
+Compiling .pio/build/esp32dev/src/main.cpp.o
+Linking .pio/build/esp32dev/firmware.elf
+RAM:   [===       ]  16.4% (used 53752 bytes from 327680 bytes)
 Flash: [=======   ]  74.9% (used 981481 bytes from 1310720 bytes)
-========================= [SUCCESS] Took 11.26 seconds =========================
 ```
 
-### Upload
+### 4.2 Upload para ESP32
 
 ```bash
-pio run -e esp32dev -t upload
+pio run -e esp32dev -t upload --upload-port=COM3
 ```
 
-Se ficar pendurado em "Connecting...":
-1. Desconectar USB
-2. Pressionar e segurar BOOT (ou BOOTSEL)
-3. Conectar USB (ainda segurando BOOT)
-4. Soltar BOOT
-5. Retry upload
+Substituir COM3 pela porta correta.
 
-### Monitor
+### 4.3 Monitoramento Serial
 
 ```bash
-pio device monitor -p COM3 -b 115200
+pio device monitor --port=COM3 --baud=115200
 ```
 
-**Pressione `Ctrl+C` para sair**
+**Saída Esperada**:
+```
+WiFi connecting...
+Connected! IP: 192.168.1.100
+WebSocket server listening on port 81
+Backend URL: https://sistema-de-monitoramento-de-ar.onrender.com
+Iniciando heartbeat polling...
+📡 Enviando heartbeat para backend...
+✅ Heartbeat enviado com sucesso!
+```
 
-## Memory Usage
+### 4.4 Teste Local
 
-| Seção | Uso |
-|-------|-----|
-| RAM | 16.4% (53.7 KB / 320 KB) |
-| Flash | 74.9% (981 KB / 1.3 MB) |
+Acessar `http://esp32_ip:80/status` (ex: `http://192.168.1.100/status`)
 
-**Status:** Saudável, com margem para melhorias
+Deverá retornar JSON com estado atual.
 
-### Como Reduzir
+### 4.5 Captura de Sinais IR Reais
 
-1. Mover IR arrays para PROGMEM:
-   ```cpp
-   const uint16_t irSignalLigar[] PROGMEM = { ... };
-   ```
-   - Economiza ~4KB RAM
-   - Mais lento para acessar (ainda aceitável)
+**Procedimento**:
 
-2. Remover logs desnecessários
-3. Reduzir tamanho de buffers
+1. Acessar `http://esp32_ip/ir`
+2. Colocar controle remoto do AC perto do receptor IR
+3. Pressionar botão de ligar no controle
+4. Observar saída serial para valores capturados
+5. Copiar valores e substituir em `irSignalLigar[]` no código
 
-## Troubleshooting
+**Exemplo de Output Serial**:
+```
+🔴 Sinal IR capturado:
+Frequência: 38 kHz
+Pulsos: 67
+[9000, 4500, 600, 560, 560, 620, 560, 620, ...]
+```
 
-### Erro: "No serial data received"
+**Inserção no Código**:
+```cpp
+const uint16_t irSignalLigar[] = {
+  9000, 4500, 600, 560, 560, 620, 560, 620,
+  // ... copiar todos os valores capturados
+};
+```
 
-**Causa**: ESP32 não entra em bootloader
+## 5 Formato de Dados Utilizados
 
-**Solução:**
-1. Usar cabo USB com dados (não só carregamento)
-2. Tentar com resistor de 10kΩ entre GPIO0 e GND
-3. Pressionar BOOT + EN (reset) durante conexão
-4. Instalar driver CH340 se usando esse chip
+### 5.1 Estrutura JSON no Polling
 
-### Erro: "Out of Memory"
+**Requisição** (`POST /api/heartbeat`):
+```cpp
+StaticJsonDocument<256> doc;
+doc["deviceId"] = deviceId;
+doc["isOn"] = estadoAC;
+String jsonBody;
+serializeJson(doc, jsonBody);
+```
 
-**Causa**: RAM insuficiente
+**Parsing de Resposta**:
+```cpp
+StaticJsonDocument<512> responseDoc;
+deserializeJson(responseDoc, response);
+const char* command = responseDoc["command"];
+```
 
-**Solução:**
-1. Mover IR arrays para PROGMEM
-2. Reduzir tamanho de buffers
-3. Simplificar JSON
+### 5.2 Tipos de Dados
 
-### WiFi não conecta
+- **deviceId**: String única identificando o ESP32
+- **isOn**: Boolean representando estado (ligado/desligado)
+- **command**: String "TURN_ON", "TURN_OFF" ou "none"
 
-**Causa**: SSID/password incorretos
+## 6 Parâmetros de Configuração
 
-**Solução:**
-1. Verificar SSID/password em `main.cpp`
-2. Verificar se WiFi está 2.4GHz (ESP32 não suporta 5GHz)
-3. Ver serial output para diagnóstico
+### 6.1 Constantes em main.cpp
 
-### Backend não responde
+```cpp
+// WiFi
+const char *ssid = "NOME_DA_REDE";
+const char *password = "SENHA_REDE";
 
-**Causa**: URL backend incorreta, sem internet
+// Backend
+const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
+const char *deviceId = "esp32-dev-ac-01";
 
-**Solução:**
-1. Testar `https://sistema-de-monitoramento-de-ar.onrender.com` no navegador
-2. Verificar `backendURL` em `main.cpp`
-3. Verificar logs do Render
-4. Se local: backend deve estar rodando em `http://localhost:3001`
+// Hardware
+const int rxPinIR = 4;      // Pino receptor IR
+const int txPinIR = 26;     // Pino transmissor IR
+const int ligarPin = 12;    // Pino botão ligar
+const int desligarPin = 2;  // Pino botão desligar
 
-### IR não funciona
+// Timings
+const unsigned long HEARTBEAT_INTERVAL = 30000;  // 30 segundos
+```
 
-**Causa**: Sinais incorretos, pinos errados, hardware defeituoso
+## 7 Dependências
 
-**Solução:**
-1. Capturar sinais reais do seu AC (ver seção "Como Capturar Sinais")
-2. Verificar pinos em circuito
-3. Testar transmissor com oscilloscope ou sensor IR
-4. Testar receptação primeiro (serial output)
+As seguintes bibliotecas devem estar instaladas:
 
-## Checklist de Deploy
+- **IRremote** (3.9.0+): Controle IR
+- **ArduinoJson** (6.19.4+): Parsing JSON
+- **WebSockets** (2.6.1+): Comunicação WebSocket
+- **HTTPClient** (2.0.0+): Requisições HTTP
 
-- [ ] WiFi SSID/password configurado
-- [ ] Backend URL correto
-- [ ] Device ID único e documentado
-- [ ] Sinais IR capturados e testados
-- [ ] Pinos verificados no hardware
-- [ ] Firmware compilado sem erros
-- [ ] Upload realizado com sucesso
-- [ ] Serial output mostrando "Conectado ao WiFi"
-- [ ] Teste manual: pressionar botão → AC responde
-- [ ] Teste backend: webhook heartbeat retorna comando
-- [ ] Teste webapp: clicar ligar → AC liga
+Todas especificadas em `platformio.ini`:
+```ini
+lib_deps =
+    IRremote@^3.9.0
+    ArduinoJson@^6.19.4
+    WebSockets@^2.6.1
+```
 
-## Próximas Melhorias
+## 8 Diagnóstico e Troubleshooting
 
-1. OTA (Over-The-Air) updates
-2. Portal WiFi para configuração
-3. Sensor de temperatura/umidade
-4. LED de status (azul/verde/vermelho)
-5. PROGMEM para IR buffers
-6. Modo offline com cache
-7. Histórico de ações no SPIFFS
-8. Recalibração automática de sinais IR
+### 8.1 WiFi Não Conecta
 
+**Sintoma**: "WiFi connecting..." loop infinito
+
+**Causas Possíveis**:
+1. SSID/Password incorretos
+2. Rede WiFi não disponível
+3. Problema de hardware
+
+**Solução**: Verificar credenciais em main.cpp, seção 6.1
+
+### 8.2 Heartbeat Falha
+
+**Sintoma**: Backend URL não responde
+
+**Causas Possíveis**:
+1. Servidor backend offline
+2. Problema de conectividade de rede
+3. Timeout de conexão
+
+**Solução**: Verificar se backend está online, aguardar reconexão (tentativa a cada 30s)
+
+### 8.3 Sinal IR Não Funciona
+
+**Sintoma**: Transmissão de IR mas AC não responde
+
+**Causas Possíveis**:
+1. Sinais IR incorretos
+2. Hardware danificado
+3. LED IR não emitindo
+
+**Solução**: Capturar sinais do controle original conforme seção 4.5
+
+## 9 Logs e Mensagens de Debug
+
+O firmware emite logs estruturados via serial:
+
+```
+📡 Enviando heartbeat para backend...
+✅ Heartbeat enviado com sucesso!
+🔴 Sinal IR capturado
+📌 Comando recebido: TURN_ON
+🚀 Transmitindo sinal IR
+⚠️ Conexão WiFi perdida
+```
+
+Úteis para debug durante desenvolvimento.
+
+## 10 Limitações Atuais
+
+1. Credenciais WiFi hardcoded (sem portal de configuração)
+2. Sem OTA (Over-The-Air) updates
+3. Sem sincronização de hora via NTP
+4. Sem compressão de payload JSON
+5. Sinais IR iniciais são testes (devem ser calibrados)
+
+Consultar TODO.md para melhorias futuras.
+
+## 11 Conclusão
+
+O firmware implementa sistema robusto de comunicação entre ESP32 e backend, com suporte a controle remoto via IR e sincronização periódica. Está pronto para produção após calibração de sinais IR.

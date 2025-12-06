@@ -1,65 +1,128 @@
-# Guia de Setup Local
+# Guia de Configuração do Ambiente de Desenvolvimento
 
-## Pré-requisitos
+## 1 Pré-requisitos
 
-- Node.js 22+ ([download](https://nodejs.org))
-- PostgreSQL 14+ ou Neon (serverless)
-- Git
-- VSCode (recomendado)
-- PlatformIO CLI (para firmware)
+As seguintes ferramentas devem estar instaladas no ambiente de desenvolvimento:
 
-## Backend (Node.js + Express)
+| Ferramenta | Versão | Propósito |
+|-----------|--------|----------|
+| Node.js | 22+ | Runtime JavaScript |
+| PostgreSQL | 14+ | Sistema gerenciador de banco de dados (ou Neon serverless) |
+| Git | Qualquer | Controle de versão |
+| Visual Studio Code | Qualquer | Editor de código (recomendado) |
+| PlatformIO CLI | 6.x | Ferramenta de build para firmware |
 
-### 1. Clonar e Instalar
+**Instruções de Instalação**:
+- Node.js: https://nodejs.org
+- PostgreSQL: https://www.postgresql.org/download/
+- Git: https://git-scm.com/
+- VS Code: https://code.visualstudio.com/
+- PlatformIO: `pip install platformio` (requer Python 3.x)
+
+## 2 Configuração do Banco de Dados
+
+### 2.1 Opção 1: PostgreSQL Local
+
+Criar banco de dados local:
+
+```bash
+createdb ac_monitor
+```
+
+Ou via psql:
+
+```sql
+CREATE DATABASE ac_monitor;
+```
+
+String de conexão:
+```
+postgresql://postgres:password@localhost:5432/ac_monitor
+```
+
+### 2.2 Opção 2: Neon Serverless (Recomendado)
+
+1. Criar conta em https://neon.tech
+2. Criar novo projeto
+3. Copiar connection string do painel
+4. Formatar como: `postgresql://user:password@host/database?sslmode=require`
+
+## 3 Configuração do Backend
+
+### 3.1 Instalação de Dependências
 
 ```bash
 cd backend
 npm install
 ```
 
-### 2. Configurar Variáveis de Ambiente
+### 3.2 Variáveis de Ambiente
 
-Criar `.env`:
+Criar arquivo `.env` na raiz do diretório `backend/`:
+
 ```bash
 # Banco de dados
-DATABASE_URL="postgresql://user:password@host:port/database?sslmode=require&channel_binding=require"
+DATABASE_URL="postgresql://user:password@host:port/database"
 
-# JWT
-JWT_SECRET="sua-chave-super-secreta-aqui"
+# Autenticação JWT
+JWT_SECRET="gerar-com-openssl-rand-base64-32"
 
-# Servidor
+# Ambiente
 NODE_ENV="development"
 PORT=3001
 ```
 
-**Obtendo DATABASE_URL:**
-- Se usar Neon: copie a connection string do painel Neon
-- Se usar local: `postgresql://postgres:password@localhost:5432/ac_monitor`
-
-**JWT_SECRET:**
-- Gere uma string aleatória: `openssl rand -base64 32`
-
-### 3. Preparar Banco de Dados
+**Geração de JWT_SECRET Seguro**:
 
 ```bash
-# Criar/atualizar schema
-npx prisma migrate dev
+openssl rand -base64 32
+```
 
-# (Opcional) Popular com dados de teste
+**Obtenção de DATABASE_URL**:
+- Neon: Copiar da dashboard do projeto
+- Local: `postgresql://postgres:password@localhost:5432/ac_monitor`
+
+### 3.3 Inicialização do Banco de Dados
+
+Executar migrações do Prisma:
+
+```bash
+npx prisma migrate dev
+```
+
+Este comando:
+1. Cria as tabelas conforme schema.prisma
+2. Aplica todas as migrações da pasta `migrations/`
+3. Gera tipos TypeScript para cliente Prisma
+
+**Carregar dados de teste** (opcional):
+
+```bash
 npx prisma db seed
 ```
 
-### 4. Iniciar Servidor
+Dados carregados:
+- Usuário ADMIN: `admin@local` / `123456`
+- Usuário normal: `user@local` / `123456`
+- 2 unidades de AC de teste
+- 3 agendamentos de teste
+
+### 3.4 Iniciar Servidor Backend
+
+**Modo desenvolvimento** (com recarregamento automático):
 
 ```bash
-# Desenvolvimento (com nodemon)
 npm run dev
+```
 
-# Produção
+**Modo produção**:
+
+```bash
 npm start
 ```
 
-**Esperado:**
+**Saída Esperada**:
+
 ```
 Conectando ao banco de dados...
 DATABASE_URL preview: postgresql://user:***@host:5432/database?...
@@ -68,308 +131,266 @@ Conectado ao banco com sucesso.
 🕒 [executor] now = 2025-12-05T14:30:00.000Z
 ```
 
-### 5. Testar Rotas
+### 3.5 Validação de Conectividade
+
+Testar endpoints do backend:
 
 ```bash
 # Health check
 curl http://localhost:3001
 
-# Login (obter token)
+# Autenticação (obter JWT)
 curl -X POST http://localhost:3001/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@local","password":"123456"}'
 
-# Listar ACs
+# Listar ACs (substituir TOKEN_AQUI)
 curl -H "Authorization: Bearer TOKEN_AQUI" \
   http://localhost:3001/api/ac
 ```
 
-## Frontend (React + Vite)
+## 4 Configuração do Frontend
 
-### 1. Clonar e Instalar
+### 4.1 Instalação de Dependências
 
 ```bash
 cd webapp
 npm install
 ```
 
-### 2. Configurar Variáveis de Ambiente
+### 4.2 Variáveis de Ambiente
 
-Criar `.env.local`:
-```
+Criar arquivo `.env.local` na raiz do diretório `webapp/`:
+
+```bash
 VITE_API_URL=http://localhost:3001
 ```
 
-### 3. Iniciar Desenvolvimento
+### 4.3 Iniciar Servidor de Desenvolvimento
 
 ```bash
 npm run dev
 ```
 
-Abrirá em `http://localhost:5173`
+**Saída Esperada**:
 
-### 4. Build para Produção
+```
+  VITE v5.x.x  build tool
 
-```bash
-npm run build
-npm run preview  # Visualizar build
+  ➜  Local:   http://localhost:5173/
+  ➜  press h to show help
 ```
 
-## Firmware (ESP32)
+### 4.4 Acessar Aplicação
 
-### 1. Instalar PlatformIO
+Abrir navegador em `http://localhost:5173`
+
+**Credenciais de Teste**:
+- Email: `admin@local`
+- Senha: `123456`
+
+## 5 Configuração do Firmware
+
+### 5.1 Instalação de PlatformIO
+
+**Via pip** (recomendado):
 
 ```bash
-# Via pip (recomendado)
 pip install platformio
-
-# Ou via VSCode Extension
-# Marketplace → PlatformIO IDE
 ```
 
-### 2. Configurar Placa e Porta
+**Verificar instalação**:
 
-Editar `firmware/platformio.ini`:
-
-```ini
-[env:esp32dev]
-platform = espressif32
-board = esp32dev
-framework = arduino
-monitor_speed = 115200
-upload_port = COM3      ; Ajuste para sua porta
-monitor_port = COM3
-lib_deps = 
-  z3t0/IRremote@^3.9.0
-  bblanchon/ArduinoJson@^6.19.4
-  links2004/WebSockets@^2.6.1
+```bash
+pio --version
 ```
 
-**Encontrar porta:**
+### 5.2 Preparar ESP32 Fisicamente
+
+Conectar ESP32 ao computador via cabo USB-C ou Micro-USB.
+
+Identificar porta COM:
+
 ```bash
 pio device list
 ```
 
-### 3. Configurar WiFi
+Saída esperada:
 
-Editar `firmware/src/main.cpp`:
-
-```cpp
-const char *ssid = "SEU_WIFI_SSID";
-const char *password = "SUA_SENHA_WIFI";
+```
+/dev/cu.SLAB_USBtoUART - Silicon Labs CP210x USB to UART Bridge
+COM3 - USB Serial Device (VID: 10C4, PID: EA60)
 ```
 
-### 4. Compilar
+### 5.3 Atualizar Credenciais WiFi
+
+Editar `firmware/src/main.cpp`, aproximadamente linha 15:
+
+```cpp
+const char *ssid = "SEU_SSID_AQUI";
+const char *password = "SUA_SENHA_AQUI";
+```
+
+Substituir com credenciais reais da rede.
+
+### 5.4 Compilar Firmware
 
 ```bash
 cd firmware
 pio run -e esp32dev
 ```
 
-**Esperado:**
+**Esperado**:
+
 ```
-Building in release mode
-...
-RAM:   [==        ]  16.4% (used 53752 bytes from 327680 bytes)
+Compiling .pio/build/esp32dev/src/main.cpp.o
+Linking .pio/build/esp32dev/firmware.elf
+RAM:   [===       ]  16.4% (used 53752 bytes from 327680 bytes)
 Flash: [=======   ]  74.9% (used 981481 bytes from 1310720 bytes)
-========================= [SUCCESS] Took 11.26 seconds =========================
 ```
 
-### 5. Upload para ESP32
+### 5.5 Upload do Firmware
 
 ```bash
-# Conectar ESP32 via USB
-pio run -e esp32dev -t upload
-
-# Se ficar pendurado: pressionar BOOT durante upload
+pio run -e esp32dev -t upload --upload-port=COM3
 ```
 
-### 6. Monitorar Logs
+Substituir `COM3` pela porta correta identificada.
+
+**Durante o upload**:
+1. PlatformIO compila o projeto
+2. Inicia comunicação serial com ESP32
+3. Transfere binário para flash
+4. Reseta device
+
+**Se falhar**: Consultar seção de troubleshooting em TROUBLESHOOTING.md
+
+### 5.6 Monitorar Saída Serial
+
+Após upload bem-sucedido:
 
 ```bash
-pio device monitor -p COM3 -b 115200
+pio device monitor --port=COM3
 ```
 
-**Esperado:**
-```
-✅ Conectado ao Wi-Fi!
-Endereço IP: 192.168.1.100
-🕒 [executor] now = 2025-12-05T14:30:00.000Z
-📡 Comando recebido do backend: TURN_ON
-🟢 Executando: LIGAR
-➡️ Sinal IR enviado para Ligar: 4372, 4336, ...
-```
-
-## Banco de Dados
-
-### Via Neon (Recomendado)
-
-1. Criar conta em [neon.tech](https://neon.tech)
-2. Criar projeto PostgreSQL
-3. Copiar connection string
-4. Colar em `DATABASE_URL` no `.env`
-5. Rodar: `npx prisma migrate deploy`
-
-### Via PostgreSQL Local
-
-```bash
-# Instalar PostgreSQL
-# Windows: https://www.postgresql.org/download/windows/
-# Mac: brew install postgresql
-# Linux: sudo apt install postgresql
-
-# Iniciar serviço
-# Windows: Services → PostgreSQL iniciar
-# Mac: brew services start postgresql
-# Linux: sudo systemctl start postgresql
-
-# Criar banco
-createdb ac_monitor
-
-# Criar usuário
-createuser -P ac_user  # Digite uma senha
-
-# Atualizar .env
-DATABASE_URL="postgresql://ac_user:senha@localhost:5432/ac_monitor"
-
-# Rodar migrations
-npx prisma migrate deploy
-```
-
-## Prisma (ORM)
-
-### Comandos Úteis
-
-```bash
-# Ver schema
-npx prisma studio
-
-# Criar migration após mudar schema.prisma
-npx prisma migrate dev --name nome_da_mudanca
-
-# Reset banco (CUIDADO! Deleta dados)
-npx prisma migrate reset
-
-# Validar schema
-npx prisma validate
-
-# Gerar client (automático, mas às vezes precisa manual)
-npx prisma generate
-```
-
-## Troubleshooting Local
-
-### Backend não conecta ao banco
+**Esperado**:
 
 ```
-Error: Error parsing connection string: ...
+WiFi connecting...
+Connected! IP: 192.168.1.100
+WebSocket server listening on port 81
+Backend URL: https://sistema-de-monitoramento-de-ar.onrender.com
+Iniciando heartbeat polling...
 ```
 
-**Solução:**
-- Verificar `DATABASE_URL` está correto
-- Usar formato: `postgresql://user:pass@host:5432/db?sslmode=require`
-- Se local: `postgresql://user:pass@localhost:5432/db`
+## 6 Teste Integrado (Local)
 
-### Frontend não consegue chamar backend
+### 6.1 Verificar Componentes
 
-```
-GET http://localhost:3001/api/ac 404 (Not Found)
-```
+1. **Backend**: Acessar http://localhost:3001 - deve retornar JSON
+2. **Frontend**: Acessar http://localhost:5173 - deve exibir tela de login
+3. **Firmware**: Saída serial deve mostrar "WiFi connecting..."
 
-**Solução:**
-- Verificar se backend está rodando (`npm run dev` na pasta backend)
-- Verificar `VITE_API_URL=http://localhost:3001` em `.env.local`
-- Verificar CORS habilitado no backend
+### 6.2 Fluxo de Login
 
-### ESP32 não entra em bootloader
+1. Abrir http://localhost:5173
+2. Inserir credenciais: `admin@local` / `123456`
+3. Clicar "Entrar"
+4. Verificar se redireciona para dashboard
 
-```
-Connecting......................................
-Failed to connect to ESP32
-```
+### 6.3 Listar ACs
 
-**Solução:**
-1. Desconectar USB
-2. Pressionar e segurar BOOT
-3. Conectar USB (ainda segurando BOOT)
-4. Soltar BOOT
-5. Tentar upload novamente
+No dashboard, aguardar carregamento da lista de ACs. Devem aparecer ACs do seed ou criados manualmente.
 
-### Porta COM não aparece
+### 6.4 Teste de Agendamento
 
-```
-No port specified for upload. Please use upload_port.
-```
+1. Ir para aba "Agendamentos"
+2. Clicar "+ Novo Agendamento"
+3. Preencher formulário
+4. Salvar
+5. Verificar se aparece na lista
 
-**Solução:**
-- Instalar driver CH340: [link](https://github.com/nodemcu/ch340g-usb-serial-driver)
-- Ou usar CP2102 se outra versão do chip
-- Reiniciar VSCode após instalar driver
+## 7 Implantação em Produção
 
-## IDE Setup
+### 7.1 Deploy do Backend (Render)
 
-### VSCode Extensions (Recomendadas)
+1. Fazer push para GitHub
+2. Conectar repositório ao Render
+3. Configurar variáveis de ambiente:
+   - `DATABASE_URL`: String de conexão PostgreSQL (Neon)
+   - `JWT_SECRET`: Chave segura gerada
+4. Render fará deploy automático
 
-```
-ms-vscode.cpptools
-ms-vscode.cmake-tools
-platformio.platformio-ide
-dbaeumer.vscode-eslint
-esbenp.prettier-vscode
-prisma.prisma
-thunder-client.thunder-client
-```
+**URL Esperada**: `https://sistema-de-monitoramento-de-ar.onrender.com`
 
-### Prettier (Formatting)
+### 7.2 Deploy do Frontend (Vercel)
 
-Criar `.prettierrc`:
-```json
-{
-  "semi": true,
-  "singleQuote": true,
-  "tabWidth": 2,
-  "trailingComma": "es5"
-}
+1. Fazer push para GitHub
+2. Conectar repositório ao Vercel
+3. Configurar variável de ambiente:
+   - `VITE_API_URL`: `https://sistema-de-monitoramento-de-ar.onrender.com`
+4. Vercel fará deploy automático
+
+**URL Esperada**: `https://sistema-de-monitoramento-de-ar-condicionado-*.vercel.app`
+
+### 7.3 Firmware em Produção
+
+Atualizar em `firmware/src/main.cpp`:
+
+```cpp
+const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
 ```
 
-## Scripts Úteis
+Recompilar e fazer upload para ESP32 final.
 
-### Backend
+## 8 Checklist de Validação
 
-```bash
-npm run dev        # Iniciar com nodemon
-npm run start      # Iniciar sem nodemon
-npm run seed       # Popular banco com dados
-npx prisma studio # Interface gráfica do banco
+- [ ] Node.js 22+ instalado: `node --version`
+- [ ] Git instalado: `git --version`
+- [ ] PostgreSQL/Neon acessível
+- [ ] Backend iniciando sem erros
+- [ ] Frontend carregando em localhost:5173
+- [ ] Login funcionando
+- [ ] Dashboard exibindo ACs
+- [ ] PlatformIO CLI instalado: `pio --version`
+- [ ] Firmware compilando sem erros
+- [ ] Firmware fazendo upload com sucesso
+- [ ] Saída serial mostrando conexão WiFi
+
+## 9 Estrutura de Diretórios após Setup
+
+```
+Sistema-de-monitoramento-de-ar-condicionado/
+├── backend/
+│   ├── .env (configurar)
+│   ├── node_modules/
+│   ├── prisma/
+│   ├── server.js
+│   └── package.json
+├── webapp/
+│   ├── .env.local (configurar)
+│   ├── node_modules/
+│   ├── src/
+│   └── package.json
+├── firmware/
+│   ├── src/main.cpp (atualizar WiFi)
+│   ├── platformio.ini
+│   └── .pio/build/
+└── docs/
+    ├── OVERVIEW.md
+    ├── API.md
+    └── ...
 ```
 
-### Frontend
+## 10 Próximos Passos
 
-```bash
-npm run dev        # Dev server
-npm run build      # Build production
-npm run preview    # Preview do build
-npm run lint       # ESLint
-```
+Após configuração bem-sucedida:
 
-### Firmware
+1. Consultar OVERVIEW.md para entender arquitetura
+2. Ler API.md para documentação de endpoints
+3. Consultar FIRMWARE.md para detalhes de hardware
+4. Usar TROUBLESHOOTING.md se encontrar problemas
 
-```bash
-pio run                        # Compilar
-pio run -t upload              # Upload
-pio device monitor             # Monitorar serial
-pio run -t upload -t monitor   # Upload + monitor
-pio update                     # Atualizar pacotes
-```
+## 11 Suporte
 
-## Próximos Passos
-
-1. ✅ Instalar dependências
-2. ✅ Configurar variáveis de ambiente
-3. ✅ Iniciar backend (`npm run dev`)
-4. ✅ Iniciar frontend (`npm run dev`)
-5. ✅ Testar login com `admin@local` / `123456`
-6. ⏳ Fazer upload do firmware no ESP32
-7. ⏳ Capturar sinais IR reais do seu AC
-8. ⏳ Testar integração completa
-
+Para problemas específicos, consulte TROUBLESHOOTING.md que contém 20+ cenários comuns de resolução.

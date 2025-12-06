@@ -1,696 +1,702 @@
-# Troubleshooting & FAQ
+# Guia de Solução de Problemas (Troubleshooting)
 
-## Problemas Comuns
+## 1 Problemas de Backend
 
-### Backend (Node.js + Express)
+### 1.1 Erro: "JWT_SECRET must have a value"
 
-#### ❌ "Error: secretOrPrivateKey must have a value"
-
-**Sintoma**: Erro ao tentar fazer login
+**Sintoma**:
 ```
 Error: secretOrPrivateKey must have a value
 ```
 
-**Causa**: `JWT_SECRET` não configurada na variável de ambiente
+**Causa**: Variável de ambiente `JWT_SECRET` não configurada ou vazia.
 
 **Solução**:
-- **Local**: Adicionar em `.env`:
-  ```
-  JWT_SECRET=sua-chave-super-secreta-aqui
-  ```
-- **Render**: Settings → Environment Variables → Adicionar `JWT_SECRET`
 
----
-
-#### ❌ "Error parsing connection string: invalid domain character"
-
-**Sintoma**: Erro ao conectar no banco
-```
-PrismaClientInitializationError: Error parsing connection string: 
-invalid domain character in database URL
-```
-
-**Causa**: `DATABASE_URL` com valores placeholder ou inválido
-
-**Solução**:
+1. Verificar arquivo `.env`:
 ```bash
-# ❌ Errado (placeholder)
-DATABASE_URL="postgresql://SEU_USUARIO:***@SEU_HOST:PORT/SEU_DATABASE"
-
-# ✅ Correto (valores reais)
-DATABASE_URL="postgresql://neondb_owner:abcd1234@ep-soft-brook-admmp8yg-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
+echo $JWT_SECRET
 ```
 
-**Como obter URL correta:**
-- **Neon**: Login → Project → Connection string → Copiar
-- **Local**: `postgresql://user:pass@localhost:5432/dbname`
-
----
-
-#### ❌ "ECONNREFUSED 127.0.0.1:5432"
-
-**Sintoma**: Não consegue conectar ao PostgreSQL local
-```
-Error: Error connecting to server: ECONNREFUSED 127.0.0.1:5432
-```
-
-**Causa**: PostgreSQL não está rodando
-
-**Solução**:
-- **Windows**: Services → PostgreSQL → Start
-- **Mac**: `brew services start postgresql`
-- **Linux**: `sudo systemctl start postgresql`
-
-**Verificar:**
+2. Se vazio, gerar novo secret:
 ```bash
-psql -U postgres -c "SELECT 1"  # Deve retornar 1
+openssl rand -base64 32
 ```
 
----
-
-#### ❌ "Cannot GET /"
-
-**Sintoma**: Ao acessar URL do backend, aparece erro 404
+3. Adicionar ao `.env`:
 ```
-Cannot GET /
+JWT_SECRET=seu_novo_secret_aqui
 ```
 
-**Causa**: Rota raiz não implementada
-
-**Solução**: ✅ Já foi adicionado (`GET /` → retorna status)
-
-Se continuar, rodar:
+4. Reiniciar servidor:
 ```bash
-npm install && npm run dev
-```
-
----
-
-#### ❌ "CORS error" no navegador
-
-**Sintoma**: Frontend não consegue chamar backend
-```
-Access to XMLHttpRequest at 'http://localhost:3001/...' 
-from origin 'http://localhost:3000' has been blocked by CORS policy
-```
-
-**Causa**: CORS não configurado
-
-**Solução**: Backend já tem CORS habilitado. Se problema persistir:
-```bash
-# Verificar se servidor está rodando
-curl http://localhost:3001/
-
-# Deve retornar JSON, não erro
-```
-
----
-
-#### ❌ "Cannot find module 'dotenv'"
-
-**Sintoma**: Erro ao iniciar servidor
-```
-Error: Cannot find module 'dotenv'
-```
-
-**Causa**: Dependências não instaladas
-
-**Solução**:
-```bash
-cd backend
-npm install
 npm run dev
 ```
 
----
+**Prevenção**: Sempre definir `JWT_SECRET` antes de iniciar servidor.
 
-### Frontend (React + Vite)
+### 1.2 Erro: "Cannot connect to database"
 
-#### ❌ "VITE_API_URL is undefined"
-
-**Sintoma**: Console mostra `undefined` para API URL
+**Sintoma**:
 ```
-🔗 API Base URL: undefined
+Error: connect ECONNREFUSED 127.0.0.1:5432
 ```
 
-**Causa**: Variável de ambiente não definida
+**Causa**: Banco de dados PostgreSQL não está acessível.
 
 **Solução**:
-- **Vercel**: Settings → Environment Variables → Adicionar `VITE_API_URL`
-- **Local**: Criar `webapp/.env.local`:
-  ```
-  VITE_API_URL=http://localhost:3001
-  ```
 
-**Teste**:
+1. Verificar se PostgreSQL está rodando:
 ```bash
-cd webapp
-echo "VITE_API_URL=http://localhost:3001" > .env.local
-npm run dev
+# Linux/Mac
+pg_isready
+
+# Windows
+# Abrir Services.msc e verificar PostgreSQL service
 ```
 
----
+2. Se usando Neon, verificar CONNECTION_URL em `.env`
 
-#### ❌ "Failed to load resource: 404"
-
-**Sintoma**: Requisições à API retornam 404
-```
-GET https://sistema-de-monitoramento-de-ar.onrender.com/api/ac 404
+3. Testar conectividade:
+```bash
+psql postgresql://user:password@host:port/database
 ```
 
-**Causas possíveis:**
-1. Backend offline
-2. URL backend incorreta
-3. Rota não existe
-
-**Solução**:
-1. Verificar se backend está online:
-   ```bash
-   curl https://sistema-de-monitoramento-de-ar.onrender.com/
-   # Deve retornar JSON
-   ```
-
-2. Verificar URL em `webapp/.env.local` ou Vercel
-   ```bash
-   # Deve ser exatamente
-   VITE_API_URL=https://sistema-de-monitoramento-de-ar.onrender.com
-   ```
-
-3. Se local, verificar se backend está rodando:
-   ```bash
-   cd backend && npm run dev
-   ```
-
----
-
-#### ❌ "Redirected to login, but still seeing login page"
-
-**Sintoma**: Token parece inválido, fica em loop de login
-
-**Causa**: Token expirado (8h) ou inválido
-
-**Solução**:
-1. Limpar localStorage:
-   ```javascript
-   localStorage.clear()
-   ```
-
-2. Fazer login novamente
-
-3. Se erro persistir, verificar console para mensagens detalhadas
-
----
-
-#### ❌ "404 Not Found" ao pressionar F5 no celular
-
-**Sintoma**: Ao fazer refresh no celular, aparece 404
-```
-Failed to load resource: the server responded with a status of 404
+4. Se problema persiste, criar novo banco:
+```bash
+createdb ac_monitor
 ```
 
-**Causa**: Vercel não configurado para SPA routing
+**Prevenção**: Documentar credenciais do banco em arquivo seguro.
 
-**Solução**: ✅ Já foi adicionado (`vercel.json` com rewrites)
+### 1.3 Erro: "Email already registered"
 
-Se continuar:
-1. Verificar `webapp/vercel.json` tem seção `rewrites`:
-   ```json
-   {
-     "rewrites": [
-       {
-         "source": "/(.*)",
-         "destination": "/index.html"
-       }
-     ]
-   }
-   ```
-
-2. Redeploy na Vercel:
-   - Dashboard → Deployments → 3 pontos → Redeploy
-
----
-
-#### ❌ "CSP violation" - Fonts/scripts bloqueadas
-
-**Sintoma**: Console mostra avisos de Content Security Policy
-```
-Executing inline script violates CSP directive 'default-src 'none''
-Loading stylesheet violates CSP directive
-```
-
-**Causa**: CSP headers muito restritivo
-
-**Solução**: ✅ Já foi adicionado (`vercel.json` com CSP apropriado)
-
-Se continuar, verificar `webapp/vercel.json`:
+**Sintoma**:
 ```json
 {
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com; ..."
-        }
-      ]
-    }
+  "error": "Email já registrado"
+}
+```
+
+**Causa**: Usuário com este email já existe no banco.
+
+**Solução**:
+
+1. Usar email diferente para novo registro
+
+2. Se necessário remover usuário anterior (apenas desenvolvimento):
+```bash
+# Via Prisma Studio
+npx prisma studio
+
+# Encontrar usuário e deletar
+```
+
+3. Ou redefinir senha via banco de dados
+
+**Prevenção**: Verificar email antes de registrar novo usuário.
+
+### 1.4 Erro: "Request timeout"
+
+**Sintoma**:
+```
+Error: Request timeout after 30000ms
+```
+
+**Causa**: Servidor levando muito tempo para responder.
+
+**Solução**:
+
+1. Verificar logs do servidor para gargalos
+2. Verificar uso de CPU/RAM:
+```bash
+# Linux/Mac
+top
+
+# Windows
+# Ctrl+Shift+Esc (Task Manager)
+```
+
+3. Se banco está lento:
+   - Verificar índices: `\d tablename` no psql
+   - Considerar migração para instância maior
+
+4. Aumentar timeout no cliente (webapp):
+```javascript
+// Adicionar timeout em axios
+axios.defaults.timeout = 60000;  // 60 segundos
+```
+
+**Prevenção**: Monitorar performance em desenvolvimento.
+
+### 1.5 Erro: "CORS error"
+
+**Sintoma**:
+```
+Access to XMLHttpRequest at 'http://localhost:3001/api/ac' 
+from origin 'http://localhost:5173' has been blocked by CORS policy
+```
+
+**Causa**: CORS não configurado no backend.
+
+**Solução**:
+
+Se problema em desenvolvimento local (improvável, mas possível):
+
+```javascript
+// Em server.js, adicionar antes das rotas:
+const cors = require('cors');
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
+```
+
+Em produção (Vercel → Render), geralmente não é problema pois estão no mesmo domínio.
+
+## 2 Problemas de Frontend
+
+### 2.1 Erro: "VITE_API_URL is undefined"
+
+**Sintoma**:
+```
+🔗 VITE_API_URL env: undefined
+```
+
+**Causa**: Variável de ambiente não configurada em tempo de build.
+
+**Solução**:
+
+1. **Desenvolvimento local**: Criar `.env.local` em `webapp/`:
+```
+VITE_API_URL=http://localhost:3001
+```
+
+2. **Vercel**: Adicionar em Project Settings → Environment Variables:
+   - Key: `VITE_API_URL`
+   - Value: `https://sistema-de-monitoramento-de-ar.onrender.com`
+
+3. Rebuild/reiniciar:
+```bash
+npm run dev
+```
+
+**Prevenção**: Ter `.env.local` no `.gitignore` e documentar em `.env.example`.
+
+### 2.2 Erro: "Cannot GET /login"
+
+**Sintoma**: Página branca ao acessar `http://localhost:5173/login` após refresh (F5).
+
+**Causa**: Vercel não está configurado para SPA (Single Page Application).
+
+**Solução**:
+
+Criar `webapp/vercel.json`:
+```json
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
 ```
 
----
-
-### Firmware (ESP32)
-
-#### ❌ "Failed to connect to ESP32: No serial data received"
-
-**Sintoma**: Upload falha com timeout
-```
-Connecting......................................
-Failed to connect to ESP32: No serial data received.
-```
-
-**Causa**: ESP32 não entra em bootloader
-
-**Solução (Método 1):**
-1. Desconectar USB
-2. Pressionar e segurar **BOOT** (ou **BOOTSEL**)
-3. Conectar USB (mantendo BOOT pressionado)
-4. Soltar BOOT
-5. Fazer upload novamente
-
-**Solução (Método 2):**
-1. Verificar porta COM:
-   ```bash
-   pio device list
-   ```
-2. Atualizar `platformio.ini`:
-   ```ini
-   upload_port = COM3  ; Ajuste para sua porta
-   ```
-
-**Solução (Método 3):**
-1. Instalar driver CH340/CP2102:
-   - https://github.com/nodemcu/ch340g-usb-serial-driver
-2. Tentar com outro cabo USB (alguns são só de carregamento)
-
----
-
-#### ❌ "Board espressif32 unknown"
-
-**Sintoma**: Erro ao compilar
-```
-Error: board 'esp32dev' is unknown
-```
-
-**Causa**: PlatformIO não tem plataforma ESP32
-
-**Solução**:
+Fazer deploy novamente:
 ```bash
-pio platform install espressif32
-pio run -e esp32dev
+git add vercel.json
+git commit -m "Adicionar SPA rewrites"
+git push
 ```
 
----
+**Prevenção**: Configurar `vercel.json` no repositório.
 
-#### ❌ "Library IRremote not found"
+### 2.3 Erro: "Content-Security-Policy violation"
 
-**Sintoma**: Erro ao compilar
+**Sintoma**:
 ```
-.pio/libdeps/esp32dev/IRremote not found
+Refused to load the font 'https://fonts.googleapis.com/...' 
+because it violates the following Content-Security-Policy directive
 ```
 
-**Causa**: Biblioteca não instalada
+**Causa**: CSP headers muito restritivos.
 
 **Solução**:
-```bash
-# Em firmware/
-pio lib install "IRremote@^3.9.0"
-pio run -e esp32dev
+
+Atualizar `webapp/vercel.json`:
+```json
+{
+  "headers": [{
+    "source": "/(.*)",
+    "headers": [{
+      "key": "Content-Security-Policy",
+      "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.googleapis.com; connect-src 'self' https://sistema-de-monitoramento-de-ar.onrender.com"
+    }]
+  }]
+}
 ```
 
-Ou editar `platformio.ini`:
-```ini
-lib_deps = 
-  z3t0/IRremote@^3.9.0
-  bblanchon/ArduinoJson@^6.19.4
-  links2004/WebSockets@^2.6.1
+**Prevenção**: Documentar CSP requirements ao configurar novas dependências.
+
+### 2.4 Erro: "Token expired"
+
+**Sintoma**:
+```
+Error: 401 Unauthorized
+Redirect to login page
 ```
 
----
-
-#### ❌ "WiFi não conecta"
-
-**Sintoma**: Serial mostra tentando conectar, mas não consegue
-```
-...................
-✗ WiFi não conectou
-```
-
-**Causa**: SSID/password incorretos
+**Causa**: JWT expirou após 8 horas.
 
 **Solução**:
-1. Editar `src/main.cpp`:
-   ```cpp
-   const char *ssid = "SEU_SSID_AQUI";
-   const char *password = "SUA_SENHA_AQUI";
-   ```
 
-2. Verificar se WiFi é 2.4GHz (ESP32 não suporta 5GHz)
-
-3. Recompile e upload:
-   ```bash
-   pio run -e esp32dev -t upload
-   ```
-
-4. Monitorar:
-   ```bash
-   pio device monitor
-   ```
-
----
-
-#### ❌ "Backend não responde"
-
-**Sintoma**: Serial mostra erro ao fazer heartbeat
+Fazer login novamente para obter novo token:
 ```
-❌ Erro na requisição heartbeat: 404
+1. Clicar em "Sair" ou atualizar página
+2. Login com email/senha
+3. Novo token será armazenado em localStorage
 ```
 
-**Causa**: Backend offline, URL incorreta, ou rota `/api/heartbeat` não existe
+**Prevenção** (futuro): Implementar refresh token para renovação automática.
 
-**Solução**:
-1. Verificar backend está online:
-   ```bash
-   curl https://sistema-de-monitoramento-de-ar.onrender.com/
-   # Deve retornar JSON
-   ```
+### 2.5 Erro: Dados não carregam no dashboard
 
-2. Verificar URL em `main.cpp`:
-   ```cpp
-   const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
-   ```
-
-3. Verificar logs do Render:
-   - Render Dashboard → seu service → Logs
-
-4. Se usando backend local, deve estar rodando:
-   ```bash
-   cd backend && npm run dev
-   ```
-
----
-
-#### ❌ "IR signal não funciona"
-
-**Sintoma**: AC não liga/desliga quando firmware envia sinal
+**Sintoma**:
+- Página de login funciona
+- Dashboard fica em branco ou mostra "Nenhum AC registrado"
 
 **Causa**: 
-- Sinais IR incorretos
-- Pinos errados
-- Hardware defeituoso
+1. Backend offline
+2. API retornando erro
+3. Dados não foram seeded
 
 **Solução**:
 
-**Opção 1: Capturar sinais reais**
-1. Apontar receptor IR para controle remoto do AC
-2. Pressionar LIGAR
-3. Ver no serial:
-   ```
-   📡 Sinal IR recebido:
-   4372, 4336, 568, 1572, ...
-   ```
-4. Copiar valores
-5. Colar em `irSignalLigar[]` em `main.cpp`
-6. Recompile e upload
+1. Verificar se backend está online:
+```bash
+curl https://sistema-de-monitoramento-de-ar.onrender.com
+```
 
-**Opção 2: Verificar pinos**
+2. Verificar logs no Render:
+   - Acessar dashboard do Render
+   - Ver seção "Logs"
+   - Procurar por erros 500
+
+3. Se local, rodar seed:
+```bash
+cd backend
+npx prisma db seed
+```
+
+4. Verificar console do navegador (F12):
+   - Aba "Network" - ver requisição para `/api/ac`
+   - Aba "Console" - procurar por erros JavaScript
+
+**Prevenção**: Fazer testes de integração antes de deploy.
+
+## 3 Problemas de Firmware (ESP32)
+
+### 3.1 Erro: "Failed to connect to ESP32: No serial data received"
+
+**Sintoma**:
+```
+esptool.py v4.x
+A fatal error occurred: Failed to connect to ESP32: No serial data received.
+For troubleshooting steps visit: https://docs.espressif.com/...
+```
+
+**Causa**:
+1. Porta COM incorreta
+2. ESP32 não em modo bootloader
+3. Cabo USB com problema
+4. Driver USB não instalado
+
+**Solução - Passo 1: Verificar Porta**:
+
+```bash
+pio device list
+```
+
+Identificar porta correta (ex: COM3, /dev/ttyUSB0).
+
+Atualizar `platformio.ini`:
+```ini
+upload_port = COM3
+monitor_port = COM3
+```
+
+**Solução - Passo 2: Modo Bootloader**:
+
+Durante o upload, manter pressionado:
+1. Botão **BOOT** (continuamente)
+2. Clicar **EN** (Reset) uma vez
+3. Soltar **BOOT** após aparecer "Connecting..."
+
+Ou automaticamente se cabo está correto.
+
+**Solução - Passo 3: Verificar Cabo/Driver**:
+
+```bash
+# Windows - listar portas seriais
+mode
+
+# Linux/Mac - listar portas
+ls /dev/tty*
+
+# Testar conexão básica
+pio device monitor --port=COM3 --baud=115200
+```
+
+Se nenhuma porta aparecer: problema de driver ou cabo.
+
+**Instalar Driver CP210x** (USB-to-UART):
+- Baixar: https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers
+- Instalar para seu SO
+- Reiniciar computador
+- Tentar novamente
+
+**Prevenção**: Usar cabo USB original de qualidade.
+
+### 3.2 Erro: "WiFi connecting... loop infinito"
+
+**Sintoma**:
+```
+WiFi connecting...
+WiFi connecting...
+WiFi connecting...
+(continua indefinidamente)
+```
+
+**Causa**: Credenciais WiFi incorretas ou rede não disponível.
+
+**Solução**:
+
+1. Verificar SSID e senha em `firmware/src/main.cpp`:
 ```cpp
-// Verificar se pinos estão corretos para seu ESP32
-#define txPinIR 26      // Transmissor (ajustar se necessário)
-#define rxPinIR 4       // Receptor
-
-// Alguns ESP32 têm restrições de pinos:
-// GPIO 0, 2: boot pins (use com cuidado)
-// GPIO 6-11: reserved para flash
-// GPIO 34-39: input-only
+const char *ssid = "NOME_DA_REDE";
+const char *password = "SENHA";
 ```
 
-**Opção 3: Testar com oscilloscope/analisador**
-- Medir se sinal está sendo enviado em GPIO26
-- Verificar frequência (deve ser ~38kHz para IR)
+2. Confirmar que rede está 2.4 GHz (ESP32 não suporta 5 GHz)
 
----
-
-#### ❌ "Cannot allocate memory for task"
-
-**Sintoma**: Erro ao iniciar
-```
-xTaskCreatePinnedToCore failed: ...
-```
-
-**Causa**: RAM insuficiente
-
-**Solução**:
-1. Reduzir tamanho de stacks em `xTaskCreatePinnedToCore`:
-   ```cpp
-   // Antes:
-   xTaskCreatePinnedToCore(handleBackendPolling, "...", 8192, NULL, ...);
-   
-   // Depois (reduzir para 4096):
-   xTaskCreatePinnedToCore(handleBackendPolling, "...", 4096, NULL, ...);
-   ```
-
-2. Mover IR arrays para PROGMEM:
-   ```cpp
-   const uint16_t irSignalLigar[] PROGMEM = { ... };
-   ```
-
----
-
-### Banco de Dados (Neon)
-
-#### ❌ "too many connections"
-
-**Sintoma**: Erro ao conectar ao banco
-```
-Error: too many connections
-```
-
-**Causa**: Pool de conexões esgotado
-
-**Solução**:
-1. Usar connection pooling (PgBouncer):
-   - Neon → Project settings → Connection pooling → Enable
-
-2. Aumentar limite em Neon dashboard
-
----
-
-#### ❌ "Password authentication failed"
-
-**Sintoma**: Erro ao conectar ao banco
-```
-Error: password authentication failed
-```
-
-**Causa**: Senha incorreta
-
-**Solução**:
-1. Verificar password em `DATABASE_URL`
-2. Resetar password em Neon dashboard
-3. Gerar nova connection string
-
----
-
-### Git & Repositório
-
-#### ❌ "Permission denied" ao fazer push
-
-**Sintoma**: Erro ao fazer push
-```
-Permission denied (publickey).
-fatal: Could not read from remote repository.
-```
-
-**Causa**: SSH key não configurada
-
-**Solução**:
+3. Recompilar e fazer upload:
 ```bash
-# Usar HTTPS em vez de SSH
-git remote set-url origin https://github.com/SrTinny/Sistema-de-monitoramento-de-ar-condicionado.git
-
-# Ou gerar SSH key:
-ssh-keygen -t ed25519 -C "seu-email@example.com"
-# Adicionar chave em GitHub → Settings → SSH and GPG keys
+cd firmware
+pio run -e esp32dev -t upload --upload-port=COM3
 ```
 
----
-
-#### ❌ "Uncommitted changes"
-
-**Sintoma**: Não consegue fazer pull/push
+4. Monitorar saída serial:
+```bash
+pio device monitor --port=COM3
 ```
-error: your local changes to the following files would be overwritten by merge
+
+**Se ainda assim falhar**:
+
+Editar `firmware/src/main.cpp`, função `setupWiFi()`:
+```cpp
+// Aumentar timeout
+WiFi.begin(ssid, password);
+int maxAttempts = 40;  // Era 20, agora 40 (40 segundos)
+int attempts = 0;
+
+while (WiFi.status() != WL_CONNECTED && attempts < maxAttempts) {
+  delay(1000);
+  Serial.print(".");
+  attempts++;
+}
+```
+
+**Prevenção**: Testar rede antes de esperar firmware conectar.
+
+### 3.3 Erro: "Heartbeat failed - connection timeout"
+
+**Sintoma**:
+```
+[backend] Enviando heartbeat para backend...
+[error] Connection timeout
+```
+
+**Causa**: Backend não está acessível da rede do ESP32.
+
+**Solução**:
+
+1. Verificar se backend está online:
+```bash
+# Do computador onde ESP32 está conectado
+curl https://sistema-de-monitoramento-de-ar.onrender.com
+```
+
+2. Se localhost, verificar IP:
+```bash
+# No terminal do backend
+echo "http://192.168.x.x:3001"
+```
+
+Atualizar em `firmware/src/main.cpp`:
+```cpp
+const char *backendURL = "http://192.168.1.x:3001";  // Se local
+```
+
+3. Se Render, adicionar delay para testes:
+```cpp
+// Em handleBackendPolling()
+delay(5000);  // Dar 5 segundos para conexão estabilizar
+```
+
+**Prevenção**: Testar conectividade antes de rodar firmware em produção.
+
+### 3.4 Erro: "insufficient memory"
+
+**Sintoma**:
+```
+FAILED: src/main.cpp.o
+error: 'ArduinoJson' undeclared
+Stack overflow error
+```
+
+**Causa**: Stack overflow ou falta de memória.
+
+**Solução**:
+
+1. Aumentar heap do Arduino:
+```cpp
+// Em main.cpp, antes de setup()
+extern "C" {
+  void *_malloc_r(struct _reent *r, size_t sz) {
+    return malloc(sz);
+  }
+}
+```
+
+2. Otimizar alocação de memória:
+```cpp
+// Usar StaticJsonDocument em vez de DynamicJsonDocument
+StaticJsonDocument<256> doc;  // Melhor que DynamicJsonDocument
+```
+
+3. Mover arrays para PROGMEM (flash):
+```cpp
+const uint16_t irSignalLigar[] PROGMEM = { ... };
+```
+
+4. Verificar uso de stack em tasks:
+```cpp
+// Aumentar stack alocado
+xTaskCreatePinnedToCore(
+  handleBackendPolling,
+  "Polling",
+  8192,    // ERA 4096, AUMENTADO PARA 8192
+  NULL,
+  1,
+  NULL,
+  0
+);
+```
+
+**Prevenção**: Compilar com `pio run` antes de fazer upload - ele verificará uso de memória.
+
+### 3.5 Erro: "WiFi.h not found"
+
+**Sintoma**:
+```
+fatal error: WiFi.h: No such file or directory
+```
+
+**Causa**: Plataforma Arduino não está configurada em c_cpp_properties.json.
+
+**Solução**:
+
+O VS Code mostra este erro mas **a compilação funciona** se usar PlatformIO CLI:
+
+```bash
+pio run -e esp32dev
+```
+
+Se realmente não compila, atualizar PlatformIO:
+
+```bash
+pio update
+pio run -e esp32dev
+```
+
+Se ainda assim falhar, reiniciar VS Code completamente.
+
+**Nota**: Este é um erro de IntelliSense (client-side), não do compilador.
+
+## 4 Problemas de Integração
+
+### 4.1 Cenário: Webapp conecta, mas commands não executam
+
+**Sintoma**:
+- Dashboard carrega, lista ACs
+- Botão "Ligar" funciona no webapp
+- Mas AC não ligaEsp32 não recebe comando
+
+**Diagnóstico**:
+
+1. Verificar heartbeat serial do ESP32:
+```
+✅ Heartbeat enviado com sucesso!
+Resposta: {"command":"TURN_ON",...}
+```
+
+Se `command` é `"none"`, backend não tem pendingCommand.
+
+2. Verificar logs do backend:
+```bash
+# Render dashboard → Logs
+# Procurar por "pendingCommand"
+```
+
+3. Testar POST direto:
+```bash
+curl -X POST https://sistema-de-monitoramento-de-ar.onrender.com/api/ac/{id}/command \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"command":"TURN_ON"}'
 ```
 
 **Solução**:
+
+Se command é `"none"`:
+- Verificar se `pendingCommand` foi limpo após envio anterior
+- Reenviar comando
+- Aguardar próximo heartbeat (máximo 30 segundos)
+
+Se erro na resposta:
+- Verificar token JWT válido
+- Verificar ID do AC correto
+- Consultar logs do Render para erro detalhado
+
+### 4.2 Cenário: Agendamento não executa automaticamente
+
+**Sintoma**:
+- Schedule criado com sucesso
+- Horário chegou
+- Mas AC não ligou
+
+**Diagnóstico**:
+
+1. Verificar logs do backend no horário agendado:
+```
+[executor] Checando schedules...
+[executor] Schedule due: TURN_ON para AC xyz
+[executor] Setting pendingCommand
+```
+
+Se não aparecer, executor não está rodando.
+
+2. Verificar status do schedule:
 ```bash
-# Ver mudanças
-git status
+# Via Prisma Studio
+npx prisma studio
 
-# Stash (salvar temporariamente)
-git stash
-
-# Ou descartar
-git restore .
-
-# Depois fazer pull
-git pull
+# Procurar por Schedule
+# Status deve estar "PENDING" antes do horário
 ```
 
----
+**Solução**:
 
-## Performance & Otimização
+1. Se executor não está rodando:
+   - Verificar se `setInterval` está no `server.js`
+   - Verificar logs de startup
 
-### Frontend é Lento
+2. Se schedule tem status errado:
+   - Deletar e recriar schedule
+   - Verificar timezone do servidor (UTC vs local)
 
-**Solução:**
-1. Verificar Network tab no DevTools (F12)
-   - Se API lenta: problema é backend
-   - Se muito JS: problema é bundle size
-
-2. Build otimizado:
-   ```bash
-   npm run build
-   npm run preview  # Visualizar
-   ```
-
-3. Usar lighthouse no DevTools
-
----
-
-### Backend responde lento
-
-**Solução:**
-1. Verificar logs do Render:
-   - Render dashboard → Logs
-   - Procurar por operações lentas no banco
-
-2. Otimizar queries Prisma:
-   ```javascript
-   // ❌ Lento (N+1 query)
-   const acs = await prisma.airConditioner.findMany();
-   acs.forEach(ac => console.log(ac.room.name)); // Extra query!
-
-   // ✅ Rápido (include)
-   const acs = await prisma.airConditioner.findMany({
-     include: { room: true }
-   });
-   ```
-
-3. Adicionar índices no banco:
-   ```prisma
-   model AirConditioner {
-     id String @id @default(cuid())
-     deviceId String @unique
-     // ...
-     @@index([lastHeartbeat])  // Para queries por heartbeat
-   }
-   ```
-
----
-
-### Firmware travando
-
-**Solução:**
-1. Verificar stack overflow:
-   - Aumentar tamanho de stack em `xTaskCreatePinnedToCore`
-
-2. Verificar watchdog timer:
-   - Adicionar `vTaskDelay()` em loops críticos
-   - Não fazer operações bloqueantes
-
-3. Monitorar memory:
-   ```cpp
-   Serial.println(esp_get_free_heap_size());  // RAM livre
-   ```
-
----
-
-## Logs Detalhados
-
-### Como Ativar Verbose Logging
-
-**Backend:**
+3. Teste manual:
 ```bash
-NODE_ENV=development npm run dev  # Já ativa mais logs
+# Ir diretamente para o horário do schedule no banco
+UPDATE schedules SET scheduledAt = NOW() - INTERVAL '1 second' WHERE id = 'xxx';
+
+# Aguardar 30 segundos e verificar se pendingCommand foi setado
 ```
 
-**Frontend (DevTools):**
-```javascript
-// No console do DevTools:
-localStorage.setItem('DEBUG', 'app:*');
-location.reload();
+### 4.3 Cenário: Sinal IR transmitido mas AC não responde
+
+**Sintoma**:
+- Serial mostra "📡 Transmitindo sinal IR: LIGAR"
+- Mas AC não ligaledAC não pisca
+
+**Diagnóstico**:
+
+1. Verificar se sinal está sendo gerado:
+   - Apontar smartphone camera para LED IR
+   - Ao transmitir, LED deve piscar (visível em câmera mesmo se IR invisível ao olho)
+
+2. Verificar se sinais capturados estão corretos:
+```cpp
+// Verificar irSignalLigar[] e irSignalDesligar[]
+// Devem ser arrays grandes (100+ elementos) com valores 500-10000
 ```
 
-**Firmware:**
-```bash
-pio run -e esp32dev -v  # Verbose durante build
-pio device monitor -p COM3 -b 115200 -v  # Verbose no monitor
+Se arrays estão vazios ou muito pequenos:
+- Sinais não foram capturados corretamente
+- Rever seção 4.5 de FIRMWARE.md
+
+**Solução**:
+
+1. Recapturar sinais do AC original:
+   - Acessar `http://esp32_ip/ir`
+   - Pressionar botão ligar do controle
+   - Copiar array completo
+   - Substituir em `main.cpp`
+
+2. Se problema persiste:
+   - Verificar pino do transmissor (GPIO 26)
+   - Verificar voltagem (deve ser 3.3V)
+   - Medir com voltímetro se sinal está presente
+
+## 5 Matriz de Decisão de Troubleshooting
+
+| Problema | Verificar Primeiro | Ação Recomendada | Referência |
+|----------|-------------------|------------------|-----------|
+| Backend não sobe | JWT_SECRET | Gerar novo secret | 1.1 |
+| Frontend branco | VITE_API_URL | Configurar env | 2.1 |
+| ESP32 não conecta | Porta COM | Identificar porta correta | 3.1 |
+| WiFi loop infinito | SSID/Password | Atualizar credenciais | 3.2 |
+| Comando não executa | heartbeat logs | Verificar pendingCommand | 4.1 |
+| Sinal IR falha | LED piscando | Recapturar sinais | 4.3 |
+
+## 6 Logs Esperados por Componente
+
+### 6.1 Backend (expected output)
+
+```
+Conectando ao banco de dados...
+DATABASE_URL preview: postgresql://user:***@host:5432/database?...
+Conectado ao banco com sucesso.
+🚀 Servidor rodando em http://localhost:3001
+🕒 [executor] now = 2025-12-05T14:30:00.000Z
 ```
 
----
+### 6.2 Frontend (expected output - F12 console)
 
-## Recursos Úteis
+```
+🔗 API Base URL: http://localhost:3001
+🔗 VITE_API_URL env: http://localhost:3001
+✅ Login bem-sucedido
+```
 
-| Recurso | Link |
-|---------|------|
-| Docs ESP32 | https://docs.espressif.com/projects/esp-idf/en/latest/esp32/ |
-| Arduino IR | https://github.com/Arduino-IRremote/Arduino-IRremote |
-| Prisma | https://www.prisma.io/docs |
-| React | https://react.dev |
-| Express | https://expressjs.com |
-| Neon | https://neon.tech/docs |
-| Render | https://render.com/docs |
-| Vercel | https://vercel.com/docs |
+### 6.3 Firmware (expected output - serial monitor)
 
----
+```
+WiFi connecting...
+Connected! IP: 192.168.1.100
+WebSocket server listening on port 81
+Backend URL: https://sistema-de-monitoramento-de-ar.onrender.com
+Iniciando heartbeat polling...
+📡 Enviando heartbeat para backend...
+✅ Heartbeat enviado com sucesso!
+🕒 Resposta: {"command":"none",...}
+```
 
-## Quando Tudo Mais Falhar
+## 7 Recursos de Ajuda Externos
 
-1. **Verificar logs completamente:**
-   ```bash
-   # Backend
-   cd backend && npm run dev
-   
-   # Frontend
-   cd webapp && npm run dev
-   
-   # Firmware
-   pio device monitor
-   ```
+- **ESP32 Troubleshooting**: https://docs.espressif.com/projects/esptool/en/latest/troubleshooting.html
+- **Prisma Docs**: https://www.prisma.io/docs/
+- **React Documentation**: https://react.dev
+- **Express.js Guide**: https://expressjs.com/
 
-2. **Testar cada camada isoladamente:**
-   - Backend: `curl http://localhost:3001/`
-   - Frontend: `http://localhost:5173/`
-   - Firmware: Serial output deve mostrar WiFi conectado
+## 8 Conclusão
 
-3. **Resetar tudo:**
-   ```bash
-   # Backend
-   npx prisma migrate reset  # CUIDADO! Deleta dados
-   
-   # Frontend
-   rm -rf node_modules && npm install
-   
-   # Firmware
-   rm -rf .pio && pio run
-   ```
-
-4. **Procurar em issues do GitHub:**
-   - https://github.com/SrTinny/Sistema-de-monitoramento-de-ar-condicionado/issues
-
-5. **Contactar autor** (se aberto para suporte)
-
+Este guia cobre os principais cenários de problema encontrados durante desenvolvimento. Se problema não está listado, consultar logs específicos do componente e trabalhar retroativamente a partir das mensagens de erro.

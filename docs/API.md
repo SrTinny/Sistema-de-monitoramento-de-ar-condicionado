@@ -1,42 +1,56 @@
-# Documentação da API REST
+# Especificação da Interface de Programação de Aplicação (API) REST
 
-## Base URL
+## 1 Informações Gerais
+
+### 1.1 URL Base
 
 - **Desenvolvimento**: `http://localhost:3001`
 - **Produção**: `https://sistema-de-monitoramento-de-ar.onrender.com`
 
-## Autenticação
+### 1.2 Protocolo
 
-Todas as rotas (exceto login/register) requerem header:
+- **Protocolo**: HTTP/1.1 e HTTP/2
+- **Formato de Dados**: JSON (application/json)
+- **Codificação**: UTF-8
+
+### 1.3 Autenticação
+
+Todas as rotas (exceto autenticação pública) requerem autenticação via JWT (JSON Web Token).
+
+**Formato de Header**:
 ```
-Authorization: Bearer <token>
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-Token é obtido via `/auth/login` com 8 horas de expiração.
+**Duração do Token**: 8 horas
 
-## Status Codes
+**Renovação**: Obter novo token através do endpoint `/auth/login`
 
-- `200` - OK
-- `201` - Created
-- `400` - Bad Request
-- `401` - Unauthorized (token inválido/expirado)
-- `403` - Forbidden (sem permissão)
-- `404` - Not Found
-- `500` - Server Error
+## 2 Códigos de Status HTTP
 
----
+| Código | Significado | Descrição |
+|--------|-----------|-----------|
+| 200 | OK | Requisição bem-sucedida |
+| 201 | Created | Recurso criado com sucesso |
+| 400 | Bad Request | Erro na requisição (validação) |
+| 401 | Unauthorized | Token ausente ou inválido |
+| 403 | Forbidden | Usuário sem permissão |
+| 404 | Not Found | Recurso não encontrado |
+| 500 | Internal Server Error | Erro do servidor |
 
-## Rotas Públicas
+## 3 Endpoints Públicos
 
-### Health Check
+### 3.1 Verificação de Disponibilidade
 
 ```http
 GET /
 ```
 
-Verifica se servidor está online.
+**Descrição**: Verifica se o servidor está operacional.
 
-**Response (200):**
+**Autenticação**: Não requerida
+
+**Response (200)**:
 ```json
 {
   "message": "Sistema de Monitoramento de AR Condicionado - Backend OK",
@@ -45,146 +59,169 @@ Verifica se servidor está online.
 }
 ```
 
-### Registro de Usuário
+### 3.2 Registro de Novo Usuário
 
 ```http
 POST /auth/register
-Content-Type: application/json
-
-{
-  "email": "newuser@example.com",
-  "password": "senha123",
-  "role": "USER"
-}
 ```
 
-**Response (201):**
+**Descrição**: Cria novo usuário no sistema.
+
+**Autenticação**: Não requerida
+
+**Request Body**:
 ```json
 {
-  "id": "clpf1a2b3c4d5e6f7g8h",
-  "email": "newuser@example.com",
-  "role": "USER"
+  "email": "usuario@example.com",
+  "password": "senha_segura_123"
 }
 ```
 
-**Errors:**
-- `400` - Email obrigatório, senha obrigatória
-- `400` - Usuário com este e-mail já existe
+**Response (201)**:
+```json
+{
+  "id": "clp7u8w3r000208ml74a52b3h",
+  "email": "usuario@example.com",
+  "role": "USER",
+  "createdAt": "2025-12-05T14:30:00.000Z"
+}
+```
 
----
+**Respostas de Erro**:
+- `400`: Email já registrado ou senha fraca
+- `500`: Erro ao criar usuário
 
-### Login
+### 3.3 Autenticação de Usuário
 
 ```http
 POST /auth/login
-Content-Type: application/json
+```
 
+**Descrição**: Autentica usuário e retorna token JWT.
+
+**Autenticação**: Não requerida
+
+**Request Body**:
+```json
 {
   "email": "admin@local",
   "password": "123456"
 }
 ```
 
-**Response (200):**
+**Response (200)**:
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "clp7u8w3r000208ml74a52b3h",
+    "email": "admin@local",
+    "role": "ADMIN"
+  }
 }
 ```
 
-**Errors:**
-- `401` - Credenciais inválidas
-- `500` - Erro ao processar login
+**Respostas de Erro**:
+- `401`: Email ou senha incorretos
+- `400`: Email ou senha ausentes
 
----
+## 4 Endpoints de Ar-Condicionador
 
-## Rotas Autenticadas (Requer Token)
-
-### Listar Todos os ACs
+### 4.1 Listar Todas as Unidades
 
 ```http
 GET /api/ac
-Authorization: Bearer <token>
 ```
 
-**Response (200):**
+**Descrição**: Retorna lista de todas as unidades de ar-condicionado do usuário.
+
+**Autenticação**: Requerida
+
+**Response (200)**:
 ```json
 [
   {
-    "id": "clpf1a2b3c4d5e6f7g8h",
-    "deviceId": "esp32-ac-sala",
-    "name": "AC Sala",
-    "room": "Sala de Estar",
-    "isOn": false,
-    "lastHeartbeat": "2025-12-05T14:25:00.000Z",
+    "id": "clp7u8w3r000208ml74a52b3h",
+    "deviceId": "esp32-dev-ac-01",
+    "name": "AC Sala de Estar",
+    "room": "Sala",
+    "isOn": true,
+    "lastHeartbeat": "2025-12-05T14:29:15.000Z",
     "pendingCommand": null,
-    "createdAt": "2025-10-10T02:51:44.000Z",
-    "updatedAt": "2025-12-05T14:25:00.000Z"
+    "createdAt": "2025-12-01T10:00:00.000Z",
+    "updatedAt": "2025-12-05T14:30:00.000Z"
   },
   {
-    "id": "clpf1a2b3c4d5e6f7g9i",
-    "deviceId": "esp32-ac-quarto",
+    "id": "clp7u8w3r000208ml74a52b3i",
+    "deviceId": "esp32-dev-ac-02",
     "name": "AC Quarto",
     "room": "Quarto",
-    "isOn": true,
-    "lastHeartbeat": "2025-12-05T14:28:00.000Z",
+    "isOn": false,
+    "lastHeartbeat": "2025-12-05T14:28:50.000Z",
     "pendingCommand": null,
-    "createdAt": "2025-10-10T02:51:44.000Z",
-    "updatedAt": "2025-12-05T14:28:00.000Z"
+    "createdAt": "2025-12-02T14:00:00.000Z",
+    "updatedAt": "2025-12-05T14:30:00.000Z"
   }
 ]
 ```
 
----
-
-### Obter AC Específico
+### 4.2 Obter Detalhes de Unidade Específica
 
 ```http
 GET /api/ac/{id}
-Authorization: Bearer <token>
 ```
 
-**Response (200):**
+**Descrição**: Retorna informações detalhadas de uma unidade específica.
+
+**Parâmetros de URL**:
+- `id` (string, obrigatório): Identificador único da unidade
+
+**Autenticação**: Requerida
+
+**Response (200)**:
 ```json
 {
-  "id": "clpf1a2b3c4d5e6f7g8h",
-  "deviceId": "esp32-ac-sala",
-  "name": "AC Sala",
-  "room": "Sala de Estar",
-  "isOn": false,
-  "lastHeartbeat": "2025-12-05T14:25:00.000Z",
+  "id": "clp7u8w3r000208ml74a52b3h",
+  "deviceId": "esp32-dev-ac-01",
+  "name": "AC Sala de Estar",
+  "room": "Sala",
+  "isOn": true,
+  "lastHeartbeat": "2025-12-05T14:29:15.000Z",
   "pendingCommand": null,
-  "createdAt": "2025-10-10T02:51:44.000Z",
-  "updatedAt": "2025-12-05T14:25:00.000Z"
+  "createdAt": "2025-12-01T10:00:00.000Z",
+  "updatedAt": "2025-12-05T14:30:00.000Z"
 }
 ```
 
-**Errors:**
-- `404` - AC não encontrado
+**Respostas de Erro**:
+- `404`: Unidade não encontrada
 
----
-
-### Criar AC
+### 4.3 Registrar Nova Unidade
 
 ```http
 POST /api/ac
-Authorization: Bearer <token>
-Content-Type: application/json
+```
 
+**Descrição**: Cria nova unidade de ar-condicionado.
+
+**Autenticação**: Requerida
+
+**Request Body**:
+```json
 {
-  "deviceId": "esp32-ac-novo",
-  "name": "AC Sala 2",
-  "room": "Sala Auxiliar"
+  "deviceId": "esp32-novo-ac-03",
+  "name": "AC Cozinha",
+  "room": "Cozinha"
 }
 ```
 
-**Response (201):**
+**Response (201)**:
 ```json
 {
-  "id": "clpf1a2b3c4d5e6f7g9j",
-  "deviceId": "esp32-ac-novo",
-  "name": "AC Sala 2",
-  "room": "Sala Auxiliar",
+  "id": "clp7u8w3r000208ml74a52b3j",
+  "deviceId": "esp32-novo-ac-03",
+  "name": "AC Cozinha",
+  "room": "Cozinha",
   "isOn": false,
   "lastHeartbeat": null,
   "pendingCommand": null,
@@ -193,358 +230,363 @@ Content-Type: application/json
 }
 ```
 
-**Errors:**
-- `400` - Campos obrigatórios faltando
+**Respostas de Erro**:
+- `400`: Campos obrigatórios ausentes
+- `400`: deviceId já existe
 
----
-
-### Atualizar AC
+### 4.4 Atualizar Informações da Unidade
 
 ```http
 PUT /api/ac/{id}
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "name": "AC Sala Principal",
-  "room": "Sala Integrada"
-}
 ```
 
-**Response (200):**
+**Descrição**: Atualiza nome ou localização da unidade.
+
+**Parâmetros de URL**:
+- `id` (string, obrigatório): Identificador único da unidade
+
+**Autenticação**: Requerida
+
+**Request Body**:
 ```json
 {
-  "id": "clpf1a2b3c4d5e6f7g8h",
-  "deviceId": "esp32-ac-sala",
-  "name": "AC Sala Principal",
-  "room": "Sala Integrada",
-  "isOn": false,
-  "lastHeartbeat": "2025-12-05T14:25:00.000Z",
-  "pendingCommand": null,
-  "createdAt": "2025-10-10T02:51:44.000Z",
-  "updatedAt": "2025-12-05T14:30:00.000Z"
+  "name": "AC Sala de Estar (Novo)",
+  "room": "Sala Principal"
 }
 ```
 
-**Errors:**
-- `404` - AC não encontrado
+**Response (200)**:
+```json
+{
+  "id": "clp7u8w3r000208ml74a52b3h",
+  "deviceId": "esp32-dev-ac-01",
+  "name": "AC Sala de Estar (Novo)",
+  "room": "Sala Principal",
+  "isOn": true,
+  "lastHeartbeat": "2025-12-05T14:29:15.000Z",
+  "pendingCommand": null,
+  "createdAt": "2025-12-01T10:00:00.000Z",
+  "updatedAt": "2025-12-05T14:30:01.000Z"
+}
+```
 
----
-
-### Deletar AC
+### 4.5 Remover Unidade
 
 ```http
 DELETE /api/ac/{id}
-Authorization: Bearer <token>
 ```
 
-**Response (200):**
+**Descrição**: Remove unidade de ar-condicionado do sistema.
+
+**Parâmetros de URL**:
+- `id` (string, obrigatório): Identificador único da unidade
+
+**Autenticação**: Requerida
+
+**Response (200)**:
 ```json
 {
-  "message": "AC deletado com sucesso"
+  "message": "AC removido com sucesso"
 }
 ```
 
-**Errors:**
-- `404` - AC não encontrado
+**Respostas de Erro**:
+- `404`: Unidade não encontrada
 
----
-
-### Enviar Comando para AC
+### 4.6 Enviar Comando Imediato
 
 ```http
 POST /api/ac/{id}/command
-Authorization: Bearer <token>
-Content-Type: application/json
+```
 
+**Descrição**: Envia comando de ligar/desligar para unidade específica.
+
+**Parâmetros de URL**:
+- `id` (string, obrigatório): Identificador único da unidade
+
+**Autenticação**: Requerida
+
+**Request Body**:
+```json
 {
   "command": "TURN_ON"
 }
 ```
 
-**Comandos válidos:** `"TURN_ON"`, `"TURN_OFF"`
+**Valores Válidos para command**:
+- `"TURN_ON"`: Ligar unidade
+- `"TURN_OFF"`: Desligar unidade
 
-**Response (200):**
+**Response (200)**:
 ```json
 {
   "message": "Comando enviado para o AC",
-  "pendingCommand": "TURN_ON"
+  "pendingCommand": "TURN_ON",
+  "ac": {
+    "id": "clp7u8w3r000208ml74a52b3h",
+    "name": "AC Sala de Estar",
+    "isOn": true,
+    "lastHeartbeat": "2025-12-05T14:29:15.000Z",
+    "pendingCommand": "TURN_ON"
+  }
 }
 ```
 
-**Behavior:**
-- Salva comando em `AirConditioner.pendingCommand`
-- ESP32 busca na próxima polling (max 30s)
-- Comando é executado e `pendingCommand` é limpado
+**Processo**:
+1. Comando é armazenado em campo `pendingCommand`
+2. Firmware busca comando na próxima operação de heartbeat (máximo 30 segundos)
+3. Firmware executa comando transmitindo sinal IR
+4. Campo `pendingCommand` é limpo após execução
 
-**Errors:**
-- `404` - AC não encontrado
-- `400` - Comando inválido
+## 5 Endpoints de Operação de Heartbeat
 
----
-
-## Heartbeat (Firmware ↔ Backend)
-
-### Fazer Heartbeat
+### 5.1 Heartbeat do Firmware
 
 ```http
 POST /api/heartbeat
-Content-Type: application/json
+```
 
+**Descrição**: Operação de sincronização periódica do firmware com backend.
+
+**Autenticação**: Não requerida (dispositivo autenticado via deviceId)
+
+**Request Body**:
+```json
 {
-  "deviceId": "esp32-ac-sala",
+  "deviceId": "esp32-dev-ac-01",
   "isOn": true
 }
 ```
 
-**Response (200):**
+**Response (200)**:
 ```json
 {
-  "command": "TURN_OFF",
+  "command": "TURN_ON",
   "isOn": true,
-  "lastHeartbeat": "2025-12-05T14:30:00.000Z"
+  "lastHeartbeat": "2025-12-05T14:30:15.000Z"
 }
 ```
 
-**Ou se sem comando:**
-```json
-{
-  "command": "none",
-  "isOn": true,
-  "lastHeartbeat": "2025-12-05T14:30:00.000Z"
-}
-```
+**Possíveis Valores de Comando**:
+- `"TURN_ON"`: Ligar o ar-condicionado
+- `"TURN_OFF"`: Desligar o ar-condicionado
+- `"none"`: Nenhum comando pendente
 
-**Backend behavior:**
-- Atualiza `lastHeartbeat` do AC
-- Retorna `pendingCommand` (se houver)
-- Limpa `pendingCommand` após envio
-- Atualiza `isOn` com valor enviado pelo firmware
+**Frequência Recomendada**: A cada 30 segundos (implementado no firmware)
 
-**Errors:**
-- `404` - AC com este deviceId não encontrado
+## 6 Endpoints de Agendamentos
 
----
-
-## Schedules (Agendamentos)
-
-### Listar Schedules
+### 6.1 Listar Agendamentos
 
 ```http
 GET /api/schedules
-Authorization: Bearer <token>
 ```
 
-**Response (200):**
+**Descrição**: Retorna lista de agendamentos do usuário.
+
+**Autenticação**: Requerida
+
+**Response (200)**:
 ```json
 [
   {
-    "id": "clpf1a2b3c4d5e6f7g8h",
-    "airConditionerId": "clpf1a2b3c4d5e6f7g8h",
+    "id": "clp7u8w3r000208ml74a52b3k",
+    "airConditionerId": "clp7u8w3r000208ml74a52b3h",
     "action": "TURN_ON",
     "scheduledAt": "2025-12-05T19:00:00.000Z",
     "status": "PENDING",
-    "airConditioner": {
-      "name": "AC Sala",
-      "room": "Sala de Estar"
-    },
     "createdAt": "2025-12-05T14:00:00.000Z",
     "updatedAt": "2025-12-05T14:00:00.000Z"
   }
 ]
 ```
 
----
-
-### Criar Schedule
+### 6.2 Criar Agendamento
 
 ```http
 POST /api/schedules
-Authorization: Bearer <token>
-Content-Type: application/json
+```
 
+**Descrição**: Cria novo agendamento de operação automática.
+
+**Autenticação**: Requerida
+
+**Request Body**:
+```json
 {
-  "airConditionerId": "clpf1a2b3c4d5e6f7g8h",
+  "airConditionerId": "clp7u8w3r000208ml74a52b3h",
   "action": "TURN_ON",
   "scheduledAt": "2025-12-05T19:00:00Z"
 }
 ```
 
-**Response (201):**
+**Response (201)**:
 ```json
 {
-  "id": "clpf1a2b3c4d5e6f7g8i",
-  "airConditionerId": "clpf1a2b3c4d5e6f7g8h",
+  "id": "clp7u8w3r000208ml74a52b3k",
+  "airConditionerId": "clp7u8w3r000208ml74a52b3h",
   "action": "TURN_ON",
   "scheduledAt": "2025-12-05T19:00:00.000Z",
   "status": "PENDING",
-  "createdAt": "2025-12-05T14:00:00.000Z",
-  "updatedAt": "2025-12-05T14:00:00.000Z"
+  "createdAt": "2025-12-05T14:30:00.000Z",
+  "updatedAt": "2025-12-05T14:30:00.000Z"
 }
 ```
 
-**Validações:**
-- `airConditionerId` deve existir
-- `action` deve ser "TURN_ON" ou "TURN_OFF"
-- `scheduledAt` deve ser no futuro (ou agora)
+### 6.3 Atualizar Agendamento
 
-**Errors:**
-- `404` - AC não encontrado
-- `400` - Ação inválida, data inválida
+```http
+PUT /api/schedules/{id}
+```
 
----
+**Descrição**: Modifica agendamento existente.
 
-### Cancelar Schedule
+**Response (200)**:
+```json
+{
+  "id": "clp7u8w3r000208ml74a52b3k",
+  "action": "TURN_OFF",
+  "scheduledAt": "2025-12-05T22:00:00.000Z",
+  "status": "PENDING"
+}
+```
+
+### 6.4 Remover Agendamento
 
 ```http
 DELETE /api/schedules/{id}
-Authorization: Bearer <token>
 ```
 
-**Response (200):**
+**Descrição**: Remove agendamento (marca como CANCELLED).
+
+**Response (200)**:
 ```json
 {
   "message": "Schedule cancelado com sucesso"
 }
 ```
 
-**Errors:**
-- `404` - Schedule não encontrado
+## 7 Modelos de Dados
 
----
+### 7.1 User
 
-### Atualizar Schedule
-
-```http
-PUT /api/schedules/{id}
-Authorization: Bearer <token>
-Content-Type: application/json
-
+```
 {
-  "action": "TURN_OFF",
-  "scheduledAt": "2025-12-05T20:00:00Z"
+  id: String (CUID)
+  email: String (único)
+  password: String (hash bcrypt)
+  role: "ADMIN" | "USER"
+  createdAt: DateTime
+  updatedAt: DateTime
 }
 ```
 
-**Response (200):**
-```json
+### 7.2 AirConditioner
+
+```
 {
-  "id": "clpf1a2b3c4d5e6f7g8i",
-  "airConditionerId": "clpf1a2b3c4d5e6f7g8h",
-  "action": "TURN_OFF",
-  "scheduledAt": "2025-12-05T20:00:00.000Z",
-  "status": "PENDING",
-  "updatedAt": "2025-12-05T14:05:00.000Z"
+  id: String (CUID)
+  deviceId: String (único)
+  name: String
+  room: String
+  isOn: Boolean
+  lastHeartbeat: DateTime | null
+  pendingCommand: "TURN_ON" | "TURN_OFF" | null
+  userId: String (FK)
+  createdAt: DateTime
+  updatedAt: DateTime
 }
 ```
 
----
+### 7.3 Schedule
 
-## Executor (Automático)
-
-O backend executa um **executor** a cada 30 segundos que:
-
-1. Busca schedules com `status = "PENDING"`
-2. Verifica se `scheduledAt <= agora`
-3. Se verdade:
-   - Define `pendingCommand` no AC correspondente
-   - Marca schedule como `EXECUTED`
-   - Próximo heartbeat do firmware executa a ação
-
-**Log do executor:**
 ```
-🕒 [executor] now = 2025-12-05T14:30:00.000Z
-🕒 [executor] found 1 pending schedules
-✅ [executor] executed schedule: clpf1a2b3c4d5e6f7g8i for AC clpf1a2b3c4d5e6f7g8h
+{
+  id: String (CUID)
+  airConditionerId: String (FK)
+  action: "TURN_ON" | "TURN_OFF"
+  scheduledAt: DateTime
+  status: "PENDING" | "EXECUTED" | "CANCELLED"
+  createdAt: DateTime
+  updatedAt: DateTime
+}
 ```
 
----
+## 8 Exemplos de Uso com cURL
 
-## Exemplo de Fluxo Completo
+### Login e Obtenção de Token
 
-### 1. Login
 ```bash
 curl -X POST http://localhost:3001/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@local","password":"123456"}'
-
-# Retorna: { "token": "eyJhbGc..." }
+  -d '{
+    "email": "admin@local",
+    "password": "123456"
+  }'
 ```
 
-### 2. Obter ACs
+Resposta contém `token` a ser usado em requisições subsequentes.
+
+### Listar ACs com Token
+
 ```bash
-TOKEN="eyJhbGc..."
-curl -H "Authorization: Bearer $TOKEN" \
+curl -H "Authorization: Bearer TOKEN_AQUI" \
   http://localhost:3001/api/ac
-
-# Retorna lista de ACs
 ```
 
-### 3. Enviar Comando
+### Enviar Comando de Ligar
+
 ```bash
-curl -X POST http://localhost:3001/api/ac/clpf1a2b3c4d5e6f7g8h/command \
-  -H "Authorization: Bearer $TOKEN" \
+curl -X POST http://localhost:3001/api/ac/DEVICE_ID/command \
+  -H "Authorization: Bearer TOKEN_AQUI" \
   -H "Content-Type: application/json" \
-  -d '{"command":"TURN_ON"}'
-
-# Retorna: { "message": "Comando enviado", "pendingCommand": "TURN_ON" }
+  -d '{
+    "command": "TURN_ON"
+  }'
 ```
 
-### 4. ESP32 Faz Heartbeat
+### Simular Heartbeat do Firmware
+
 ```bash
 curl -X POST http://localhost:3001/api/heartbeat \
   -H "Content-Type: application/json" \
-  -d '{"deviceId":"esp32-ac-sala","isOn":false}'
-
-# Retorna: { "command": "TURN_ON", "isOn": false, ... }
+  -d '{
+    "deviceId": "esp32-dev-ac-01",
+    "isOn": true
+  }'
 ```
 
-### 5. AC Ligado, Próximo Heartbeat
-```bash
-# Alguns segundos depois, AC ligado, firmware envia:
-curl -X POST http://localhost:3001/api/heartbeat \
-  -H "Content-Type: application/json" \
-  -d '{"deviceId":"esp32-ac-sala","isOn":true}'
+## 9 Tratamento de Erros
 
-# Retorna: { "command": "none", "isOn": true, ... }
-```
+Todos os erros retornam JSON com formato padronizado:
 
----
-
-## Erros Comuns
-
-### Erro: Invalid JWT
 ```json
 {
-  "error": "Invalid JWT"
+  "error": "Mensagem de erro descritiva",
+  "statusCode": 400
 }
 ```
-**Causa**: Token expirado ou malformado
-**Solução**: Fazer login novamente
 
-### Erro: Acesso Negado
+**Exemplos**:
+
 ```json
 {
-  "error": "Acesso negado. Rota apenas para administradores."
+  "error": "Token inválido ou expirado",
+  "statusCode": 401
 }
 ```
-**Causa**: Usuário não é ADMIN
-**Solução**: Criar usuário com role ADMIN
 
-### Erro: AC não encontrado
 ```json
 {
-  "error": "AC não encontrado"
+  "error": "AC não encontrado",
+  "statusCode": 404
 }
 ```
-**Causa**: ID inválido ou AC deletado
-**Solução**: Verificar ID na lista de ACs
 
----
+## 10 Rate Limiting
 
-## Rate Limits
+Não implementado atualmente. Consultar TODO.md para melhorias futuras.
 
-Atualmente **não há rate limiting**. Em produção, adicionar:
-- Login: 5 tentativas por 15 min
-- General: 100 requisições por minuto
+## 11 Conclusão
 
+A API REST fornece interface completa para gerenciamento de sistema de ar-condicionado. Toda comunicação é realizada via HTTP com autenticação JWT para endpoints protegidos.
