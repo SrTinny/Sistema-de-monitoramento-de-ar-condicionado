@@ -18,6 +18,17 @@ app.use(cors());
 app.use(express.json());
 
 // ==========================================================
+// ROTA DE HEALTH CHECK (PÚBLICA)
+// ==========================================================
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Sistema de Monitoramento de AR Condicionado - Backend OK',
+    timestamp: new Date().toISOString(),
+    status: 'operational'
+  });
+});
+
+// ==========================================================
 // ROTAS DE AUTENTICAÇÃO (PÚBLICAS)
 // ==========================================================
 app.post('/auth/register', async (req, res) => {

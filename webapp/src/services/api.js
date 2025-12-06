@@ -4,6 +4,12 @@ import axios from 'axios';
 // Em desenvolvimento, o fallback é http://localhost:3001
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// Log para debug
+if (typeof window !== 'undefined') {
+  console.log('🔗 API Base URL:', baseURL);
+  console.log('🔗 VITE_API_URL env:', import.meta.env.VITE_API_URL);
+}
+
 const api = axios.create({
   baseURL, // URL base da API (pode ser configurada no ambiente de deploy)
 });
