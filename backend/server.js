@@ -235,6 +235,52 @@ app.post('/api/command', authenticateToken, async (req, res) => {
 
 // --- ROTAS CRUD PARA AGENDAMENTOS ---
 
+// ROTA: Alterar setpoint de temperatura. (PROTEGIDA - AUTENTICADO)
+app.post('/api/ac/:id/setpoint', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { setpoint } = req.body;
+
+  if (setpoint === undefined || setpoint === null) {
+    return res.status(400).json({ error: 'Setpoint é obrigatório.' });
+  }
+
+  const tempSetpoint = parseFloat(setpoint);
+  
+  if (isNaN(tempSetpoint) || tempSetpoint < 16 || tempSetpoint > 30) {
+    return res.status(400).json({ error: 'Setpoint deve ser um número entre 16 e 30.' });
+  }
+
+  try {
+    const ac = await prisma.airConditioner.findUnique({
+      where: { id },
+    });
+
+    if (!ac) {
+      return res.status(404).json({ error: 'Aparelho não encontrado.' });
+    }
+
+    // Cria comando para o firmware ajustar a temperatura
+    const command = `set_temp:${tempSetpoint}`;
+
+    const updatedAC = await prisma.airConditioner.update({
+      where: { id },
+      data: {
+        setpoint: tempSetpoint,
+        pendingCommand: command,
+      },
+    });
+
+    res.status(200).json({
+      message: `Setpoint alterado para ${tempSetpoint}°C`,
+      setpoint: updatedAC.setpoint,
+      pendingCommand: updatedAC.pendingCommand,
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar setpoint:', error);
+    res.status(500).json({ error: 'Não foi possível atualizar o setpoint.' });
+  }
+});
+
 // ROTA 'CREATE': Criar um novo agendamento
 app.post('/api/schedules', authenticateToken, async (req, res) => {
   const { airConditionerId, action, scheduledAt } = req.body;

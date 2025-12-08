@@ -62,8 +62,23 @@ export const RoomProvider = ({ children }) => {
     }
   };
 
+  // Função para alterar setpoint de temperatura
+  const setTemperature = async (roomId, temperature) => {
+    try {
+      const response = await api.post(`/api/ac/${roomId}/setpoint`, { setpoint: temperature });
+      fetchRooms(); // Atualiza as salas para refletir o novo setpoint
+      toast.success(`Temperatura alterada para ${temperature}°C`);
+      return response;
+    } catch (error) {
+      const msg = error?.response?.data?.error || error.message || 'Erro ao alterar temperatura.';
+      toast.error(msg);
+      console.error("Erro ao alterar temperatura:", error);
+      throw error;
+    }
+  };
+
   // Função para atualizar os dados de uma sala
- const updateRoom = async (roomId, dataToUpdate) => {
+  const updateRoom = async (roomId, dataToUpdate) => {
     try {
       const response = await api.put(`/api/rooms/${roomId}`, dataToUpdate);
       fetchRooms(); // Atualiza a lista após o sucesso
@@ -133,6 +148,7 @@ export const RoomProvider = ({ children }) => {
         fetchRooms,
         addRoom,
         sendCommand,
+        setTemperature,
         updateRoom,
         deleteRoom,
         addSchedule,

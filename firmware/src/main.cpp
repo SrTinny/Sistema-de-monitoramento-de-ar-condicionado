@@ -27,6 +27,7 @@ WebSocketsServer webSocket(81);
 
 // Variável de estado do ar-condicionado
 bool estadoAC = false;
+float setpointAtual = 22.0; // Setpoint padrão
 
 // Buffers para armazenamento dos sinais IR
 uint16_t irSignalLigar[] = {4372, 4336, 568, 1572, 564, 528, 568, 1572, 568, 1572, 564, 528, 568, 528, 568, 1572, 568, 524, 568, 528, 568, 1572, 568, 528, 564, 528, 568, 1572, 568, 1568, 572, 528, 564, 1572, 568, 528, 568, 1572, 564, 528, 568, 1572, 568, 1572, 564, 1572, 568, 1572, 564, 1572, 568, 1572, 568, 524, 572, 1568, 568, 528, 568, 528, 568, 524, 572, 524, 568, 528, 568, 528, 568, 528, 568, 1568, 568, 528, 568, 528, 568, 528, 568, 528, 568, 528, 564, 1572, 568, 1568, 572, 524, 572, 1568, 568, 1568, 568, 1572, 568, 1572, 568, 1568, 572, 5196, 4372, 4332, 572, 1568, 568, 528, 568, 1572, 568, 1568, 568, 528, 568, 528, 568, 1572, 564, 528, 568, 528, 568, 1572, 568, 524, 572, 524, 568, 1572, 568, 1568, 568, 528, 568, 1572, 568, 528, 568, 1568, 568, 528, 568, 1572, 564, 1572, 568, 1572, 568, 1568, 572, 1568, 568, 1572, 564, 528, 568, 1572, 568, 528, 564, 528, 568, 532, 564, 532, 564, 528, 568, 528, 568, 528, 564, 1572, 568, 528, 568, 528, 568, 528, 568, 528, 564, 528, 568, 1572, 568, 1572, 564, 528, 568, 1572, 568, 1568, 572, 1568, 568, 1572, 564, 1572, 568}; // Sinal IR para ligar
@@ -106,6 +107,7 @@ void handleBackendPolling(void *pvParameters) {
             StaticJsonDocument<256> doc;
             doc["deviceId"] = deviceId;
             doc["isOn"] = estadoAC;
+            doc["setpoint"] = setpointAtual;
             
             String jsonBody;
             serializeJson(doc, jsonBody);
@@ -127,19 +129,31 @@ void handleBackendPolling(void *pvParameters) {
                     if (command != nullptr && String(command) != "none") {
                         Serial.println("📡 Comando recebido do backend: " + String(command));
                         
-                        if (String(command) == "TURN_ON" && !estadoAC) {
+                        if ((String(command) == "TURN_ON" || String(command) == "ligar") && !estadoAC) {
                             Serial.println("🟢 Executando: LIGAR");
                             IrSender.sendRaw(irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]), 38);
                             estadoAC = true;
                             sendStateToClients();
                             sendIRSignalToClients("Ligar", irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]));
                         } 
-                        else if (String(command) == "TURN_OFF" && estadoAC) {
+                        else if ((String(command) == "TURN_OFF" || String(command) == "desligar") && estadoAC) {
                             Serial.println("🔴 Executando: DESLIGAR");
                             IrSender.sendRaw(irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]), 38);
                             estadoAC = false;
                             sendStateToClients();
                             sendIRSignalToClients("Desligar", irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]));
+                        }
+                        else if (String(command).startsWith("set_temp:")) {
+                            String valor = String(command).substring(String("set_temp:").length());
+                            float novoSetpoint = valor.toFloat();
+                            if (novoSetpoint >= 16 && novoSetpoint <= 30) {
+                                setpointAtual = novoSetpoint;
+                                Serial.println("🌡️ Ajustar setpoint para: " + String(novoSetpoint) + "°C");
+                                // TODO: Enviar sinal IR correspondente ao setpoint (não mapeado nesta versão)
+                                webSocket.broadcastTXT("Setpoint atualizado para " + String(novoSetpoint) + "°C");
+                            } else {
+                                Serial.println("⚠️ Comando set_temp inválido: " + valor);
+                            }
                         }
                     }
                 }

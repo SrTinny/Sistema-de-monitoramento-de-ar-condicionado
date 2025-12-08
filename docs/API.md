@@ -26,7 +26,6 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **Renovação**: Obter novo token através do endpoint `/auth/login`
 
-## 2 Códigos de Status HTTP
 
 | Código | Significado | Descrição |
 |--------|-----------|-----------|
@@ -38,7 +37,6 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | 404 | Not Found | Recurso não encontrado |
 | 500 | Internal Server Error | Erro do servidor |
 
-## 3 Endpoints Públicos
 
 ### 3.1 Verificação de Disponibilidade
 
@@ -49,7 +47,6 @@ GET /
 **Descrição**: Verifica se o servidor está operacional.
 
 **Autenticação**: Não requerida
-
 **Response (200)**:
 ```json
 {
@@ -61,8 +58,9 @@ GET /
 
 ### 3.2 Registro de Novo Usuário
 
-```http
-POST /auth/register
+ - `"TURN_ON"` ou "ligar": Ligar unidade
+ - `"TURN_OFF"` ou "desligar": Desligar unidade
+ - `"set_temp:XX"`: Ajustar setpoint para XX°C (16-30)
 ```
 
 **Descrição**: Cria novo usuário no sistema.
@@ -84,6 +82,42 @@ POST /auth/register
   "email": "usuario@example.com",
   "role": "USER",
   "createdAt": "2025-12-05T14:30:00.000Z"
+
+### 4.7 Alterar Setpoint de Temperatura
+
+```http
+POST /api/ac/{id}/setpoint
+```
+
+**Descrição**: Define o setpoint (temperatura alvo) para a unidade.
+
+**Parâmetros de URL**:
+- `id` (string, obrigatório): Identificador único da unidade (ID do AC, não o `deviceId`)
+
+**Autenticação**: Requerida
+
+**Request Body**:
+```json
+{
+  "setpoint": 23
+}
+```
+
+**Validação**:
+- `setpoint` deve ser numérico entre 16 e 30.
+
+**Response (200)**:
+```json
+{
+  "message": "Setpoint alterado para 23°C",
+  "setpoint": 23,
+  "pendingCommand": "set_temp:23"
+}
+```
+
+**Processo**:
+1. Armazena `setpoint` no AC e define `pendingCommand` como `set_temp:XX`.
+2. Firmware coleta o comando no próximo heartbeat e ajusta o setpoint local.
 }
 ```
 
@@ -490,9 +524,10 @@ DELETE /api/schedules/{id}
   name: String
   room: String
   isOn: Boolean
+  temperature: Float | null
+  setpoint: Float | null
   lastHeartbeat: DateTime | null
-  pendingCommand: "TURN_ON" | "TURN_OFF" | null
-  userId: String (FK)
+  pendingCommand: "TURN_ON" | "TURN_OFF" | "set_temp:XX" | null
   createdAt: DateTime
   updatedAt: DateTime
 }

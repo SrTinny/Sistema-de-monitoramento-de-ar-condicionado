@@ -11,10 +11,11 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
   const { user } = useContext(AuthContext);
   const { updateRoom } = useRooms();
 
-  const { name, room: roomLocation, status, temperature, deviceId } = room;
+  const { id, name, room: roomLocation, status, temperature, setpoint, deviceId } = room;
 
   const handleTempChange = (e) => {
-    onTempChange(deviceId, e.target.value);
+    const value = parseFloat(e.target.value);
+    onTempChange(id, value);
   };
 
   return (
@@ -51,6 +52,9 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
         <p>
           Temperatura Atual: <span>{temperature ?? "--"}°C</span>
         </p>
+        <p>
+          Setpoint: <span>{setpoint ?? "--"}°C</span>
+        </p>
 
         <button className={styles.mainButton} onClick={() => onToggle(room)}>
           {status === "ligado" ? "Desligar" : "Ligar"}
@@ -62,7 +66,7 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
           max="30"
           // PONTO DE MELHORIA 3: Usar '??' (Nullish Coalescing)
           // Evita bugs se a temperatura for 0 (embora não seja o caso aqui).
-          value={temperature ?? 22}
+          value={setpoint ?? 22}
           onChange={handleTempChange}
         />
       </div>

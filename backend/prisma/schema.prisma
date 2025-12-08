@@ -27,6 +27,7 @@ model AirConditioner {
   humidity       Float?
   pendingCommand String?
   temperature    Float?
+  setpoint       Float?     @default(22)
   lastHeartbeat  DateTime?
   schedules      Schedule[]
 }
