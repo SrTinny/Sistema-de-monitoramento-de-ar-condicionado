@@ -1,13 +1,20 @@
 .unit {
-  background-color: var(--bg-secondary);   /* ANTES: --form-background */
+  background-color: var(--bg-secondary);
   border-radius: 16px;
-  border: 1px solid var(--border);         /* ANTES: --border-color */
-  box-shadow: 0 4px 12px var(--shadow);    /* ANTES: --shadow-color */
-  padding: 1.5rem;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px var(--shadow);
+  padding: 1.25rem;
   transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .unit {
+    padding: 1rem;
+    gap: 0.5rem;
+  }
 }
 
 .unit:hover {
@@ -31,8 +38,8 @@
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
   gap: 0.5rem;
 }
 
@@ -42,17 +49,18 @@
   gap: 0.4rem;
   padding: 0.35rem 0.7rem;
   border-radius: 999px;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-primary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   box-shadow: 0 2px 6px var(--shadow);
+  flex-shrink: 0;
 }
 
 .pulseDot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   position: relative;
 }
@@ -60,7 +68,7 @@
 .pulseDot::after {
   content: "";
   position: absolute;
-  inset: -4px;
+  inset: -3px;
   border-radius: 999px;
   border: 2px solid currentColor;
   opacity: 0.4;
@@ -80,15 +88,13 @@
 }
 
 .title {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
-  flex-grow: 1;
-  margin-right: 0.5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  width: 100%;
+  word-break: break-word;
+  line-height: 1.3;
 }
 
 /* Ícone do status com animação ao passar o mouse */

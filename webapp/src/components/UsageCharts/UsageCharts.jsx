@@ -45,13 +45,14 @@ export default function UsageCharts({ rooms = [], schedules = [] }) {
   const usageData = useMemo(() => {
     if (rooms.length === 0) {
       return [
-        { name: "Sala 1", onHours: 5.2 },
-        { name: "Sala 2", onHours: 3.8 },
-        { name: "Sala 3", onHours: 6.1 },
+        { name: "Sala 1", shortName: "S1", onHours: 5.2 },
+        { name: "Sala 2", shortName: "S2", onHours: 3.8 },
+        { name: "Sala 3", shortName: "S3", onHours: 6.1 },
       ];
     }
     return rooms.map((r, idx) => ({
       name: r.name ?? `Sala ${idx + 1}`,
+      shortName: (r.name ?? `Sala ${idx + 1}`).substring(0, 8),
       onHours: r.status === "ligado" ? 5 + (idx % 3) : 2 + (idx % 2),
     }));
   }, [rooms]);
@@ -111,9 +112,16 @@ export default function UsageCharts({ rooms = [], schedules = [] }) {
           </p>
           <div className={styles.chartWrapper}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={usageData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+              <BarChart data={usageData} margin={{ top: 10, right: 16, left: 0, bottom: 30 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="name" stroke="var(--text-secondary)" interval={0} tick={{ fontSize: 12 }} />
+                <XAxis 
+                  dataKey="shortName" 
+                  stroke="var(--text-secondary)" 
+                  tick={{ fontSize: 11 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
                 <YAxis stroke="var(--text-secondary)" />
                 <Tooltip content={usageTooltip} />
                 <Bar dataKey="onHours" fill="#f59e0b" radius={[8, 8, 4, 4]} />

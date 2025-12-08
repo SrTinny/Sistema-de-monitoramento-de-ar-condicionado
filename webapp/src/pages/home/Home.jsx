@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { Plus } from 'lucide-react';
 import { useRooms } from '../../contexts/RoomContext';
 import ACUnit from '../../components/ACUnit/ACUnit';
 import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
@@ -7,7 +6,7 @@ import ScheduleTimeline from '../../components/ScheduleTimeline/ScheduleTimeline
 import { SkeletonRoomList } from '../../components/SkeletonLoader/SkeletonLoader';
 import { EmptyStateRooms } from '../../components/EmptyState/EmptyState';
 import UsageCharts from '../../components/UsageCharts/UsageCharts';
-import { StaggerContainer, StaggerItem, FloatingActionButton } from '../../components/AnimatedCard/AnimatedCard';
+import { StaggerContainer, StaggerItem } from '../../components/AnimatedCard/AnimatedCard';
 import styles from './Home.module.css';
 
 export default function Home() {
@@ -70,11 +69,6 @@ export default function Home() {
           onDelete={deleteSchedule}
         />
       )}
-
-      {/* FAB para mobile */}
-      <FloatingActionButton onClick={openForm}>
-        <Plus size={24} />
-      </FloatingActionButton>
     </main>
   );
 }
