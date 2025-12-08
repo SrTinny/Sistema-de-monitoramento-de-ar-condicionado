@@ -26,6 +26,19 @@ const Login = () => {
 
   return (
     <div className={styles.container}>
+      {/* Vídeo de background */}
+      <video 
+        autoPlay 
+        muted 
+        loop 
+        className={styles.videoBackground}
+      >
+        <source src="/src/public/video_background.mp4" type="video/mp4" />
+      </video>
+      
+      {/* Overlay para melhorar legibilidade */}
+      <div className={styles.overlay}></div>
+      
       <form onSubmit={handleSubmit} className={styles.formCard}>
         <div className={styles.logoContainer}>
           <img src="/src/public/logo_name.png" alt="Intelifri" className={styles.logo} />
