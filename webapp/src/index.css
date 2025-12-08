@@ -6,69 +6,80 @@
    ---------------------------------------------------------- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* 1. VARIÁVEIS DE TEMA (THEME)
+/* 1. VARIÁVEIS DE TEMA (THEME) - INTELIFRI
    ---------------------------------------------------------- */
 :root {
-  /* Ações (Botões, links, etc) */
-  --primary: #007aff;
-  --primary-hover: #005ecb;
-  --secondary: #6c757d;
-  --secondary-hover: #5a6268;
+  /* --- PALETA INTELIFRI (MODO CLARO) --- */
+  
+  /* Ações: Azul Vibrante (Tech Blue) inspirado no corpo do floco de neve */
+  --primary: #0095FF; 
+  --primary-hover: #007ACC;
+  
+  /* Secundário: Cinza azulado frio */
+  --secondary: #6c8ea3;
+  --secondary-hover: #5a7688;
   --text-on-primary: #ffffff;
-  /* ADICIONADO: Sombra para o foco dos inputs */
-  --primary-focus-shadow: rgba(0, 122, 255, 0.25);
+  
+  /* Sombra com tom de Ciano */
+  --primary-focus-shadow: rgba(0, 149, 255, 0.25);
 
-  /* Backgrounds */
-  --bg-primary: #f8f9fa;
+  /* Backgrounds: Off-white com leve toque de azul gelo (frio) */
+  --bg-primary: #F4F9FC; 
   --bg-secondary: #ffffff;
-  --bg-hover: #e9ecef;
+  --bg-hover: #eef6fa;
 
-  /* Textos */
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
+  /* Textos: Azul Marinho Profundo (Corporate) em vez de preto puro */
+  --text-primary: #0D2538; 
+  --text-secondary: #587385;
 
   /* Outros */
-  --border: #dee2e6;
-  --shadow: rgba(0, 0, 0, 0.08);
-  --overlay-bg: rgba(0, 0, 0, 0.7);
+  --border: #dbe4eb;
+  --shadow: rgba(0, 48, 73, 0.08); /* Sombra levemente azulada */
+  --overlay-bg: rgba(13, 37, 56, 0.7);
 
   /* Status */
   --status-success: #28a745;
   --status-error: #dc3545;
   --bg-status-success: #e9f7ef;
   --bg-status-error: #fbebed;
-  /* ADICIONADO: Cores de hover para status */
   --status-error-hover: #c82333;
 }
 
 body.dark-mode {
-  /* Ações */
-  --primary: #0a84ff;
-  --primary-hover: #0060d1;
-  --secondary: #8e8e93;
-  --secondary-hover: #636366;
-  --text-on-primary: #ffffff;
-  --primary-focus-shadow: rgba(10, 132, 255, 0.3);
+  /* --- PALETA INTELIFRI (MODO ESCURO) --- */
 
-  /* Backgrounds */
-  --bg-primary: #000000;
-  --bg-secondary: #1c1c1e;
-  --bg-hover: #2c2c2e;
+  /* Ações: Azul Ciano Neon (Ice Blue) para brilhar no escuro */
+  --primary: #00D4FF; 
+  --primary-hover: #00A3CC;
+  
+  /* Secundário: Cinza metálico */
+  --secondary: #8e9eab;
+  --secondary-hover: #637079;
+  
+  /* No modo escuro, o texto no botão primary pode ser escuro para contraste */
+  --text-on-primary: #05111A; 
+  
+  --primary-focus-shadow: rgba(0, 212, 255, 0.3);
 
-  /* Textos */
-  --text-primary: #f2f2f7;
-  --text-secondary: #8e8e93;
+  /* Backgrounds: Azul Marinho Profundo (Deep Ocean) em vez de preto */
+  --bg-primary: #05111A; 
+  --bg-secondary: #0F2231;
+  --bg-hover: #1A3445;
+
+  /* Textos: Branco Gelo */
+  --text-primary: #F0F8FF;
+  --text-secondary: #8FA6B8;
 
   /* Outros */
-  --border: #38383a;
-  --shadow: rgba(255, 255, 255, 0.1);
-  --overlay-bg: rgba(0, 0, 0, 0.8);
+  --border: #1F3A4D;
+  --shadow: rgba(0, 0, 0, 0.4);
+  --overlay-bg: rgba(0, 0, 0, 0.9);
 
-  /* Status */
+  /* Status (Ajustados para brilho no escuro) */
   --status-success: #30d158;
   --status-error: #ff453a;
-  --bg-status-success: #1c3d25;
-  --bg-status-error: #4f1d20;
+  --bg-status-success: #0d2b16; /* Fundo mais escuro para o badge */
+  --bg-status-error: #3d1214;   /* Fundo mais escuro para o badge */
   --status-error-hover: #e0342a;
 }
 

@@ -43,7 +43,6 @@ const Login = () => {
         <div className={styles.logoContainer}>
           <img src="/src/public/logo_name.png" alt="Intelifri" className={styles.logo} />
         </div>
-        <h1 className={styles.title}>Bem-vindo!</h1>
         <p className={styles.subtitle}>Faça login para continuar</p>
         
         <div className={styles.inputGroup}>
