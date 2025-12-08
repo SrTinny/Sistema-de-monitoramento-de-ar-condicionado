@@ -6,6 +6,7 @@ import DashboardHeader from '../../components/DashboardHeader/DashboardHeader';
 import ScheduleTimeline from '../../components/ScheduleTimeline/ScheduleTimeline';
 import { SkeletonRoomList } from '../../components/SkeletonLoader/SkeletonLoader';
 import { EmptyStateRooms } from '../../components/EmptyState/EmptyState';
+import UsageCharts from '../../components/UsageCharts/UsageCharts';
 import { StaggerContainer, StaggerItem, FloatingActionButton } from '../../components/AnimatedCard/AnimatedCard';
 import styles from './Home.module.css';
 
@@ -31,6 +32,9 @@ export default function Home() {
     <main className={styles.container}>
       {/* Dashboard Header com estatísticas */}
       <DashboardHeader rooms={rooms} schedules={schedules} />
+
+      {/* Gráficos históricos */}
+      <UsageCharts rooms={rooms} schedules={schedules} />
 
       {/* Seção de Salas */}
       {loading ? (

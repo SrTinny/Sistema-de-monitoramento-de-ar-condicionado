@@ -9,15 +9,20 @@ export default function Header() {
   const { user, logout } = useContext(AuthContext);
 
   useEffect(() => {
-    const bodyHasDarkMode = document.body.classList.contains("dark-mode");
-    if (bodyHasDarkMode) {
+    const saved = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const shouldUseDark = saved === "dark" || (!saved && prefersDark);
+    if (shouldUseDark) {
+      document.body.classList.add("dark-mode");
       setIsDarkMode(true);
     }
   }, []);
 
   const toggleTheme = () => {
-    document.body.classList.toggle("dark-mode");
-    setIsDarkMode(!isDarkMode);
+    const next = !isDarkMode;
+    setIsDarkMode(next);
+    document.body.classList.toggle("dark-mode", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
   };
 
   // 1. MELHORIA NA SAUDAÇÃO: Extrai o nome de usuário do e-mail

@@ -1,5 +1,12 @@
 # 🎨 Guia de Design - Sistema de Monitoramento de Ar Condicionado
 
+**Status rápido (manter sempre atualizado após cada entrega)**
+
+- ✅ Phase 1 entregue: skeletons, spinners, empty states, toasts
+- ✅ Phase 2 entregue: Dashboard header + stats, timeline de agendamentos, animações base (stagger/page), modal com blur e tabs, FAB mobile
+- ✅ Phase 3 entregue: dark mode com persistência, gráficos históricos (Recharts), parallax sutil, card de AC em 2 colunas com slider gradiente
+- ⏳ Próximos focos: gestos mobile (pull-to-refresh/swipe delete), revisão de contraste/ARIA, onboarding/atalhos, gráficos com dados reais
+
 ## 📋 Contexto do Projeto
 
 Sistema web para controle e monitoramento remoto de unidades de ar condicionado via ESP32 e infrared. Usuários podem ligar/desligar ACs, ajustar temperatura (setpoint), criar agendamentos e visualizar status em tempo real.
@@ -643,8 +650,8 @@ html[data-theme="dark"] {
 | Tecnologia | Propósito | Status |
 |------------|-----------|--------|
 | **Tailwind CSS** | Estilos (já em uso) | ✅ Ativo |
-| **Framer Motion** | Animações | 🔄 A adicionar |
-| **Lucide React** | Ícones | 🔄 A adicionar |
+| **Framer Motion** | Animações | ✅ Em uso (stagger, page transitions, modal) |
+| **Lucide React** | Ícones | ✅ Em uso (Dashboard, Timeline, FAB) |
 | **Headless UI** | Componentes acessíveis | 🔄 A considerar |
 | **Recharts** | Gráficos (futura) | ⏳ Futura |
 
@@ -661,54 +668,54 @@ npm install @headlessui/react @radix-ui/react-dialog
 ### ✅ MVP (Fase 1) - Semanas 1-2
 
 - [ ] Melhorar cards de AC:
-  - [ ] Status visual (Online/Offline com pulsing)
-  - [ ] Slider com gradiente de cores
-  - [ ] Exibir setpoint e temperatura atual
-  - [ ] Hover effects e animações suaves
+  - ✅ Status visual (Online/Offline com pulsing)
+  - ✅ Slider com gradiente de cores
+  - ✅ Exibir setpoint e temperatura atual
+  - ✅ Hover effects e animações suaves
   
-- [ ] Sistema de notificações (Toasts):
-  - [ ] Toast success/error/warning
-  - [ ] Auto-dismiss em 4s
-  - [ ] Posicionamento top-right
+- ✅ Sistema de notificações (Toasts):
+  - ✅ Toast success/error/warning
+  - ✅ Auto-dismiss em 4s
+  - ✅ Posicionamento top-right
   
-- [ ] Estados de loading e erro:
-  - [ ] Skeleton loaders em cards
-  - [ ] Spinner em botões
-  - [ ] Empty states com ilustração
+- ✅ Estados de loading e erro:
+  - ✅ Skeleton loaders em cards
+  - ✅ Spinner em botões
+  - ✅ Empty states com ilustração
 
 ### 🔄 Fase 2 (Semanas 3-4)
 
-- [ ] Dashboard contextual:
-  - [ ] Header com cumprimento + resumo
-  - [ ] Cards de resumo rápido
-  - [ ] FAB para mobile
+- ✅ Dashboard contextual:
+  - ✅ Header com cumprimento + resumo
+  - ✅ Cards de resumo rápido
+  - ✅ FAB para mobile
   
-- [ ] Timeline de agendamentos:
-  - [ ] Visual timeline
-  - [ ] Cards compactos
-  - [ ] Filtros (Hoje/Semana/Todos)
+- ✅ Timeline de agendamentos:
+  - ✅ Visual timeline
+  - ✅ Cards compactos
+  - ✅ Filtros (Hoje/Semana/Todos)
   
-- [ ] Modais aprimorados:
-  - [ ] Backdrop blur
-  - [ ] Animações de entrada
-  - [ ] Tabs (Informações/Histórico/Avançado)
+- ✅ Modais aprimorados:
+  - ✅ Backdrop blur
+  - ✅ Animações de entrada
+  - ✅ Tabs (Informações/Histórico/Avançado)
 
 ### ⏳ Fase 3 (Semanas 5-6)
 
-- [ ] Dark mode:
-  - [ ] Toggle de tema
-  - [ ] Persistência em localStorage
-  - [ ] Paleta adaptada
+- ✅ Dark mode:
+  - ✅ Toggle de tema
+  - ✅ Persistência em localStorage
+  - ✅ Paleta adaptada
   
-- [ ] Gráficos de histórico:
-  - [ ] Temperatura ao longo do tempo
-  - [ ] Hora de uso (ON/OFF)
-  - [ ] Consumo energético (estimado)
+- ✅ Gráficos de histórico:
+  - ✅ Temperatura ao longo do tempo (linha)
+  - ✅ Hora de uso (ON/OFF) por sala (barras)
+  - ⏳ Consumo energético (estimado) — opcional futuro
   
-- [ ] Animações com Framer Motion:
-  - [ ] Page transitions
-  - [ ] Card stagger animations
-  - [ ] Parallax effects
+- ✅ Animações com Framer Motion:
+  - ✅ Page transitions / Stagger (base feitos)
+  - ✅ Card stagger animations
+  - ✅ Parallax effects (sutil em gráficos)
 
 ---
 
@@ -716,36 +723,34 @@ npm install @headlessui/react @radix-ui/react-dialog
 
 ### Componente: Card de AC
 
-- [ ] Layout em 2 colunas (info + controles)
-- [ ] Badge de status (Online/Offline)
-- [ ] Indicador pulsante para Online
-- [ ] Exibição de temperatura atual vs setpoint
-- [ ] Slider com gradiente azul → vermelho
-- [ ] Marcações a cada 2°C
-- [ ] Thumb de 32px
-- [ ] Tooltip ao arrastar slider
-- [ ] Botão ligar/desligar com loading state
-- [ ] Botão configurações
-- [ ] Hover effect com elevação
-- [ ] Skeleton loader durante fetch
-- [ ] Toast de sucesso/erro ao mudar setpoint
+- ✅ Layout em 2 colunas (info + controles)
+- ✅ Badge de status (Online/Offline)
+- ✅ Indicador pulsante para Online
+- ✅ Exibição de temperatura atual vs setpoint
+- ✅ Slider com gradiente azul → vermelho
+- ✅ Marcações a cada 2°C
+- ✅ Thumb de 32px
+- ✅ Tooltip ao arrastar slider
+- ✅ Botão ligar/desligar com loading state
+- ✅ Botão configurações
+- ✅ Hover effect com elevação
+- ✅ Skeleton loader durante fetch
+- ✅ Toast de sucesso/erro ao mudar setpoint
 
 ### Dashboard/Home
-
-- [ ] Header com cumprimento personalizado
-- [ ] Cards de resumo rápido
-- [ ] Grid responsivo (3 col desktop, 2 tablet, 1 mobile)
-- [ ] Empty state com ilustração
-- [ ] FAB em mobile
+- ✅ Header com cumprimento personalizado
+- ✅ Cards de resumo rápido
+- ✅ Grid responsivo (3 col desktop, 2 tablet, 1 mobile)
+- ✅ Empty state com ilustração
+- ✅ FAB em mobile
 - [ ] Pull-to-refresh (mobile)
 
 ### Notificações
-
-- [ ] Toast component reutilizável
-- [ ] Estados: success, error, warning, info
-- [ ] Auto-dismiss em 4s
-- [ ] Posicionamento top-right
-- [ ] Animação suave
+- ✅ Toast component reutilizável
+- ✅ Estados: success, error, warning, info
+- ✅ Auto-dismiss em 4s
+- ✅ Posicionamento top-right
+- ✅ Animação suave
 
 ### Accessibility
 
@@ -758,10 +763,16 @@ npm install @headlessui/react @radix-ui/react-dialog
 
 ### Dark Mode
 
-- [ ] CSS variables para cores
-- [ ] Toggle visível
-- [ ] Persistência em localStorage
-- [ ] Paleta escura completa
+- ✅ CSS variables para cores
+- ✅ Toggle visível
+- ✅ Persistência em localStorage
+- ✅ Paleta escura completa
+
+## 🔜 Pendências principais (resumido)
+- Revisar contraste/ARIA em páginas e formulários; garantir focus visible consistente
+- Gestos mobile: pull-to-refresh e swipe para deletar agendamento
+- Onboarding/atalhos de teclado (help overlay)
+- Gráficos com dados reais e consumo energético (quando disponível)
 
 ---
 

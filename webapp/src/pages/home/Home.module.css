@@ -2,63 +2,67 @@
 
 /* Layout base */
 .container {
-  padding: 20px;
-  background-color: var(--background-color);
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 2rem;
   min-height: 100vh;
 }
 
 /* Saudação no topo */
 .welcomeCard {
-  background-color: var(--form-background);
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 6px 12px var(--shadow-color);
+  background-color: var(--bg-secondary);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px var(--shadow);
   text-align: center;
 }
 
 .welcomeCard h2 {
-  font-size: 20px;
-  color: var(--primary-color);
-  margin-bottom: 5px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
 }
 
 .welcomeCard p {
-  font-size: 14px;
-  color: var(--highlight-color);
+  font-size: 0.95rem;
+  color: var(--text-secondary);
 }
 
-/* Seção de projetos */
 .projectsSection {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 1rem;
 }
 
 .sectionTitle {
-  font-size: 18px;
-  font-weight: bold;
-  color: var(--primary-color);
-  margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
 }
 
 /* Cartões de projeto */
 .projectCard {
-  background-color: var(--form-background);
-  border-radius: 15px;
-  padding: 15px;
-  box-shadow: 0 4px 8px var(--shadow-color);
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px var(--shadow);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  border: 1px solid var(--border);
 }
 
 .projectCard h3 {
-  font-size: 16px;
-  color: var(--highlight-color);
-  margin-bottom: 10px;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 0.75rem;
 }
 
 .projectCard .progressBarContainer {
@@ -105,57 +109,41 @@
 .footer {
   margin-top: auto;
   text-align: center;
-  font-size: 12px;
-  color: var(--highlight-color);
-  padding: 20px 0;
-}
-
-.unitsSection {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: center;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-
-  padding: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 1.5rem 0;
 }
 
 .unitsSection {
   display: grid;
-  /* Mostrar mais cards por linha reduzindo o min-width dos itens.
-     auto-fit/auto-fill + minmax cria uma grade responsiva que se adapta
-     ao espaço disponível. */
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem; /* Espaçamento consistente entre todos os cards */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
   align-items: start;
+  width: 100%;
 }
 
-/* Mobile: forçar 1 coluna em telas pequenas para garantir legibilidade */
-@media (max-width: 600px) {
-  /* Em modo responsivo próximo ao celular, mostrar 2 colunas quando couber.
-     Isso cria um layout mais compacto e evita uma coluna única muito longa. */
+.unitsGrid {
+  display: contents;
+}
+
+@media (max-width: 768px) {
   .unitsSection {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+}
+
+/* Mobile: 1 coluna em telas pequenas */
+@media (max-width: 600px) {
+  .unitsSection {
+    grid-template-columns: 1fr;
     gap: 0.75rem;
   }
 }
 
-/* Very small screens (narrow phones) — fallback para 1 coluna para evitar cartões muito apertados */
-@media (max-width: 360px) {
+/* Large screens: 3+ colunas */
+@media (min-width: 1200px) {
   .unitsSection {
-    grid-template-columns: repeat(1, 1fr);
-    gap: 0.6rem;
-  }
-}
-
-/* Large screens: permitir colunas ainda menores para caber mais cards */
-@media (min-width: 1400px) {
-  .unitsSection {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   }
 }

@@ -1,0 +1,115 @@
+/* Charts container */
+.section {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  display: grid;
+  gap: 1.25rem;
+}
+
+.parallax {
+  position: absolute;
+  inset: -30% -10% 10% -10%;
+  background: radial-gradient(circle at 30% 30%, rgba(59,130,246,0.12), transparent 40%),
+              radial-gradient(circle at 70% 60%, rgba(16,185,129,0.12), transparent 45%);
+  filter: blur(50px);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.5rem 0.75rem 0.75rem;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+}
+
+.cardTitle {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.chartWrapper {
+  width: 100%;
+  min-height: 300px;
+  max-height: 360px;
+}
+
+.legend {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-left: 0.5rem;
+}
+
+.dotPrimary {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #3b82f6;
+}
+
+.dotAccent {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #10b981;
+}
+
+.dotWarning {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #f59e0b;
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 1rem;
+  }
+  .chartWrapper {
+    min-height: 260px;
+    max-height: 320px;
+  }
+}

@@ -33,6 +33,50 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.5rem;
+  gap: 0.5rem;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 6px var(--shadow);
+}
+
+.pulseDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  position: relative;
+}
+
+.pulseDot::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  opacity: 0.4;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.success {
+  color: var(--status-success);
+}
+
+.warning {
+  color: var(--status-warning, #f59e0b);
+}
+
+.neutral {
+  color: var(--text-secondary);
 }
 
 .title {
@@ -105,6 +149,23 @@
   color: var(--text-secondary); /* ANTES: --highlight-color */
 }
 
+.contentGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.infoCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.controlCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .mainButton {
   background-color: var(--primary);
   color: var(--text-on-primary);
@@ -127,37 +188,94 @@
 /* ====================================
    ESTILIZAÇÃO DO SLIDER DE TEMPERATURA
 ==================================== */
-input[type="range"] {
+.sliderWrapper {
+  position: relative;
+  margin-top: 1rem;
+  padding: 0.25rem 0;
+}
+
+.rangeInput {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 8px;
-  background: var(--border); /* ANTES: --border-color */
-  border-radius: 5px;
+  height: 10px;
+  background: var(--border);
+  border-radius: 999px;
   outline: none;
-  margin-top: 1rem;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-input[type="range"]::-webkit-slider-thumb {
+.rangeInput:hover {
+  box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.1);
+}
+
+.rangeInput:focus-visible {
+  box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.2);
+}
+
+.rangeInput::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
-  background: var(--primary); /* ANTES: --second-color. Agora usa a cor primária. */
+  width: 24px;
+  height: 24px;
+  background: #ffffff;
   cursor: pointer;
   border-radius: 50%;
-  border: 3px solid var(--bg-secondary); /* ANTES: --form-background */
-  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+  border: 3px solid var(--primary);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease;
 }
 
-input[type="range"]::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
-  background: var(--primary);
+.rangeInput::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background: #ffffff;
   cursor: pointer;
   border-radius: 50%;
-  border: 3px solid var(--bg-secondary);
-  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+  border: 3px solid var(--primary);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease;
+}
+
+.rangeInput:active::-webkit-slider-thumb,
+.rangeInput:active::-moz-range-thumb {
+  transform: scale(1.05);
+}
+
+.sliderMarks {
+  position: absolute;
+  inset: 0.6rem 0 0 0;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.mark {
+  width: 2px;
+  height: 10px;
+  background: var(--border);
+  opacity: 0.8;
+}
+
+.valueBubble {
+  position: absolute;
+  top: -1.5rem;
+  transform: translateX(-50%);
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary);
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.valueBubble.visible {
+  opacity: 1;
 }
 
 /* Ajustes para telas pequenas: reduzir padding e tamanhos para caber 2 cards por linha */
@@ -176,4 +294,21 @@ input[type="range"]::-moz-range-thumb {
     padding: 10px;
     font-size: 0.9rem;
   }
+}
+
+@media (min-width: 768px) {
+  .contentGrid {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .controlCol {
+    align-items: stretch;
+  }
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1); opacity: 0.2; }
+  100% { transform: scale(1.1); opacity: 0; }
 }
