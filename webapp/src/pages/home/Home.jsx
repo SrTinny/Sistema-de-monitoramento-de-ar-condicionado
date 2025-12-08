@@ -34,7 +34,9 @@ export default function Home() {
       <DashboardHeader rooms={rooms} schedules={schedules} />
 
       {/* Gráficos históricos */}
-      <UsageCharts rooms={rooms} schedules={schedules} />
+      <section className={styles.chartsSection}>
+        <UsageCharts rooms={rooms} schedules={schedules} />
+      </section>
 
       {/* Seção de Salas */}
       {loading ? (

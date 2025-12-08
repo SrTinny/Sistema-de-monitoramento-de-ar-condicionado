@@ -126,6 +126,12 @@
   display: contents;
 }
 
+/* Espaçamento para gráficos */
+.chartsSection {
+  width: 100%;
+  margin: 1rem 0;
+}
+
 @media (max-width: 768px) {
   .unitsSection {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

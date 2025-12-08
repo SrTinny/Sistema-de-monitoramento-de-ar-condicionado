@@ -77,8 +77,7 @@
 
 .chartWrapper {
   width: 100%;
-  min-height: 300px;
-  max-height: 360px;
+  height: 300px;
 }
 
 .legend {

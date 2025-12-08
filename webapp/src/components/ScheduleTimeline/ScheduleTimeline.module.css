@@ -2,9 +2,10 @@
 
 .container {
   padding: 1.5rem;
-  background: white;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow);
   margin-bottom: 2rem;
 }
 
@@ -22,7 +23,7 @@
   gap: 0.75rem;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -33,10 +34,10 @@
 
 .filterBtn {
   padding: 0.5rem 1rem;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
   border-radius: 0.5rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -44,14 +45,15 @@
 }
 
 .filterBtn:hover {
-  border-color: #d1d5db;
-  color: #4b5563;
+  border-color: var(--primary);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
 }
 
 .filterBtn.active {
-  background: #3b82f6;
+  background: var(--primary);
   color: white;
-  border-color: #2563eb;
+  border-color: var(--primary);
 }
 
 /* Timeline */
@@ -85,39 +87,39 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #e5e7eb;
-  border: 3px solid white;
-  box-shadow: 0 0 0 1px #d1d5db;
+  background: var(--border);
+  border: 3px solid var(--bg-secondary);
+  box-shadow: 0 0 0 1px var(--border);
   transition: all 0.3s ease;
 }
 
 .dot.active {
   width: 16px;
   height: 16px;
-  background: #3b82f6;
-  box-shadow: 0 0 0 1px #2563eb;
+  background: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
 }
 
 .line {
   flex: 1;
   width: 2px;
-  background: #e5e7eb;
+  background: var(--border);
   margin-top: 0.5rem;
 }
 
 /* Card */
 .card {
   flex: 1;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
   overflow: hidden;
   transition: all 0.3s ease;
 }
 
 .card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: #d1d5db;
+  box-shadow: 0 4px 12px var(--shadow);
+  border-color: var(--primary);
 }
 
 .cardHeader {
@@ -145,21 +147,21 @@
   flex-direction: column;
   align-items: center;
   min-width: 60px;
-  background: white;
+  background: var(--bg-secondary);
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
 }
 
 .time {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
 .date {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   text-transform: uppercase;
 }
 
@@ -170,13 +172,13 @@
 .roomName {
   font-size: 1rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .day {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin: 0.25rem 0 0 0;
   text-transform: capitalize;
 }
@@ -199,20 +201,20 @@
 }
 
 .badge.ligar {
-  background: #ecfdf5;
+  background: rgba(16, 185, 129, 0.1);
   color: #065f46;
-  border: 1px solid #86efac;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .badge.desligar {
-  background: #eff6ff;
+  background: rgba(59, 130, 246, 0.1);
   color: #0c4a6e;
-  border: 1px solid #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 .chevron {
   transition: transform 0.3s ease;
-  color: #9ca3af;
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
@@ -223,8 +225,8 @@
 /* Detalhes Expandidos */
 .cardDetails {
   padding: 1rem;
-  border-top: 1px solid #e5e7eb;
-  background: white;
+  border-top: 1px solid var(--border);
+  background: var(--bg-primary);
   animation: slideDown 0.3s ease;
 }
 
@@ -421,91 +423,6 @@
 
   .empty {
     padding: 2rem 1rem;
-  }
-}
-
-/* Dark Mode */
-@media (prefers-color-scheme: dark) {
-  .container {
-    background: #1f2937;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  }
-
-  .title {
-    color: #f3f4f6;
-  }
-
-  .filterBtn {
-    background: #374151;
-    border-color: #4b5563;
-    color: #d1d5db;
-  }
-
-  .filterBtn:hover {
-    border-color: #6b7280;
-    color: #f3f4f6;
-  }
-
-  .filterBtn.active {
-    background: #2563eb;
-    border-color: #1d4ed8;
-  }
-
-  .dot {
-    background: #4b5563;
-    box-shadow: 0 0 0 1px #6b7280;
-  }
-
-  .line {
-    background: #4b5563;
-  }
-
-  .card {
-    background: #374151;
-    border-color: #4b5563;
-  }
-
-  .card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    border-color: #6b7280;
-  }
-
-  .timeBlock {
-    background: #1f2937;
-    border-color: #4b5563;
-  }
-
-  .time {
-    color: #f3f4f6;
-  }
-
-  .date {
-    color: #9ca3af;
-  }
-
-  .roomName {
-    color: #f3f4f6;
-  }
-
-  .day {
-    color: #d1d5db;
-  }
-
-  .cardDetails {
-    background: #1f2937;
-    border-color: #4b5563;
-  }
-
-  .label {
-    color: #9ca3af;
-  }
-
-  .value {
-    color: #f3f4f6;
-  }
-
-  .empty {
-    color: #9ca3af;
   }
 }
 
