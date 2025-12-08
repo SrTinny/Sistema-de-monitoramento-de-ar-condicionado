@@ -54,22 +54,23 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
       >
         <div className={styles.header}>
           <h2 className={styles.title}>{name}</h2>
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-            <div className={`${styles.statusBadge} ${styles[statusTone]}`}>
-              <span className={`${styles.pulseDot} ${styles[statusTone]}`} aria-hidden="true" />
-              <span>{statusLabel}</span>
-            </div>
-            
-            {user && user.role === "ADMIN" && (
-              <button
-                className={styles.iconButton}
-                onClick={() => setShowModal(true)}
-                aria-label="Abrir configurações da sala"
-              >
-                <span className={styles.icon} aria-hidden="true">⚙</span>
-              </button>
-            )}
+          <div className={`${styles.statusBadge} ${styles[statusTone]}`}>
+            <span className={`${styles.pulseDot} ${styles[statusTone]}`} aria-hidden="true" />
+            <span>{statusLabel}</span>
           </div>
+          
+          {/* PONTO DE MELHORIA 2: Acessibilidade */}
+          {/* Usar <button> em vez de <span> para o ícone clicável. */}
+          {/* É semanticamente correto e acessível para teclados. */}
+          {user && user.role === "ADMIN" && (
+            <button
+              className={styles.iconButton}
+              onClick={() => setShowModal(true)}
+              aria-label="Abrir configurações da sala" // Adiciona um rótulo para leitores de tela
+            >
+              <span className={styles.icon} aria-hidden="true">⚙</span>
+            </button>
+          )}
         </div>
 
         <div className={styles.contentGrid}>
