@@ -1,0 +1,115 @@
+/* Toast Customizado - Estilos conforme Design Guide */
+
+.toastContent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.customToast {
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  color: #f3f4f6;
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3),
+              0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Animação de entrada */
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Animação de saída */
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+/* Success Toast */
+:global(.react-hot-toast) {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+/* Estilo para toast de sucesso */
+:global(.react-hot-toast:has(svg[class*="success"])) {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Estilo para toast de erro */
+:global(.react-hot-toast:has(svg[class*="error"])) {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Estilo para toast de loading */
+:global(.react-hot-toast:has(svg[class*="loading"])) {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* Responsivo - Dispositivos móveis */
+@media (max-width: 640px) {
+  .customToast {
+    margin: 0.5rem;
+    max-width: calc(100vw - 1rem);
+    border-radius: 0.5rem;
+    padding: 0.875rem 1rem;
+  }
+
+  :global(.react-hot-toast) {
+    max-width: calc(100vw - 1rem);
+    border-radius: 0.5rem;
+  }
+}
+
+/* Acessibilidade - Tema escuro */
+@media (prefers-color-scheme: dark) {
+  .customToast {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    color: #f3f4f6;
+  }
+}
+
+/* Acessibilidade - Redução de movimento */
+@media (prefers-reduced-motion: reduce) {
+  .customToast {
+    animation: none;
+  }
+  
+  @keyframes slideIn {
+    from {
+      transform: none;
+      opacity: 1;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+}
