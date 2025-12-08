@@ -17,6 +17,18 @@
   max-width: 400px;
 }
 
+.logoContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.logo {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+}
+
 .title {
   font-size: 1.75rem;
   font-weight: 700;

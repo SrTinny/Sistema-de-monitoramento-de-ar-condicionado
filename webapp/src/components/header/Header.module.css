@@ -20,11 +20,23 @@
   font-weight: 600;
   color: var(--text-primary);
   text-decoration: none;
+  display: flex;
+  align-items: center;
 
   /* 2. ADICIONADO: Garante que a saudação não quebre o layout */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.logoImage {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.greeting {
+  display: inline-block;
 }
 
 .actions {

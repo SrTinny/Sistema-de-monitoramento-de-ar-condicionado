@@ -50,7 +50,7 @@ GET /
 **Response (200)**:
 ```json
 {
-  "message": "Sistema de Monitoramento de AR Condicionado - Backend OK",
+  "message": "Intelifri - Sistema Inteligente de Monitoramento - Backend OK",
   "timestamp": "2025-12-05T14:30:00.000Z",
   "status": "operational"
 }

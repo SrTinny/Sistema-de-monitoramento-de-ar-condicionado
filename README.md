@@ -1,6 +1,6 @@
-# Sistema de Monitoramento de Ar Condicionado
+# Intelifri - Sistema Inteligente de Monitoramento de Ar Condicionado
 
-Este repositório contém o sistema completo para monitoramento e controle de unidades de ar condicionado:
+Este repositório contém o sistema completo para monitoramento e controle inteligente de unidades de ar condicionado:
 
 - backend: API Node.js + Express com Prisma e Postgres
 - webapp: frontend React + Vite

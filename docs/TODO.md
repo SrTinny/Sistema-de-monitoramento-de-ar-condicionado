@@ -1,8 +1,8 @@
-# Plano de Trabalhos Futuros - Sistema de Monitoramento de Ar-Condicionado
+# Plano de Trabalhos Futuros - Intelifri
 
-## 1 Introdução
+## Introdução
 
-Este documento descreve as atividades necessárias para completar e aprimorar o sistema de monitoramento de ar-condicionado. Os trabalhos são organizados por prioridade e componente.
+Este documento descreve as atividades necessárias para completar e aprimorar o Intelifri (Sistema Inteligente de Monitoramento de Ar-Condicionado). Os trabalhos são organizados por prioridade e componente.
 
 ## 2 Atividades Críticas
 

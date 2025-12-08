@@ -1,8 +1,8 @@
-# Status de Implementação - Sistema de Monitoramento de Ar-Condicionado
+# Status de Implementação - Intelifri
 
 ## 1 Resumo Executivo
 
-O desenvolvimento do sistema de monitoramento de ar-condicionado encontra-se em fase de conclusão, com implementação completa dos componentes de backend e frontend, bem como do firmware embarcado. A documentação completa foi gerada e toda a infraestrutura foi configurada para ambiente de produção.
+O desenvolvimento do Intelifri (Sistema Inteligente de Monitoramento de Ar-Condicionado) encontra-se em fase de conclusão, com implementação completa dos componentes de backend e frontend, bem como do firmware embarcado. A documentação completa foi gerada e toda a infraestrutura foi configurada para ambiente de produção.
 
 ## 2 Status Geral
 

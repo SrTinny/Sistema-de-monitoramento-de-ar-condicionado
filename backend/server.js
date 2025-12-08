@@ -22,7 +22,7 @@ app.use(express.json());
 // ==========================================================
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'Sistema de Monitoramento de AR Condicionado - Backend OK',
+    message: 'Intelifri - Sistema Inteligente de Monitoramento - Backend OK',
     timestamp: new Date().toISOString(),
     status: 'operational'
   });

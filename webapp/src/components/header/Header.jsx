@@ -32,8 +32,12 @@ export default function Header() {
     <header className={styles.header}>
       <nav className={styles.nav}>
         <Link to="/" className={styles.logo}>
-          {/* A saudação agora é mais limpa e amigável */}
-          {user ? `👋 Olá, ${username}` : "Sistema de AC"}
+          {/* Logo com nome do projeto */}
+          {user ? (
+            <span className={styles.greeting}>👋 Olá, {username}</span>
+          ) : (
+            <img src="/src/public/logo_name.png" alt="Intelifri" className={styles.logoImage} />
+          )}
         </Link>
 
         <div className={styles.actions}>

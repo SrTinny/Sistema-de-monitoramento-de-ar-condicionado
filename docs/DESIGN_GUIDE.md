@@ -1,4 +1,6 @@
-# 🎨 Guia de Design - Sistema de Monitoramento de Ar Condicionado
+# 🎨 Guia de Design - Intelifri
+
+**Sistema Inteligente de Monitoramento de Ar Condicionado**
 
 **Status rápido (manter sempre atualizado após cada entrega)**
 
