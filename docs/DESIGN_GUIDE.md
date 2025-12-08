@@ -5,6 +5,13 @@
 - ✅ Phase 1 entregue: skeletons, spinners, empty states, toasts
 - ✅ Phase 2 entregue: Dashboard header + stats, timeline de agendamentos, animações base (stagger/page), modal com blur e tabs, FAB mobile
 - ✅ Phase 3 entregue: dark mode com persistência, gráficos históricos (Recharts), parallax sutil, card de AC em 2 colunas com slider gradiente
+- ✅ Fase de Correções: 
+  - Tema claro/escuro aplicado corretamente em DashboardHeader e ScheduleTimeline
+  - Layout responsivo: grid com minmax(140px) para 2+ colunas em mobile
+  - Gráficos: labels rotacionados (-45°), nomes truncados com "..."
+  - Removido FAB redundante (usar botão "Adicionar" da nav bar)
+  - Título "Salas de Controle" posicionado fora do grid
+  - Paralax z-index layering corrigido
 - ⏳ Próximos focos: gestos mobile (pull-to-refresh/swipe delete), revisão de contraste/ARIA, onboarding/atalhos, gráficos com dados reais
 
 ## 📋 Contexto do Projeto
@@ -769,28 +776,32 @@ npm install @headlessui/react @radix-ui/react-dialog
 - ✅ Paleta escura completa
 
 ## 🔜 Pendências principais (resumido)
-- Revisar contraste/ARIA em páginas e formulários; garantir focus visible consistente
-- Gestos mobile: pull-to-refresh e swipe para deletar agendamento
-- Onboarding/atalhos de teclado (help overlay)
-- Gráficos com dados reais e consumo energético (quando disponível)
+- ✅ Layout responsivo com grid minmax dinâmico (2+ colunas em mobile)
+- ✅ Tema claro/escuro com CSS variables (localStorage persistence)
+- ✅ Gráficos responsivos com labels rotacionados e truncados
+- ⏳ Gestos mobile: pull-to-refresh e swipe para deletar agendamento
+- ⏳ Revisão de contraste/ARIA em páginas e formulários; garantir focus visible consistente
+- ⏳ Onboarding/atalhos de teclado (help overlay)
+- ⏳ Gráficos com dados reais e consumo energético (quando disponível)
+- ⏳ Code splitting (Recharts > 500kB warning)
 
 ---
 
 ## 🎬 Entregáveis Esperados
 
 ### 1. Figma/Mockup
-- [ ] Telas principais (Home, Agendamentos, Config)
-- [ ] Componentes reutilizáveis
-- [ ] Flows de interação
+- [x] Telas principais (Home, Agendamentos, Config)
+- [x] Componentes reutilizáveis
+- [x] Flows de interação
 
 ### 2. Style Guide
-- [ ] Paleta de cores (hex codes)
-- [ ] Escalas de tipografia
-- [ ] Componentes documentados
-- [ ] Ícones utilizados
+- [x] Paleta de cores (hex codes)
+- [x] Escalas de tipografia
+- [x] Componentes documentados
+- [x] Ícones utilizados
 
 ### 3. Protótipo Interativo
-- [ ] Navegação entre telas
+- [x] Navegação entre telas
 - [ ] Simulação de estados
 - [ ] Feedback de ações
 

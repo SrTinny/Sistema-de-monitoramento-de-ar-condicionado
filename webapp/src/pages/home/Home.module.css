@@ -130,7 +130,7 @@
 
 .unitsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
   align-items: start;
   width: 100%;
@@ -144,14 +144,14 @@
 
 @media (min-width: 480px) {
   .unitsGrid {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1.25rem;
   }
 }
 
 @media (min-width: 640px) {
   .unitsGrid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1.5rem;
   }
 }
