@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useRooms } from "../../contexts/RoomContext";
 import BottomNavBar from "../../components/bottomNavBar/BottomNavBar";
+import { EmptyStateSchedules } from "../../components/EmptyState/EmptyState";
 import styles from "./Agendamentos.module.css";
 import toast from "react-hot-toast";
 import { format, parseISO } from 'date-fns';
@@ -135,7 +136,7 @@ export default function Agendamentos() {
               ))}
             </ul>
           ) : (
-            <p className={styles.empty}>Nenhum agendamento pendente.</p>
+            <EmptyStateSchedules />
           )}
         </div>
       </section>

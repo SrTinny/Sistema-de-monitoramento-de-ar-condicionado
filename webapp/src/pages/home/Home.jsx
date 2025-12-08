@@ -2,10 +2,11 @@ import React, { useEffect } from 'react';
 import { useRooms } from '../../contexts/RoomContext';
 import ACUnit from '../../components/ACUnit/ACUnit';
 import { SkeletonRoomList } from '../../components/SkeletonLoader/SkeletonLoader';
+import { EmptyStateRooms } from '../../components/EmptyState/EmptyState';
 import styles from './Home.module.css';
 
 export default function Home() {
-  const { rooms, loading, fetchRooms, sendCommand, setTemperature, updateRoom } = useRooms();
+  const { rooms, loading, fetchRooms, sendCommand, setTemperature, updateRoom, openForm } = useRooms();
 
   useEffect(() => {
     fetchRooms();
@@ -44,9 +45,7 @@ export default function Home() {
           ))}
         </section>
       ) : (
-        <div className={styles.emptyState}>
-          <p>Nenhuma sala configurada ainda.</p>
-        </div>
+        <EmptyStateRooms onAddClick={openForm} />
       )}
     </main>
   );
