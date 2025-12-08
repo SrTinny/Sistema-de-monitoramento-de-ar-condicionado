@@ -1,0 +1,251 @@
+/* Skeleton Loader - Estilos com animação Shimmer */
+
+/* Animação Shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Estilos base */
+.skeletonElement {
+  background: linear-gradient(
+    90deg,
+    #e5e7eb 0%,
+    #f3f4f6 50%,
+    #e5e7eb 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+  border-radius: 0.5rem;
+}
+
+/* Skeleton Room Card */
+.skeletonRoom {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.skeletonHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.skeletonLine {
+  height: 1rem;
+  background: linear-gradient(
+    90deg,
+    #e5e7eb 0%,
+    #f3f4f6 50%,
+    #e5e7eb 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+  border-radius: 0.375rem;
+}
+
+.skeletonCircle {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: linear-gradient(
+    90deg,
+    #e5e7eb 0%,
+    #f3f4f6 50%,
+    #e5e7eb 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+  flex-shrink: 0;
+}
+
+.skeletonContent {
+  margin: 1rem 0;
+}
+
+.skeletonSlider {
+  height: 2rem;
+  background: linear-gradient(
+    90deg,
+    #e5e7eb 0%,
+    #f3f4f6 50%,
+    #e5e7eb 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.skeletonFooter {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.skeletonButton {
+  flex: 1;
+  height: 2.5rem;
+  background: linear-gradient(
+    90deg,
+    #e5e7eb 0%,
+    #f3f4f6 50%,
+    #e5e7eb 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+  border-radius: 0.5rem;
+}
+
+/* Skeleton Card */
+.skeletonCard {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.skeletonImage {
+  width: 100%;
+  height: 12rem;
+  background: linear-gradient(
+    90deg,
+    #e5e7eb 0%,
+    #f3f4f6 50%,
+    #e5e7eb 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+.skeletonCardContent {
+  padding: 1.5rem;
+}
+
+/* Skeleton Text */
+.skeletonText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Skeleton Grid */
+.skeletonGrid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+/* Skeleton List */
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Animação Pulse alternativa */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsivo - Tablet */
+@media (max-width: 768px) {
+  .skeletonRoom {
+    padding: 1.25rem;
+  }
+
+  .skeletonButton {
+    height: 2.25rem;
+  }
+
+  .skeletonImage {
+    height: 10rem;
+  }
+}
+
+/* Responsivo - Mobile */
+@media (max-width: 640px) {
+  .skeletonRoom {
+    padding: 1rem;
+    border-radius: 0.5rem;
+  }
+
+  .skeletonCard {
+    border-radius: 0.5rem;
+  }
+
+  .skeletonCardContent {
+    padding: 1rem;
+  }
+
+  .skeletonImage {
+    height: 8rem;
+  }
+
+  .skeletonButton {
+    height: 2rem;
+    border-radius: 0.375rem;
+  }
+
+  .skeletonFooter {
+    gap: 0.5rem;
+  }
+}
+
+/* Acessibilidade - Redução de movimento */
+@media (prefers-reduced-motion: reduce) {
+  .skeletonLine,
+  .skeletonCircle,
+  .skeletonButton,
+  .skeletonImage,
+  .skeletonSlider {
+    animation: none;
+    background: #e5e7eb;
+  }
+
+  .skeletonRoom {
+    animation: none;
+  }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .skeletonRoom {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .skeletonLine,
+  .skeletonCircle,
+  .skeletonButton,
+  .skeletonImage,
+  .skeletonSlider {
+    background: linear-gradient(
+      90deg,
+      #374151 0%,
+      #4b5563 50%,
+      #374151 100%
+    );
+    background-size: 1000px 100%;
+  }
+
+  .skeletonCard {
+    background: #1f2937;
+    border-color: #374151;
+  }
+}

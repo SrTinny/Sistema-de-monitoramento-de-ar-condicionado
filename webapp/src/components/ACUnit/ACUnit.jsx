@@ -3,11 +3,13 @@ import { useState, useContext } from "react";
 import { createPortal } from "react-dom";
 import styles from "./ACUnit.module.css";
 import SettingsModal from "../settingsModal/SettingsModal";
+import { LoadingButton } from "../Spinner/Spinner";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useRooms } from "../../contexts/RoomContext";
 
 export default function ACUnit({ room, onToggle, onTempChange }) {
   const [showModal, setShowModal] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
   const { user } = useContext(AuthContext);
   const { updateRoom } = useRooms();
 
@@ -16,6 +18,15 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
   const handleTempChange = (e) => {
     const value = parseFloat(e.target.value);
     onTempChange(id, value);
+  };
+
+  const handleToggle = async (roomData) => {
+    setIsToggling(true);
+    try {
+      await onToggle(roomData);
+    } finally {
+      setIsToggling(false);
+    }
   };
 
   return (
@@ -56,9 +67,14 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
           Setpoint: <span>{setpoint ?? "--"}°C</span>
         </p>
 
-        <button className={styles.mainButton} onClick={() => onToggle(room)}>
+        <LoadingButton
+          isLoading={isToggling}
+          disabled={isToggling}
+          onClick={() => handleToggle(room)}
+          className={styles.mainButton}
+        >
           {status === "ligado" ? "Desligar" : "Ligar"}
-        </button>
+        </LoadingButton>
 
         <input
           type="range"

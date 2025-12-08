@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useRooms } from '../../contexts/RoomContext';
 import ACUnit from '../../components/ACUnit/ACUnit';
+import { SkeletonRoomList } from '../../components/SkeletonLoader/SkeletonLoader';
 import styles from './Home.module.css';
 
 export default function Home() {
@@ -27,10 +28,10 @@ export default function Home() {
       <h1 className={styles.title}>Painel de Controle</h1>
       
       {loading ? (
-        <div className={styles.loading}>
-          <p>Carregando salas...</p>
-        </div>
-      ) : (
+        <section className={styles.unitsSection}>
+          <SkeletonRoomList count={3} />
+        </section>
+      ) : rooms.length > 0 ? (
         <section className={styles.unitsSection}>
           {rooms.map((sala) => (
             <ACUnit
@@ -42,6 +43,10 @@ export default function Home() {
             />
           ))}
         </section>
+      ) : (
+        <div className={styles.emptyState}>
+          <p>Nenhuma sala configurada ainda.</p>
+        </div>
       )}
     </main>
   );

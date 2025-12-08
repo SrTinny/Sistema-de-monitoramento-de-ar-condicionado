@@ -1,0 +1,189 @@
+/* Spinner - Estilos com animações de carregamento */
+
+/* Animação de rotação */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Animação de pulse */
+@keyframes spinnerPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Container do Spinner */
+.spinnerContainer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Spinner padrão */
+.spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Spinner pequeno */
+.spinnerSmall {
+  width: 1rem;
+  height: 1rem;
+}
+
+.spinnerSmall .spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+}
+
+/* Spinner grande */
+.spinnerLarge {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.spinnerLarge .spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+}
+
+/* Loading Button */
+.loadingButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #fff;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+}
+
+.loadingButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+}
+
+.loadingButton:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.loadingButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loadingButton.isLoading {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+.loadingText {
+  animation: spinnerPulse 1.5s ease-in-out infinite;
+}
+
+/* Spinner em diferentes estados */
+
+/* Sucesso */
+.spinnerSuccess {
+  color: #10b981;
+  animation: spinnerPulse 1s ease-in-out 1;
+}
+
+/* Erro */
+.spinnerError {
+  color: #ef4444;
+  animation: spinnerPulse 1s ease-in-out 1;
+}
+
+/* Variações para diferentes botões */
+
+/* Botão pequeno com spinner */
+.loadingButtonSmall {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+/* Botão grande com spinner */
+.loadingButtonLarge {
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+}
+
+/* Responsivo - Mobile */
+@media (max-width: 640px) {
+  .loadingButton {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.95rem;
+  }
+
+  .loadingButtonSmall {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .loadingButtonLarge {
+    padding: 0.875rem 1.75rem;
+    font-size: 1rem;
+  }
+}
+
+/* Acessibilidade - Redução de movimento */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    background: currentColor;
+    opacity: 0.6;
+  }
+
+  .loadingText {
+    animation: none;
+  }
+
+  .loadingButton:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .loadingButton {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: #f3f4f6;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+  }
+
+  .loadingButton:hover:not(:disabled) {
+    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+  }
+
+  .spinner {
+    border-color: rgba(255, 255, 255, 0.1);
+    border-top-color: #f3f4f6;
+  }
+}
