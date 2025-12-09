@@ -4,134 +4,167 @@
 .container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1rem;
-  background-color: var(--bg-primary);
+  padding: 2rem 1.5rem;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 2.5rem;
   min-height: 100vh;
 }
 
 /* Saudação no topo */
 .welcomeCard {
-  background-color: var(--bg-secondary);
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px var(--shadow);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.2);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
   text-align: center;
+  transition: all 0.3s ease;
+}
+
+.welcomeCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.2);
 }
 
 .welcomeCard h2 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary) 0%, #10b981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 0.5rem;
 }
 
 .welcomeCard p {
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: var(--text-secondary);
 }
 
 .projectsSection {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .sectionTitle {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 0.75rem;
+  font-size: 1.3rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary) 0%, #10b981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sectionTitle::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--primary) 0%, #10b981 100%);
+  border-radius: 2px;
 }
 
 /* Cartões de projeto */
 .projectCard {
-  background-color: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 4px 12px var(--shadow);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.2);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.projectCard:hover {
+  transform: translateY(-5px);
+  border-color: var(--primary);
+  box-shadow: 0 25px 70px rgba(59, 130, 246, 0.15);
 }
 
 .projectCard h3 {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--text-primary);
-  font-weight: 600;
-  margin-bottom: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
 }
 
 .projectCard .progressBarContainer {
-  background-color: var(--row-hover-bg);
+  background-color: rgba(75, 85, 99, 0.15);
   height: 8px;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  margin-top: 5px;
+  margin-top: 0.75rem;
 }
 
 .projectCard .progressBar {
   height: 8px;
-  border-radius: 8px;
-  background-color: var(--primary-color);
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary) 0%, #10b981 100%);
   transition: width 0.3s ease;
 }
 
 /* Estilo do botão flutuante (+) */
 .floatingButton {
   position: fixed;
-  bottom: 20px;
+  bottom: 100px;
   right: 20px;
-  background-color: var(--primary-color);
+  background: linear-gradient(135deg, var(--primary) 0%, #0077cc 100%);
   color: white;
   font-size: 28px;
   width: 56px;
   height: 56px;
   border-radius: 50%;
   border: none;
-  box-shadow: 0 4px 8px var(--shadow-dark);
+  box-shadow: 0 8px 24px rgba(0, 149, 255, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 999;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .floatingButton:hover {
-  background-color: var(--second-color);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 149, 255, 0.4);
+}
+
+.floatingButton:active {
+  transform: translateY(0);
 }
 
 /* Rodapé simples */
 .footer {
   margin-top: auto;
   text-align: center;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-secondary);
-  padding: 1.5rem 0;
+  padding: 2rem 0;
+  border-top: 1px solid rgba(75, 85, 99, 0.15);
 }
 
 .unitsSection {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
   width: 100%;
-}
-
-.sectionTitle {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 0.75rem 0;
 }
 
 .unitsGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: 1.5rem;
   align-items: start;
   width: 100%;
 }
@@ -139,45 +172,82 @@
 /* Espaçamento para gráficos */
 .chartsSection {
   width: 100%;
-  margin: 1rem 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  gap: 1.5rem;
 }
 
+/* ========== RESPONSIVIDADE ========== */
+
 @media (min-width: 480px) {
+  .container {
+    padding: 1.5rem 1rem;
+    gap: 2rem;
+  }
+
   .unitsGrid {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1.25rem;
   }
+
+  .sectionTitle {
+    font-size: 1.2rem;
+  }
 }
 
 @media (min-width: 640px) {
+  .container {
+    padding: 2rem;
+  }
+
   .unitsGrid {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1.5rem;
+  }
+
+  .welcomeCard {
+    padding: 2.5rem;
+  }
+
+  .projectCard {
+    padding: 1.75rem;
   }
 }
 
 @media (min-width: 768px) {
   .unitsGrid {
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
+  .container {
+    gap: 3rem;
+  }
+
   .unitsGrid {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+  }
+
+  .chartsSection {
+    gap: 2rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.4rem;
+  }
+
+  .floatingButton {
+    width: 64px;
+    height: 64px;
+    font-size: 32px;
   }
 }
 
 @media (min-width: 1400px) {
   .unitsGrid {
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  }
-}
-@media (min-width: 1200px) {
-  .unitsSection {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   }
 }
