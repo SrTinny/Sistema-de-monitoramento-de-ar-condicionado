@@ -36,7 +36,7 @@ export default function Header() {
           {user ? (
             <span className={styles.greeting}>👋 Olá, {username}</span>
           ) : (
-            <img src="/src/public/logo_name.png" alt="Intelifri" className={styles.logoImage} />
+            <img src="/logo_name.png" alt="Intelifri" className={styles.logoImage} />
           )}
         </Link>
 

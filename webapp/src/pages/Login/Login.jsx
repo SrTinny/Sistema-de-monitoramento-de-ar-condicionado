@@ -33,7 +33,7 @@ const Login = () => {
         loop 
         className={styles.videoBackground}
       >
-        <source src="/src/public/video_background.mp4" type="video/mp4" />
+        <source src="/video_background.mp4" type="video/mp4" />
       </video>
       
       {/* Overlay para melhorar legibilidade */}
@@ -41,7 +41,7 @@ const Login = () => {
       
       <form onSubmit={handleSubmit} className={styles.formCard}>
         <div className={styles.logoContainer}>
-          <img src="/src/public/logo_name.png" alt="Intelifri" className={styles.logo} />
+          <img src="/logo_name.png" alt="Intelifri" className={styles.logo} />
         </div>
         <p className={styles.subtitle}>Faça login para continuar</p>
         
