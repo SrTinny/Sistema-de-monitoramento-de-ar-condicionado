@@ -21,7 +21,6 @@ function App() {
   return (
   <>
     <EnvWarning />
-      
     <Routes>
       <Route path="/login" element={<Login />} />
 
@@ -38,7 +37,6 @@ function App() {
         <Route index element={<Home />} />
         <Route path="agendamentos" element={<Agendamentos />} />
       </Route>
-      
     </Routes>
   </>
   );

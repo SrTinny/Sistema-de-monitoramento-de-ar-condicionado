@@ -97,7 +97,7 @@ export default function UsageCharts({ rooms = [], schedules = [] }) {
             </span>
           </p>
           <div className={styles.chartWrapper}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={350}>
               <LineChart data={tempData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="day" stroke="var(--text-secondary)" />
@@ -118,7 +118,7 @@ export default function UsageCharts({ rooms = [], schedules = [] }) {
             </span>
           </p>
           <div className={styles.chartWrapper}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={350}>
               <BarChart data={usageData} margin={{ top: 10, right: 16, left: 0, bottom: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="name" stroke="var(--text-secondary)" interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end', height: 80 }} />

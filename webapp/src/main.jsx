@@ -7,9 +7,14 @@ import { AuthProvider } from './contexts/AuthContext.jsx';
 import { RoomProvider } from './contexts/RoomContext.jsx'; // 👈 Importe o RoomProvider
 import './index.css';
 
+const routerFutureFlags = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+};
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <Router>
+    <Router future={routerFutureFlags}>
       <AuthProvider>
         <RoomProvider> {/* 👈 Envolva o App com o RoomProvider */}
           <App />
