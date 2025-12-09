@@ -283,13 +283,35 @@ app.post('/api/ac/:id/setpoint', authenticateToken, async (req, res) => {
 
 // ROTA 'CREATE': Criar um novo agendamento
 app.post('/api/schedules', authenticateToken, async (req, res) => {
-  const { airConditionerId, action, scheduledAt } = req.body;
+  const { airConditionerId, action, scheduledAt, isRecurring, recurringTime } = req.body;
   try {
+    // Validação básica
+    if (!airConditionerId || !action) {
+      return res.status(400).json({ error: 'airConditionerId e action são obrigatórios.' });
+    }
+
+    // Se não for recorrente, scheduledAt é obrigatório
+    if (!isRecurring && !scheduledAt) {
+      return res.status(400).json({ error: 'scheduledAt é obrigatório para agendamentos únicos.' });
+    }
+
+    // Se for recorrente, recurringTime é obrigatório
+    if (isRecurring && !recurringTime) {
+      return res.status(400).json({ error: 'recurringTime é obrigatório para agendamentos recorrentes.' });
+    }
+
     const newSchedule = await prisma.schedule.create({
       data: {
         airConditionerId,
         action,
-        scheduledAt: new Date(scheduledAt),
+        scheduledAt: !isRecurring ? new Date(scheduledAt) : null,
+        isRecurring: Boolean(isRecurring),
+        recurringTime: isRecurring ? recurringTime : null,
+      },
+      include: {
+        airConditioner: {
+          select: { name: true, room: true },
+        },
       },
     });
     res.status(201).json(newSchedule);
@@ -304,9 +326,12 @@ app.get('/api/schedules', authenticateToken, async (req, res) => {
   try {
     const schedules = await prisma.schedule.findMany({
       where: { status: 'PENDENTE' },
-      orderBy: { scheduledAt: 'asc' },
+      orderBy: [
+        { isRecurring: 'desc' }, // Recorrentes primeiro
+        { scheduledAt: 'asc' },  // Depois ordena por data
+      ],
       include: {
-        airConditioner: { // Inclui o nome e a sala para exibição no frontend
+        airConditioner: {
           select: { name: true, room: true },
         },
       },

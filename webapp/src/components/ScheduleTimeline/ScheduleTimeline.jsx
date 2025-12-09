@@ -13,6 +13,16 @@ export default function ScheduleTimeline({ schedules = [], onDelete }) {
 
   // Filtrar agendamentos baseado no filtro selecionado
   const filteredSchedules = schedules.filter(schedule => {
+    // Se for agendamento recorrente, sempre incluir (não tem data específica)
+    if (schedule.isRecurring) {
+      return true;
+    }
+
+    // Para agendamentos únicos, aplicar filtro de data
+    if (!schedule.scheduledAt) {
+      return false;
+    }
+
     const scheduledDate = parseISO(schedule.scheduledAt);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -33,7 +43,17 @@ export default function ScheduleTimeline({ schedules = [], onDelete }) {
       default:
         return true;
     }
-  }).sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
+  }).sort((a, b) => {
+    // Agendamentos recorrentes primeiro
+    if (a.isRecurring && !b.isRecurring) return -1;
+    if (!a.isRecurring && b.isRecurring) return 1;
+    
+    // Depois ordenar por data
+    if (a.scheduledAt && b.scheduledAt) {
+      return new Date(a.scheduledAt) - new Date(b.scheduledAt);
+    }
+    return 0;
+  });
 
   return (
     <section className={styles.container}>
@@ -101,6 +121,67 @@ function TimelineItem({
   onToggleExpand,
   onDelete,
 }) {
+  // Para agendamentos recorrentes
+  if (schedule.isRecurring) {
+    return (
+      <div className={styles.timelineItem}>
+        {/* Linha da timeline */}
+        <div className={styles.timeline_line}>
+          <div className={`${styles.dot} ${styles.recurring}`}></div>
+        </div>
+
+        {/* Card do agendamento recorrente */}
+        <div className={styles.card}>
+          <button
+            className={styles.cardHeader}
+            onClick={onToggleExpand}
+          >
+            <div className={styles.cardInfo}>
+              <div className={styles.timeBlock}>
+                <span className={styles.time}>🔄 {schedule.recurringTime}</span>
+                <span className={styles.date}>Todos os dias</span>
+              </div>
+              <div className={styles.details}>
+                <p className={styles.roomName}>
+                  {schedule.airConditioner?.name || 'Sala desconhecida'}
+                </p>
+                <p className={styles.day}>Recorrente</p>
+              </div>
+            </div>
+
+            <div className={styles.cardAction}>
+              <span className={`${styles.badge} ${styles[schedule.action.toLowerCase()]}`}>
+                {schedule.action === 'LIGAR' ? '⚡ Ligar' : '❄️ Desligar'}
+              </span>
+              <ChevronDown
+                size={18}
+                className={`${styles.chevron} ${isExpanded ? styles.expanded : ''}`}
+              />
+            </div>
+          </button>
+
+          {isExpanded && (
+            <div className={styles.cardDetails}>
+              <div className={styles.detailsContent}>
+                <span>Agendamento recorrente diário</span>
+                <button
+                  className={styles.deleteBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                >
+                  <Trash2 size={16} /> Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Para agendamentos únicos
   const scheduledDate = parseISO(schedule.scheduledAt);
   const now = new Date();
   const isPast = scheduledDate < now;

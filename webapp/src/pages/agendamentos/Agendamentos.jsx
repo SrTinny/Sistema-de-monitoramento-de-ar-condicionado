@@ -5,21 +5,22 @@ import { EmptyStateSchedules } from "../../components/EmptyState/EmptyState";
 import styles from "./Agendamentos.module.css";
 import toast from "react-hot-toast";
 import { format, parseISO } from 'date-fns';
-import { FiTrash2 } from 'react-icons/fi'; // 1. Ícone para o botão de deletar
+import { FiTrash2 } from 'react-icons/fi';
 
 export default function Agendamentos() {
   const { rooms, fetchRooms, schedules, fetchSchedules, addSchedule, deleteSchedule } = useRooms();
 
   const [form, setForm] = useState({
-    airConditionerId: "",
+    airConditionerId: "all", // Permite selecionar todos
     action: "LIGAR",
     scheduledAt: "",
+    isRecurring: false, // Nova opção de recorrência
+    recurringTime: "", // Hora para recorrência diária
   });
 
-  // A lógica para o minDateTime já está ótima, sem alterações
   const getMinDateTimeLocal = () => {
     const dt = new Date();
-    dt.setMinutes(dt.getMinutes() + 1); // Garante que o mínimo seja sempre no futuro
+    dt.setMinutes(dt.getMinutes() + 1);
     const pad = (n) => String(n).padStart(2, '0');
     return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
   };
@@ -43,18 +44,67 @@ export default function Agendamentos() {
   }, [rooms]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setForm((f) => ({ 
+      ...f, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.airConditionerId || !form.scheduledAt) {
-      toast.error("Preencha todos os campos do formulário.");
+    
+    if (form.airConditionerId === "all" && !rooms.length) {
+      toast.error("Nenhuma sala disponível.");
       return;
     }
-    await addSchedule(form);
-    setForm((f) => ({ ...f, scheduledAt: "" }));
+
+    if (!form.isRecurring && !form.scheduledAt) {
+      toast.error("Preencha a data e hora ou ative recorrência diária.");
+      return;
+    }
+
+    if (form.isRecurring && !form.recurringTime) {
+      toast.error("Preencha a hora para a recorrência diária.");
+      return;
+    }
+
+    try {
+      // Se for "todos", cria agendamento para cada sala
+      if (form.airConditionerId === "all") {
+        for (const room of rooms) {
+          const scheduleData = {
+            airConditionerId: room.id,
+            action: form.action,
+            isRecurring: form.isRecurring,
+            recurringTime: form.recurringTime,
+            scheduledAt: form.scheduledAt,
+          };
+          await addSchedule(scheduleData);
+        }
+        toast.success(`Agendamento criado para todas as ${rooms.length} salas!`);
+      } else {
+        const scheduleData = {
+          airConditionerId: form.airConditionerId,
+          action: form.action,
+          isRecurring: form.isRecurring,
+          recurringTime: form.recurringTime,
+          scheduledAt: form.scheduledAt,
+        };
+        await addSchedule(scheduleData);
+        toast.success('Agendamento criado com sucesso!');
+      }
+      
+      setForm((f) => ({ 
+        ...f, 
+        scheduledAt: "",
+        recurringTime: "",
+        isRecurring: false,
+      }));
+    } catch (error) {
+      toast.error('Erro ao criar agendamento.');
+      console.error(error);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -72,10 +122,10 @@ export default function Agendamentos() {
         <div className={styles.card}>
           <h2 className={styles.subTitle}>Novo Agendamento</h2>
           <form className={styles.form} onSubmit={handleSubmit}>
-            {/* 2. ESTRUTURA REFEITA USANDO O PADRÃO 'inputGroup' */}
             <div className={styles.inputGroup}>
               <label htmlFor="ac-select">Sala</label>
               <select id="ac-select" name="airConditionerId" value={form.airConditionerId} onChange={handleChange}>
+                <option value="all">🔗 Todos os ACs</option>
                 {rooms.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name} — {r.room}
@@ -87,25 +137,55 @@ export default function Agendamentos() {
             <div className={styles.inputGroup}>
               <label htmlFor="action-select">Ação</label>
               <select id="action-select" name="action" value={form.action} onChange={handleChange}>
-                <option value="LIGAR">Ligar</option>
-                <option value="DESLIGAR">Desligar</option>
+                <option value="LIGAR">🟢 Ligar</option>
+                <option value="DESLIGAR">🔴 Desligar</option>
               </select>
             </div>
 
-            <div className={styles.inputGroup}>
-              <label htmlFor="datetime-input">Data e hora</label>
-              <input
-                id="datetime-input"
-                name="scheduledAt"
-                type="datetime-local"
-                value={form.scheduledAt}
-                min={minDateTime}
-                onChange={handleChange}
-              />
+            {/* Opção de recorrência */}
+            <div className={styles.recurringBox}>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  name="isRecurring"
+                  checked={form.isRecurring}
+                  onChange={handleChange}
+                />
+                <span>Recorrer todos os dias 🔄</span>
+              </label>
+              {form.isRecurring && (
+                <div className={styles.inputGroup}>
+                  <label htmlFor="recurring-time">Hora do dia</label>
+                  <input
+                    id="recurring-time"
+                    type="time"
+                    name="recurringTime"
+                    value={form.recurringTime}
+                    onChange={handleChange}
+                  />
+                  <small className={styles.helperText}>
+                    Vai repetir todos os dias nesta hora
+                  </small>
+                </div>
+              )}
             </div>
 
+            {!form.isRecurring && (
+              <div className={styles.inputGroup}>
+                <label htmlFor="datetime-input">Data e hora (una única vez)</label>
+                <input
+                  id="datetime-input"
+                  name="scheduledAt"
+                  type="datetime-local"
+                  value={form.scheduledAt}
+                  min={minDateTime}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+
             <button type="submit" className={styles.submitButton}>
-              Criar Agendamento
+              ✓ Criar Agendamento
             </button>
           </form>
         </div>
@@ -120,14 +200,17 @@ export default function Agendamentos() {
                   <div className={styles.itemInfo}>
                     <span className={styles.itemTitle}>{s.airConditioner?.name || 'Sala desconhecida'}</span>
                     <span className={styles.itemMeta}>
-                      {s.scheduledAt ? format(parseISO(s.scheduledAt), 'dd/MM/yyyy HH:mm') : 'Data inválida'}
+                      {s.isRecurring ? (
+                        <span>🔄 Todos os dias às {s.recurringTime || 'hora não definida'}</span>
+                      ) : (
+                        s.scheduledAt ? format(parseISO(s.scheduledAt), 'dd/MM/yyyy HH:mm') : 'Data inválida'
+                      )}
                     </span>
                   </div>
                   <div className={styles.itemActions}>
                     <span className={`${styles.itemAction} ${styles[s.action.toLowerCase()]}`}>
-                      {s.action === 'LIGAR' ? 'Ligar' : 'Desligar'}
+                      {s.action === 'LIGAR' ? '🟢 Ligar' : '🔴 Desligar'}
                     </span>
-                    {/* 3. BOTÃO DE DELETAR AGORA É UM ÍCONE */}
                     <button className={styles.deleteButton} onClick={() => handleDelete(s.id)} aria-label="Cancelar agendamento">
                       <FiTrash2 />
                     </button>

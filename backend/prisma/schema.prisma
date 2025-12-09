@@ -34,12 +34,16 @@ model AirConditioner {
 
 model Schedule {
   id               String         @id @default(cuid())
-  scheduledAt      DateTime
+  scheduledAt      DateTime?      // Nulo se for recorrente
   action           ScheduleAction
   status           ScheduleStatus @default(PENDENTE)
   createdAt        DateTime       @default(now())
   airConditionerId String
   airConditioner   AirConditioner @relation(fields: [airConditionerId], references: [id], onDelete: Cascade)
+  
+  // Novos campos para recorrência
+  isRecurring      Boolean        @default(false)
+  recurringTime    String?        // HH:mm formato (ex: "14:30")
 }
 
 enum Role {

@@ -113,29 +113,24 @@ export const RoomProvider = ({ children }) => {
   const closeForm = () => setIsFormOpen(false);
 
   const addSchedule = async (scheduleData) => {
-    const promise = api.post('/api/schedules', scheduleData);
-    toast.promise(promise, {
-      loading: 'Criando agendamento...',
-      success: () => {
-        fetchSchedules(); // Atualiza a lista
-        return 'Agendamento criado com sucesso!';
-      },
-      error: 'Erro ao criar agendamento.',
-    });
-    return promise;
+    try {
+      const response = await api.post('/api/schedules', scheduleData);
+      await fetchSchedules();
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   };
 
   const deleteSchedule = async (scheduleId) => {
-    const promise = api.delete(`/api/schedules/${scheduleId}`);
-    toast.promise(promise, {
-      loading: 'Cancelando agendamento...',
-      success: () => {
-        setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
-        return 'Agendamento cancelado!';
-      },
-      error: 'Erro ao cancelar agendamento.',
-    });
-    return promise;
+    try {
+      await api.delete(`/api/schedules/${scheduleId}`);
+      setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
+      toast.success('Agendamento cancelado!');
+    } catch (error) {
+      toast.error('Erro ao cancelar agendamento.');
+      console.error(error);
+    }
   };
 
   return (
