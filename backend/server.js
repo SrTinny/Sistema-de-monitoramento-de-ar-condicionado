@@ -328,7 +328,7 @@ app.get('/api/schedules', authenticateToken, async (req, res) => {
       where: { status: 'PENDENTE' },
       orderBy: [
         { isRecurring: 'desc' }, // Recorrentes primeiro
-        { scheduledAt: 'asc' },  // Depois ordena por data
+        { scheduledAt: 'asc' },  // Depois ordena por data (nulls last)
       ],
       include: {
         airConditioner: {
@@ -338,7 +338,7 @@ app.get('/api/schedules', authenticateToken, async (req, res) => {
     });
     res.status(200).json(schedules);
   } catch (error) {
-    console.error(error);
+    console.error('[schedules:get] erro ao buscar agendamentos:', error && error.stack ? error.stack : error);
     res.status(500).json({ error: 'Não foi possível buscar os agendamentos.' });
   }
 });
