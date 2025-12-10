@@ -57,7 +57,7 @@ export default function UsageCharts({ rooms = [], schedules = [] }) {
     return rooms.map((r, idx) => {
       const fullName = r.name ?? `Sala ${idx + 1}`;
       return {
-        name: truncateName(fullName, 12),
+        name: truncateName(fullName, 15),
         fullName: fullName,
         onHours: r.status === "ligado" ? 5 + (idx % 3) : 2 + (idx % 2),
       };
@@ -98,9 +98,9 @@ export default function UsageCharts({ rooms = [], schedules = [] }) {
           </p>
           <div className={styles.chartWrapper}>
             <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={tempData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+              <LineChart data={tempData} margin={{ top: 10, right: 16, left: 0, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="day" stroke="var(--text-secondary)" />
+                <XAxis dataKey="day" stroke="var(--text-secondary)" interval={0} tick={{ fontSize: 12 }} />
                 <YAxis stroke="var(--text-secondary)" domain={[18, 28]} />
                 <Tooltip content={tempTooltip} />
                 <Line type="monotone" dataKey="temp" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} />
@@ -119,9 +119,9 @@ export default function UsageCharts({ rooms = [], schedules = [] }) {
           </p>
           <div className={styles.chartWrapper}>
             <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={usageData} margin={{ top: 10, right: 16, left: 0, bottom: 40 }}>
+              <BarChart data={usageData} margin={{ top: 10, right: 16, left: 0, bottom: 70 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="name" stroke="var(--text-secondary)" interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end', height: 80 }} />
+                <XAxis dataKey="name" stroke="var(--text-secondary)" interval={0} tick={{ fontSize: 12, angle: -35, textAnchor: 'end', height: 90 }} />
                 <YAxis stroke="var(--text-secondary)" />
                 <Tooltip content={usageTooltip} />
                 <Bar dataKey="onHours" fill="#f59e0b" radius={[8, 8, 4, 4]} />
