@@ -1,8 +1,19 @@
-# Especificação do Software Embarcado (Firmware) para ESP32
+# Especificação do Software Embarcado (Firmware)
+
+> Status atual do projeto: o fluxo principal é `pio run` e `pio run -t upload`, com detecção automática de porta USB.
 
 ## 1 Requisitos de Hardware
 
 ### 1.1 Microcontrolador
+
+Perfis homologados para este firmware:
+
+| Perfil | Plataforma | Board | Uso recomendado |
+|---|---|---|---|
+| ESP8266 | `espressif8266` | `nodemcuv2` | Dispositivo principal atual |
+| ESP32 | `espressif32` | `esp32dev` | Compatibilidade e migração |
+
+#### 1.1.1 Referência ESP32
 
 | Especificação | Valor |
 |---|---|
@@ -18,8 +29,10 @@
 
 #### 1.2.1 Transmissor Infravermelhos
 
+Pino padrão no firmware: `GPIO 26`.
+
 - **Componente**: LED IR (comprimento de onda: 950 nm)
-- **Pino**: GPIO 26 do ESP32
+- **Pino**: GPIO 26 (ESP32)
 - **Resistor de Proteção**: 100Ω (obrigatório)
 - **Transistor NPN**: 2N2222 ou equivalente (para amplificar sinal)
 
@@ -33,8 +46,10 @@ LED IR (-) → GND
 
 #### 1.2.2 Receptor Infravermelhos
 
+Pino padrão no firmware: `GPIO 4`.
+
 - **Componente**: Fotodiodo IR com demodulador (TSOP38238 ou equivalente)
-- **Pino**: GPIO 4 do ESP32
+- **Pino**: GPIO 4 (ESP32/ESP8266)
 - **Alimentação**: 5V (com regulador LDO se necessário)
 
 **Esquema de Conexão**:
@@ -48,7 +63,9 @@ GND → TSOP38238 (GND)
 
 - **Botão Ligar**: GPIO 12 → GND
 - **Botão Desligar**: GPIO 2 → GND
-- **Resistor Pull-up**: Interno (habilitado em código)
+- **Lógica elétrica no código**:
+  - ESP8266: `INPUT_PULLUP` (pressionado = `LOW`)
+  - ESP32: `INPUT_PULLDOWN` (pressionado = `HIGH`)
 
 **Proteção Recomendada**: Capacitor 100nF entre pino e GND para debouncing
 
@@ -83,9 +100,9 @@ O firmware é organizado em camadas:
 └─────────────────────────────────────────┘
 ```
 
-### 2.2 Estrutura de Tasks FreeRTOS
+### 2.2 Estrutura de execução
 
-O firmware executa 4 tasks simultâneas:
+No ESP32, o firmware executa 4 tasks FreeRTOS simultâneas:
 
 | Task | Núcleo | Prioridade | Stack (bytes) | Função |
 |------|--------|-----------|---|----------|
@@ -94,7 +111,9 @@ O firmware executa 4 tasks simultâneas:
 | `handleIRCommands` | 0 | 1 | 4096 | Monitoramento botões físicos |
 | `handleIRReception` | 0 | 1 | 4096 | Captura de sinais IR |
 
-**Alocação Total**: ~20 KB de stack (disponível)
+**Alocação Total**: ~20 KB de stack (ESP32).
+
+No ESP8266, o mesmo comportamento funcional é executado no `loop()` com funções de processamento não bloqueantes (sem `xTaskCreatePinnedToCore`).
 
 ### 2.3 Fluxo de Execução Principal
 
@@ -243,8 +262,18 @@ Interface para captura de sinais IR (seção 4.5).
 
 ### 4.1 Compilação
 
+Build padrão (usa `default_envs` definido em `platformio.ini`):
+
 ```bash
 cd firmware
+pio run
+```
+
+Build explícito por ambiente (avançado):
+
+```bash
+cd firmware
+pio run -e esp8266dev
 pio run -e esp32dev
 ```
 
@@ -256,19 +285,40 @@ RAM:   [===       ]  16.4% (used 53752 bytes from 327680 bytes)
 Flash: [=======   ]  74.9% (used 981481 bytes from 1310720 bytes)
 ```
 
-### 4.2 Upload para ESP32
+### 4.2 Upload
+
+Upload padrão (recomendado):
 
 ```bash
+pio run -t upload
+```
+
+Com apenas um dispositivo conectado, o PlatformIO detecta automaticamente a porta.
+
+Upload explícito por ambiente e porta (avançado):
+
+```bash
+pio run -e esp8266dev -t upload --upload-port=COM3
 pio run -e esp32dev -t upload --upload-port=COM3
 ```
 
-Substituir COM3 pela porta correta.
+Use `--upload-port` somente quando houver múltiplas portas/dispositivos.
+
+**Boa prática**: sempre informar `-e` quando houver mais de um hardware no projeto para evitar upload no alvo errado.
 
 ### 4.3 Monitoramento Serial
 
 ```bash
 pio device monitor --port=COM3 --baud=115200
 ```
+
+## 5 Boas práticas de manutenção
+
+1. **Nunca fixar uma COM no repositório**: portas variam entre máquinas.
+2. **Documentar ambiente alvo no comando** (`-e esp8266dev` ou `-e esp32dev`).
+3. **Manter pinos por placa em tabela** e refletir mudanças no código e na documentação no mesmo commit.
+4. **Evitar lógica bloqueante no loop** para preservar Wi-Fi e WebSocket estáveis.
+5. **Tratar HTTPS explicitamente por placa** (clientes TLS diferem entre ESP8266 e ESP32).
 
 **Saída Esperada**:
 ```

@@ -1,10 +1,20 @@
+#include <Arduino.h>
+#if defined(ESP8266)
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClientSecureBearSSL.h>
+using WebServerType = ESP8266WebServer;
+#else
 #include <WiFi.h>
 #include <WebServer.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+using WebServerType = WebServer;
+#endif
 #include <WebSocketsServer.h>
-#include <Arduino.h>
 #include <IRremote.h>
 #include <ArduinoJson.h>
-#include <HTTPClient.h>
 
 // Configurações de WiFi
 const char *ssid = "Sobralnet-ENGENHARIA 1060";
@@ -22,7 +32,7 @@ const char *deviceId = "esp32-dev-ac-01"; // ID único do dispositivo
 #define desligarPin 2 // Pino do botão de desligar
 
 // Inicialização do servidor Web e WebSocket
-WebServer server(80);
+WebServerType server(80);
 WebSocketsServer webSocket(81);
 
 // Variável de estado do ar-condicionado
@@ -36,17 +46,31 @@ uint16_t irSignalDesligar[] = {4376, 4336, 568, 1596, 540, 556, 540, 1596, 544, 
 // Variáveis voláteis para interrupções IR
 volatile unsigned long irBuffer[maxLen];
 volatile unsigned int x = 0;
+#if defined(ESP32)
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+#endif
+
+#if defined(ESP8266)
+const uint8_t buttonMode = INPUT_PULLUP;
+const uint8_t buttonPressedState = LOW;
+#else
+const uint8_t buttonMode = INPUT_PULLDOWN;
+const uint8_t buttonPressedState = HIGH;
+#endif
 
 // Função de interrupção para capturar sinais IR recebidos
 void IRAM_ATTR rxIR_Interrupt_Handler()
 {
+#if defined(ESP32)
     portENTER_CRITICAL_ISR(&mux);
+#endif
     if (x < maxLen)
     {
         irBuffer[x++] = micros();
     }
+#if defined(ESP32)
     portEXIT_CRITICAL_ISR(&mux);
+#endif
 }
 
 // Envia o estado atual do AC para os clientes WebSocket
@@ -62,134 +86,162 @@ void sendIRSignalToClients(String action, uint16_t signal[], size_t length) {
         Serial.print(signal[i]);
         Serial.print(i < length - 1 ? ", " : "\n");
     }
-    webSocket.broadcastTXT("Sinal IR enviado para " + action);
+    String wsMessage = "Sinal IR enviado para " + action;
+    webSocket.broadcastTXT(wsMessage);
 }
 
-// Tarefa que processa e exibe sinais IR recebidos
+void processIRReception() {
+    if (x > 0) {
+        Serial.println("\n📡 Sinal IR recebido:");
+        for (unsigned int i = 1; i < x; i++) {
+            unsigned long delta = irBuffer[i] - irBuffer[i - 1];
+            Serial.print(delta);
+            Serial.print(i < x - 1 ? ", " : "\n");
+        }
+        x = 0;
+    }
+}
+
+void processRequests() {
+    server.handleClient();
+    webSocket.loop();
+}
+
+void processBackendPolling() {
+    static unsigned long lastHeartbeat = 0;
+    if (millis() - lastHeartbeat <= 30000) {
+        return;
+    }
+    lastHeartbeat = millis();
+
+    HTTPClient http;
+#if defined(ESP8266)
+    BearSSL::WiFiClientSecure client;
+    client.setInsecure();
+    if (!http.begin(client, backendURL)) {
+        Serial.println("❌ Falha ao iniciar conexão HTTP (ESP8266)");
+        return;
+    }
+#else
+    WiFiClientSecure client;
+    client.setInsecure();
+    if (!http.begin(client, backendURL)) {
+        Serial.println("❌ Falha ao iniciar conexão HTTP (ESP32)");
+        return;
+    }
+#endif
+    http.addHeader("Content-Type", "application/json");
+
+    StaticJsonDocument<256> doc;
+    doc["deviceId"] = deviceId;
+    doc["isOn"] = estadoAC;
+    doc["setpoint"] = setpointAtual;
+
+    String jsonBody;
+    serializeJson(doc, jsonBody);
+
+    int httpCode = http.POST(jsonBody);
+
+    if (httpCode == 200) {
+        String response = http.getString();
+
+        StaticJsonDocument<512> responseDoc;
+        DeserializationError error = deserializeJson(responseDoc, response);
+
+        if (!error) {
+            const char *command = responseDoc["command"];
+
+            if (command != nullptr && String(command) != "none") {
+                Serial.println("📡 Comando recebido do backend: " + String(command));
+
+                if ((String(command) == "TURN_ON" || String(command) == "ligar") && !estadoAC) {
+                    Serial.println("🟢 Executando: LIGAR");
+                    IrSender.sendRaw(irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]), 38);
+                    estadoAC = true;
+                    sendStateToClients();
+                    sendIRSignalToClients("Ligar", irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]));
+                }
+                else if ((String(command) == "TURN_OFF" || String(command) == "desligar") && estadoAC) {
+                    Serial.println("🔴 Executando: DESLIGAR");
+                    IrSender.sendRaw(irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]), 38);
+                    estadoAC = false;
+                    sendStateToClients();
+                    sendIRSignalToClients("Desligar", irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]));
+                }
+                else if (String(command).startsWith("set_temp:")) {
+                    String valor = String(command).substring(String("set_temp:").length());
+                    float novoSetpoint = valor.toFloat();
+                    if (novoSetpoint >= 16 && novoSetpoint <= 30) {
+                        setpointAtual = novoSetpoint;
+                        Serial.println("🌡️ Ajustar setpoint para: " + String(novoSetpoint) + "°C");
+                        String wsSetpointMessage = "Setpoint atualizado para " + String(novoSetpoint) + "°C";
+                        webSocket.broadcastTXT(wsSetpointMessage);
+                    } else {
+                        Serial.println("⚠️ Comando set_temp inválido: " + valor);
+                    }
+                }
+            }
+        }
+    } else {
+        Serial.println("❌ Erro na requisição heartbeat: " + String(httpCode));
+    }
+
+    http.end();
+}
+
+void processIRCommands() {
+    static unsigned long lastButtonAction = 0;
+    if (millis() - lastButtonAction < 500) {
+        return;
+    }
+
+    if (digitalRead(ligarPin) == buttonPressedState && !estadoAC) {
+        Serial.println("🟢 Botão físico pressionado: LIGAR");
+        IrSender.sendRaw(irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]), 38);
+        estadoAC = true;
+        sendStateToClients();
+        sendIRSignalToClients("Ligar", irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]));
+        lastButtonAction = millis();
+    }
+    if (digitalRead(desligarPin) == buttonPressedState && estadoAC) {
+        Serial.println("🔴 Botão físico pressionado: DESLIGAR");
+        IrSender.sendRaw(irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]), 38);
+        estadoAC = false;
+        sendStateToClients();
+        sendIRSignalToClients("Desligar", irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]));
+        lastButtonAction = millis();
+    }
+}
+
+#if defined(ESP32)
 void handleIRReception(void *pvParameters) {
     while (true) {
-        if (x > 0) {
-            Serial.println("\n📡 Sinal IR recebido:");
-            for (unsigned int i = 1; i < x; i++) {
-                unsigned long delta = irBuffer[i] - irBuffer[i - 1];
-                Serial.print(delta);
-                Serial.print(i < x - 1 ? ", " : "\n");
-            }
-            x = 0; // Reseta o buffer
-        }
+        processIRReception();
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
 
-// Tarefa que lida com as requisições HTTP e WebSockets
 void handleRequests(void *pvParameters) {
     while (true) {
-        server.handleClient();
-        webSocket.loop();
+        processRequests();
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
 
-// Tarefa que faz polling do backend para verificar comandos pendentes
 void handleBackendPolling(void *pvParameters) {
-    HTTPClient http;
-    unsigned long lastHeartbeat = 0;
-    
     while (true) {
-        // Faz heartbeat a cada 30 segundos
-        if (millis() - lastHeartbeat > 30000) {
-            lastHeartbeat = millis();
-            
-            http.begin(backendURL);
-            http.addHeader("Content-Type", "application/json");
-            
-            // Cria JSON com o deviceId e estado atual
-            StaticJsonDocument<256> doc;
-            doc["deviceId"] = deviceId;
-            doc["isOn"] = estadoAC;
-            doc["setpoint"] = setpointAtual;
-            
-            String jsonBody;
-            serializeJson(doc, jsonBody);
-            
-            // Envia POST para /api/heartbeat
-            int httpCode = http.POST(jsonBody);
-            
-            if (httpCode == 200) {
-                String response = http.getString();
-                
-                // Parseia resposta JSON
-                StaticJsonDocument<512> responseDoc;
-                DeserializationError error = deserializeJson(responseDoc, response);
-                
-                if (!error) {
-                    const char* command = responseDoc["command"];
-                    
-                    // Processa comando recebido
-                    if (command != nullptr && String(command) != "none") {
-                        Serial.println("📡 Comando recebido do backend: " + String(command));
-                        
-                        if ((String(command) == "TURN_ON" || String(command) == "ligar") && !estadoAC) {
-                            Serial.println("🟢 Executando: LIGAR");
-                            IrSender.sendRaw(irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]), 38);
-                            estadoAC = true;
-                            sendStateToClients();
-                            sendIRSignalToClients("Ligar", irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]));
-                        } 
-                        else if ((String(command) == "TURN_OFF" || String(command) == "desligar") && estadoAC) {
-                            Serial.println("🔴 Executando: DESLIGAR");
-                            IrSender.sendRaw(irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]), 38);
-                            estadoAC = false;
-                            sendStateToClients();
-                            sendIRSignalToClients("Desligar", irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]));
-                        }
-                        else if (String(command).startsWith("set_temp:")) {
-                            String valor = String(command).substring(String("set_temp:").length());
-                            float novoSetpoint = valor.toFloat();
-                            if (novoSetpoint >= 16 && novoSetpoint <= 30) {
-                                setpointAtual = novoSetpoint;
-                                Serial.println("🌡️ Ajustar setpoint para: " + String(novoSetpoint) + "°C");
-                                // TODO: Enviar sinal IR correspondente ao setpoint (não mapeado nesta versão)
-                                webSocket.broadcastTXT("Setpoint atualizado para " + String(novoSetpoint) + "°C");
-                            } else {
-                                Serial.println("⚠️ Comando set_temp inválido: " + valor);
-                            }
-                        }
-                    }
-                }
-            } else {
-                Serial.println("❌ Erro na requisição heartbeat: " + String(httpCode));
-            }
-            
-            http.end();
-        }
-        
+        processBackendPolling();
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
-// Tarefa que lida com os comandos IR via botões físicos
 void handleIRCommands(void *pvParameters) {
     while (true) {
-        if (digitalRead(ligarPin) == HIGH && !estadoAC) {
-            Serial.println("🟢 Botão físico pressionado: LIGAR");
-            IrSender.sendRaw(irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]), 38);
-            estadoAC = true;
-            sendStateToClients();
-            sendIRSignalToClients("Ligar", irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]));
-            vTaskDelay(500 / portTICK_PERIOD_MS);
-        }
-        if (digitalRead(desligarPin) == HIGH && estadoAC) {
-            Serial.println("🔴 Botão físico pressionado: DESLIGAR");
-            IrSender.sendRaw(irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]), 38);
-            estadoAC = false;
-            sendStateToClients();
-            sendIRSignalToClients("Desligar", irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]));
-            vTaskDelay(500 / portTICK_PERIOD_MS);
-        }
+        processIRCommands();
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 }
+#endif
 
 // Configuração inicial do sistema
 void setup() {
@@ -240,16 +292,28 @@ void setup() {
 
     pinMode(rxPinIR, INPUT_PULLUP);
     pinMode(txPinIR, OUTPUT);
-    pinMode(ligarPin, INPUT_PULLDOWN);
-    pinMode(desligarPin, INPUT_PULLDOWN);
+    pinMode(ligarPin, buttonMode);
+    pinMode(desligarPin, buttonMode);
 
     IrSender.begin(txPinIR, ENABLE_LED_FEEDBACK);
     attachInterrupt(digitalPinToInterrupt(rxPinIR), rxIR_Interrupt_Handler, CHANGE);
 
+#if defined(ESP32)
     xTaskCreatePinnedToCore(handleRequests, "Tarefa Requisições", 4096, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(handleIRCommands, "Tarefa IR", 4096, NULL, 1, NULL, 0);
     xTaskCreatePinnedToCore(handleIRReception, "Tarefa Recebimento IR", 4096, NULL, 1, NULL, 0);
     xTaskCreatePinnedToCore(handleBackendPolling, "Tarefa Backend Polling", 8192, NULL, 1, NULL, 0);
+#endif
 }
 
-void loop() { vTaskDelay(portMAX_DELAY); }
+void loop() {
+#if defined(ESP32)
+    vTaskDelay(portMAX_DELAY);
+#else
+    processRequests();
+    processIRCommands();
+    processIRReception();
+    processBackendPolling();
+    delay(10);
+#endif
+}

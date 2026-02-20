@@ -292,9 +292,58 @@ npx prisma db seed
 
 **Prevenção**: Fazer testes de integração antes de deploy.
 
-## 3 Problemas de Firmware (ESP32)
+## 3 Problemas de Firmware (ESP8266/ESP32)
 
-### 3.1 Erro: "Failed to connect to ESP32: No serial data received"
+### 3.1 Erro: "This chip is ESP8266 not ESP32. Wrong --chip argument?"
+
+**Sintoma**:
+```
+A fatal error occurred: This chip is ESP8266 not ESP32. Wrong --chip argument?
+```
+
+**Causa**: comando executado com ambiente `esp32dev` em uma placa ESP8266.
+
+**Solução**:
+
+1. Confirmar a placa conectada:
+```bash
+pio device list
+```
+
+2. Fazer upload com ambiente correto:
+```bash
+# ESP8266
+pio run -e esp8266dev -t upload --upload-port=COM3
+
+# ESP32
+pio run -e esp32dev -t upload --upload-port=COM3
+```
+
+3. Se for usar botão Upload sem `-e`, verificar `default_envs` no `platformio.ini`.
+
+---
+
+### 3.2 Erro: "Could not open COMx, the port doesn't exist"
+
+**Sintoma**:
+```
+A fatal error occurred: Could not open COM6, the port doesn't exist
+```
+
+**Causa**: porta COM inválida, desconectada ou alterada pelo sistema.
+
+**Solução**:
+
+1. Reconectar a placa e listar portas:
+```bash
+pio device list
+```
+2. Atualizar o comando com a COM correta.
+3. Evitar hardcode de porta no repositório.
+
+---
+
+### 3.3 Erro: "Failed to connect to ESP32: No serial data received"
 
 **Sintoma**:
 ```

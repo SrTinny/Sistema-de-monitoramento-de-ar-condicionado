@@ -1,31 +1,39 @@
 # Firmware (PlatformIO)
 
-Pasta `firmware/` contém o código para microcontroladores (ex.: ESP32) utilizado nos dispositivos.
+Pasta `firmware/` contém o firmware para dois ambientes:
 
-Como abrir
+- `esp8266dev` (`nodemcuv2`) — ambiente padrão atual (`default_envs`)
+- `esp32dev` (`esp32dev`) — compatibilidade
 
-- Recomenda-se abrir a pasta no VS Code com a extensão PlatformIO instalada.
-
-Build e upload
-
-- Configure a placa no `platformio.ini` e use a interface do PlatformIO para compilar e subir para o dispositivo.
- 
-Passos rápidos (CLI):
+## Fluxo recomendado (plug-and-upload)
 
 ```powershell
 cd firmware
-# Instala dependências listadas em lib_deps
-pio lib update
-pio run -e esp32dev
-# Para enviar ao dispositivo
-pio run -e esp32dev -t upload
+
+# Build do ambiente padrão (atual: esp8266dev)
+pio run
+
+# Upload do ambiente padrão com auto-detecção de porta
+pio run -t upload
 ```
 
-Notas
+Se houver apenas uma placa conectada, não é necessário informar COM.
 
-- O firmware faz requests HTTP ao backend para heartbeat e busca de comandos pendentes.
-- Arquivo principal: `src/main.cpp`.
+## Fluxo explícito por placa (avançado)
 
-Notas de manutenção:
-- `.pio/` e arquivos de build são ignorados por `.gitignore` para evitar commits de artefatos.
-- Se houver erros de compilação por bibliotecas, execute `pio lib install` conforme instruções acima.
+```powershell
+# ESP8266
+pio run -e esp8266dev
+pio run -e esp8266dev -t upload --upload-port COM3
+
+# ESP32
+pio run -e esp32dev
+pio run -e esp32dev -t upload --upload-port COM3
+```
+
+## Boas práticas
+
+- Sempre usar `-e` quando tiver mais de uma placa no projeto.
+- Não versionar porta COM fixa no repositório.
+- Validar com `pio device list` antes de upload.
+- Arquivo principal do firmware: `src/main.cpp`.

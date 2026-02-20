@@ -79,13 +79,13 @@ O desenvolvimento do Intelifri (Sistema Inteligente de Monitoramento de Ar-Condi
 
 **Conclusão**: Frontend 100% funcional e em produção.
 
-### 3.3 Firmware (ESP32)
+### 3.3 Firmware (ESP8266/ESP32)
 
 | Item | Status | Notas |
 |------|--------|-------|
 | PlatformIO IDE | ✅ Instalado | Versão 6.x |
-| Configuração platformio.ini | ✅ Completo | esp32dev como environment |
-| Include WiFi.h | ✅ Completo | Compilação sem erros |
+| Configuração platformio.ini | ✅ Completo | `esp8266dev` (default) e `esp32dev` |
+| Includes condicionais WiFi | ✅ Completo | ESP8266 e ESP32 suportados |
 | Include IRremote | ✅ Completo | Versão 3.9.0 |
 | Include ArduinoJson | ✅ Completo | Versão 6.x |
 | Include HTTPClient | ✅ Completo | Cliente REST |
@@ -95,14 +95,13 @@ O desenvolvimento do Intelifri (Sistema Inteligente de Monitoramento de Ar-Condi
 | WebSocket Server | ✅ Completo | Broadcast de estado |
 | Transmissor IR | ✅ Completo | Controle de AC via IR |
 | Receptor IR | ✅ Completo | Captura de sinais |
-| Task handleRequests | ✅ Completo | HTTP server + WebSocket |
-| Task handleBackendPolling | ✅ Completo | Polling /api/heartbeat a cada 30s |
-| Task handleIRCommands | ✅ Completo | Monitoramento de botões físicos |
-| Task handleIRReception | ✅ Completo | Captura de sinais IR |
+| Execução com FreeRTOS (ESP32) | ✅ Completo | Tasks dedicadas por núcleo |
+| Execução no loop (ESP8266) | ✅ Completo | Rotinas não bloqueantes |
 | Parsing JSON da resposta | ✅ Completo | Uso de ArduinoJson |
 | Execução de comando IR | ✅ Completo | IrSender.sendRaw() |
-| Compilação PlatformIO | ✅ Sucesso | RAM 16.4%, Flash 74.9% |
-| Upload para ESP32 | ⏳ Bloqueado | Erro de conexão serial (COM1) |
+| Compilação PlatformIO (ESP8266) | ✅ Sucesso | RAM ~45%, Flash ~41% |
+| Upload para ESP8266 (COM3) | ✅ Sucesso | Gravação validada |
+| Compilação PlatformIO (ESP32) | ✅ Sucesso | Compatibilidade mantida |
 | Sinais IR calibrados | ⏳ Pendente | Requer captura de AC real |
 
 **Conclusão**: Firmware 95% completo, aguardando validação em hardware.

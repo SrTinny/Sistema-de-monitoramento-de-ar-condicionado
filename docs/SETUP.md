@@ -205,9 +205,9 @@ pip install platformio
 pio --version
 ```
 
-### 5.2 Preparar ESP32 Fisicamente
+### 5.2 Preparar Placa Fisicamente
 
-Conectar ESP32 ao computador via cabo USB-C ou Micro-USB.
+Conectar a placa alvo ao computador via USB.
 
 Identificar porta COM:
 
@@ -235,8 +235,18 @@ Substituir com credenciais reais da rede.
 
 ### 5.4 Compilar Firmware
 
+Compilação padrão (usa `default_envs` de `platformio.ini`):
+
 ```bash
 cd firmware
+pio run
+```
+
+Compilação explícita por ambiente (avançado):
+
+```bash
+cd firmware
+pio run -e esp8266dev
 pio run -e esp32dev
 ```
 
@@ -251,15 +261,26 @@ Flash: [=======   ]  74.9% (used 981481 bytes from 1310720 bytes)
 
 ### 5.5 Upload do Firmware
 
+Upload padrão (recomendado, sem COM fixa):
+
 ```bash
+pio run -t upload
+```
+
+O PlatformIO detecta automaticamente a porta quando há apenas uma placa conectada.
+
+Upload explícito por ambiente e porta (avançado):
+
+```bash
+pio run -e esp8266dev -t upload --upload-port=COM3
 pio run -e esp32dev -t upload --upload-port=COM3
 ```
 
-Substituir `COM3` pela porta correta identificada.
+Use `--upload-port` apenas quando necessário (múltiplas portas/dispositivos conectados).
 
 **Durante o upload**:
 1. PlatformIO compila o projeto
-2. Inicia comunicação serial com ESP32
+2. Inicia comunicação serial com a placa alvo
 3. Transfere binário para flash
 4. Reseta device
 
@@ -268,6 +289,12 @@ Substituir `COM3` pela porta correta identificada.
 ### 5.6 Monitorar Saída Serial
 
 Após upload bem-sucedido:
+
+```bash
+pio device monitor
+```
+
+Se houver mais de uma porta serial ativa, informe a porta manualmente:
 
 ```bash
 pio device monitor --port=COM3
@@ -341,7 +368,7 @@ Atualizar em `firmware/src/main.cpp`:
 const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
 ```
 
-Recompilar e fazer upload para ESP32 final.
+Recompilar e fazer upload para a placa final.
 
 ## 8 Checklist de Validação
 
