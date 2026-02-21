@@ -222,16 +222,19 @@ Saída esperada:
 COM3 - USB Serial Device (VID: 10C4, PID: EA60)
 ```
 
-### 5.3 Atualizar Credenciais WiFi
+### 5.3 Provisionamento WiFi (sem editar código)
 
-Editar `firmware/src/main.cpp`, aproximadamente linha 15:
+O firmware usa portal de configuração WiFi.
 
-```cpp
-const char *ssid = "SEU_SSID_AQUI";
-const char *password = "SUA_SENHA_AQUI";
-```
+Fluxo:
 
-Substituir com credenciais reais da rede.
+1. Faça upload normal do firmware.
+2. Se o ESP não tiver rede salva, ele cria um ponto de acesso `AC-SETUP-XXXXXX`.
+3. No celular/notebook, conecte nesse Wi-Fi.
+4. Abra a página de configuração (captiva) e selecione SSID/senha da rede local.
+5. Salve; o ESP reinicia conectado na rede.
+
+Isso elimina a necessidade de alterar SSID/senha no `main.cpp`.
 
 ### 5.4 Compilar Firmware
 
@@ -336,6 +339,27 @@ No dashboard, aguardar carregamento da lista de ACs. Devem aparecer ACs do seed 
 3. Preencher formulário
 4. Salvar
 5. Verificar se aparece na lista
+
+### 6.5 Teste de Firmware - 1 Sala (MVP)
+
+1. Conectar 1 ESP e fazer upload:
+```bash
+cd firmware
+pio run -t upload
+```
+2. Provisionar WiFi via `AC-SETUP-XXXXXX` (primeira vez).
+3. Abrir monitor serial:
+```bash
+pio device monitor
+```
+4. Confirmar logs: conexão WiFi, IP e `Device ID`.
+5. No webapp, acionar ligar/desligar e validar resposta IR no ar-condicionado.
+
+### 6.6 Escalar para 3 Salas (Próximo passo)
+
+1. Repetir upload e provisionamento para cada ESP.
+2. Garantir que cada placa tenha `Device ID` diferente (gerado automaticamente por chip).
+3. Validar que cada dispositivo responde de forma independente no backend/webapp.
 
 ## 7 Implantação em Produção
 

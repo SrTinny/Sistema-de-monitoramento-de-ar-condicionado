@@ -171,17 +171,19 @@ void transmitCommand(const char *command) {
 
 **Função**: `void setupWiFi()`
 
-**Descrição**: Conecta ESP32 à rede WiFi.
+**Descrição**: Provisiona e conecta o dispositivo à rede WiFi sem hardcode de credenciais.
 
 **Processo**:
-1. Aguarda conexão com timeout de 20 segundos
-2. Se conectado: exibe IP local
-3. Se falho: reinicia loop de tentativa
+1. Tenta conectar com credenciais salvas
+2. Se não houver credenciais, abre portal `AC-SETUP-XXXXXX`
+3. Usuário informa SSID/senha pela página local de configuração
+4. Dispositivo salva dados, conecta e exibe IP
 
 **Logs Esperados**:
 ```
-WiFi connecting...
-Connected! IP: 192.168.1.100
+Iniciando conexão Wi-Fi...
+Se não houver rede salva, abrirá portal de configuração: AC-SETUP-XXXXXX
+Conectado ao Wi-Fi
 ```
 
 ### 3.3 Módulo de Polling Backend

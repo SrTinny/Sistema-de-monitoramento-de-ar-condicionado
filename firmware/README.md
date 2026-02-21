@@ -19,6 +19,17 @@ pio run -t upload
 
 Se houver apenas uma placa conectada, não é necessário informar COM.
 
+## Provisionamento Wi-Fi (sem hardcode)
+
+- Ao ligar sem credenciais salvas, o ESP cria um AP `AC-SETUP-XXXXXX`.
+- O usuário conecta nesse AP e informa SSID/senha na página de configuração.
+- As credenciais ficam salvas na flash e são reutilizadas no próximo boot.
+
+Rotas de suporte no firmware:
+
+- `GET /wifi/status` retorna status de conexão (SSID/IP/deviceId)
+- `POST /wifi/reset` limpa credenciais Wi-Fi e reinicia o ESP
+
 ## Fluxo explícito por placa (avançado)
 
 ```powershell
