@@ -15,14 +15,12 @@ using WebServerType = WebServer;
 #include <WebSocketsServer.h>
 #include <IRremote.h>
 #include <ArduinoJson.h>
-
-// Configurações de WiFi
-const char *ssid = "Sobralnet-ENGENHARIA 1060";
-const char *password = "apartamento1060";
+#include <WiFiManager.h>
 
 // Configuração do servidor backend
-const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
-const char *deviceId = "esp32-dev-ac-01"; // ID único do dispositivo
+// const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
+const char *backendURL = "http://192.168.18.109:3001"; 
+String deviceId;
 
 // Definição dos pinos e constantes
 #define maxLen 800
@@ -57,6 +55,52 @@ const uint8_t buttonPressedState = LOW;
 const uint8_t buttonMode = INPUT_PULLDOWN;
 const uint8_t buttonPressedState = HIGH;
 #endif
+
+String getChipSuffix()
+{
+#if defined(ESP8266)
+    uint32_t chipId = ESP.getChipId();
+    String suffix = String(chipId, HEX);
+#else
+    uint64_t chipId = ESP.getEfuseMac();
+    String suffix = String(static_cast<uint32_t>(chipId & 0xFFFFFF), HEX);
+#endif
+    suffix.toUpperCase();
+    while (suffix.length() < 6)
+    {
+        suffix = "0" + suffix;
+    }
+    return suffix;
+}
+
+void connectWiFiWithPortal()
+{
+    String chipSuffix = getChipSuffix();
+    String apName = "AC-SETUP-" + chipSuffix;
+
+    WiFi.mode(WIFI_STA);
+    WiFiManager wm;
+    wm.setConfigPortalTimeout(180);
+    wm.setConnectTimeout(20);
+
+    Serial.println("\n🌐 Iniciando conexão Wi-Fi...");
+    Serial.println("Se não houver rede salva, abrirá portal de configuração: " + apName);
+
+    bool connected = wm.autoConnect(apName.c_str());
+    if (!connected)
+    {
+        Serial.println("❌ Falha ao conectar Wi-Fi via portal. Reiniciando...");
+        delay(1500);
+        ESP.restart();
+        return;
+    }
+
+    Serial.println("✅ Conectado ao Wi-Fi!");
+    Serial.print("SSID: ");
+    Serial.println(WiFi.SSID());
+    Serial.print("Endereço IP: ");
+    Serial.println(WiFi.localIP());
+}
 
 // Função de interrupção para capturar sinais IR recebidos
 void IRAM_ATTR rxIR_Interrupt_Handler()
@@ -115,17 +159,45 @@ void processBackendPolling() {
     lastHeartbeat = millis();
 
     HTTPClient http;
+    String heartbeatUrl = String(backendURL) + "/api/heartbeat";
+    String heartbeatUrlLower = heartbeatUrl;
+    heartbeatUrlLower.toLowerCase();
+    bool isHttps = heartbeatUrlLower.startsWith("https://");
+
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("❌ Wi-Fi desconectado. Heartbeat não enviado.");
+        return;
+    }
+
 #if defined(ESP8266)
-    BearSSL::WiFiClientSecure client;
-    client.setInsecure();
-    if (!http.begin(client, backendURL)) {
+    static BearSSL::WiFiClientSecure secureClient;
+    static WiFiClient plainClient;
+    bool beginOk = false;
+
+    if (isHttps) {
+        secureClient.setInsecure();
+        beginOk = http.begin(secureClient, heartbeatUrl);
+    } else {
+        beginOk = http.begin(plainClient, heartbeatUrl);
+    }
+
+    if (!beginOk) {
         Serial.println("❌ Falha ao iniciar conexão HTTP (ESP8266)");
         return;
     }
 #else
-    WiFiClientSecure client;
-    client.setInsecure();
-    if (!http.begin(client, backendURL)) {
+    static WiFiClientSecure secureClient;
+    static WiFiClient plainClient;
+    bool beginOk = false;
+
+    if (isHttps) {
+        secureClient.setInsecure();
+        beginOk = http.begin(secureClient, heartbeatUrl);
+    } else {
+        beginOk = http.begin(plainClient, heartbeatUrl);
+    }
+
+    if (!beginOk) {
         Serial.println("❌ Falha ao iniciar conexão HTTP (ESP32)");
         return;
     }
@@ -134,7 +206,7 @@ void processBackendPolling() {
 
     StaticJsonDocument<256> doc;
     doc["deviceId"] = deviceId;
-    doc["isOn"] = estadoAC;
+    doc["status"] = estadoAC ? "ligado" : "desligado";
     doc["setpoint"] = setpointAtual;
 
     String jsonBody;
@@ -180,10 +252,22 @@ void processBackendPolling() {
                         Serial.println("⚠️ Comando set_temp inválido: " + valor);
                     }
                 }
+                else if (String(command) == "WIFI_RESET" || String(command) == "wifi_reset") {
+                    Serial.println("🛜 Comando recebido: resetar configuração Wi-Fi");
+                    String wsWifiMessage = "Reconfiguração de Wi-Fi solicitada";
+                    webSocket.broadcastTXT(wsWifiMessage);
+
+                    WiFiManager wm;
+                    wm.resetSettings();
+                    delay(1000);
+                    ESP.restart();
+                }
             }
         }
     } else {
-        Serial.println("❌ Erro na requisição heartbeat: " + String(httpCode));
+        Serial.println("❌ Erro na requisição heartbeat: " + String(httpCode) + " - " + HTTPClient::errorToString(httpCode));
+        Serial.println("🔎 URL heartbeat: " + heartbeatUrl);
+        Serial.println("🔎 IP local do dispositivo: " + WiFi.localIP().toString());
     }
 
     http.end();
@@ -246,14 +330,138 @@ void handleIRCommands(void *pvParameters) {
 // Configuração inicial do sistema
 void setup() {
     Serial.begin(115200);
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println("\n✅ Conectado ao Wi-Fi!");
-    Serial.print("Endereço IP: ");
-    Serial.println(WiFi.localIP());
+
+    deviceId = "ac-node-" + getChipSuffix();
+    connectWiFiWithPortal();
+
+    Serial.print("Device ID: ");
+    Serial.println(deviceId);
+    Serial.print("Backend URL: ");
+    Serial.println(backendURL);
+
+    server.on("/wifi/status", HTTP_OPTIONS, []() {
+        server.sendHeader("Access-Control-Allow-Origin", "*");
+        server.sendHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+        server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+        server.send(204);
+    });
+
+    server.on("/wifi/status", HTTP_GET, []() {
+        StaticJsonDocument<256> statusDoc;
+        statusDoc["deviceId"] = deviceId;
+        statusDoc["connected"] = (WiFi.status() == WL_CONNECTED);
+        statusDoc["ssid"] = WiFi.SSID();
+        statusDoc["ip"] = WiFi.localIP().toString();
+
+        String payload;
+        serializeJson(statusDoc, payload);
+        server.sendHeader("Access-Control-Allow-Origin", "*");
+        server.send(200, "application/json", payload);
+    });
+
+    server.on("/wifi/reset", HTTP_POST, []() {
+        server.sendHeader("Access-Control-Allow-Origin", "*");
+        server.send(200, "application/json", "{\"ok\":true,\"message\":\"Reiniciando configuração Wi-Fi\"}");
+
+        WiFiManager wm;
+        wm.resetSettings();
+        delay(1000);
+        ESP.restart();
+    });
+
+    server.on("/wifi/networks", HTTP_OPTIONS, []() {
+        server.sendHeader("Access-Control-Allow-Origin", "*");
+        server.sendHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+        server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+        server.send(204);
+    });
+
+    server.on("/wifi/networks", HTTP_GET, []() {
+        Serial.println("📡 Escaneando redes WiFi disponíveis...");
+        
+        StaticJsonDocument<512> networksDoc;
+        JsonArray networks = networksDoc.createNestedArray("networks");
+        
+        int numNetworks = WiFi.scanNetworks();
+        Serial.print("Redes encontradas: ");
+        Serial.println(numNetworks);
+        
+        for (int i = 0; i < numNetworks; i++) {
+            JsonObject net = networks.createNestedObject();
+            net["ssid"] = WiFi.SSID(i);
+            net["rssi"] = WiFi.RSSI(i);
+            net["channel"] = WiFi.channel(i);
+            #if defined(ESP8266)
+            net["encryptionType"] = (int)WiFi.encryptionType(i);
+            #endif
+        }
+        
+        String payload;
+        serializeJson(networksDoc, payload);
+        server.sendHeader("Access-Control-Allow-Origin", "*");
+        server.send(200, "application/json", payload);
+    });
+
+    server.on("/wifi/configure", HTTP_OPTIONS, []() {
+        server.sendHeader("Access-Control-Allow-Origin", "*");
+        server.sendHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+        server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+        server.send(204);
+    });
+
+    server.on("/wifi/configure", HTTP_POST, []() {
+        if (!server.hasArg("plain")) {
+            server.send(400, "application/json", "{\"error\":\"JSON body required\"}");
+            return;
+        }
+        
+        StaticJsonDocument<256> configDoc;
+        DeserializationError error = deserializeJson(configDoc, server.arg("plain"));
+        
+        if (error) {
+            server.send(400, "application/json", "{\"error\":\"JSON parse error\"}");
+            return;
+        }
+        
+        const char* ssid = configDoc["ssid"];
+        const char* password = configDoc["password"];
+        
+        if (!ssid || !password) {
+            server.send(400, "application/json", "{\"error\":\"ssid and password required\"}");
+            return;
+        }
+        
+        Serial.println("🔧 Configurando WiFi via requisição...");
+        Serial.print("SSID: ");
+        Serial.println(ssid);
+        
+        server.sendHeader("Access-Control-Allow-Origin", "*");
+        server.send(200, "application/json", "{\"ok\":true,\"message\":\"Configuração recebida. Reiniciando...\"}");
+        
+        delay(250);
+        WiFi.mode(WIFI_STA);
+        WiFi.disconnect();
+        delay(200);
+        WiFi.begin(ssid, password);
+
+        unsigned long wifiStart = millis();
+        while (WiFi.status() != WL_CONNECTED && millis() - wifiStart < 15000) {
+            delay(500);
+            Serial.print(".");
+        }
+        Serial.println();
+
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("✅ Nova rede aplicada com sucesso.");
+            Serial.print("Novo IP: ");
+            Serial.println(WiFi.localIP());
+        } else {
+            Serial.println("⚠️ Não foi possível conectar com as credenciais enviadas. Reiniciando para modo portal.");
+        }
+
+        WiFi.disconnect();
+        ESP.restart();
+    });
 
     server.on("/ligar", HTTP_GET, []() {
         Serial.println("🔴 Recebida requisição para LIGAR.");
