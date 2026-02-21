@@ -411,6 +411,49 @@ app.post('/api/heartbeat', async (req, res) => {
   }
 });
 
+// Endpoint para listar dispositivos que enviaram heartbeat (debug)
+app.get('/api/devices/status', async (req, res) => {
+  try {
+    const devices = await prisma.airConditioner.findMany({
+      select: {
+        id: true,
+        deviceId: true,
+        name: true,
+        room: true,
+        status: true,
+        lastHeartbeat: true,
+        temperature: true,
+        humidity: true,
+        setpoint: true,
+      },
+      orderBy: {
+        lastHeartbeat: 'desc',
+      },
+    });
+
+    const now = new Date();
+    const devicesWithOnlineStatus = devices.map((device) => ({
+      ...device,
+      online: device.lastHeartbeat && (now - new Date(device.lastHeartbeat)) < 60000, // Online se heartbeat < 1 min
+      lastHeartbeatAgo: device.lastHeartbeat
+        ? Math.floor((now - new Date(device.lastHeartbeat)) / 1000) + 's'
+        : 'nunca',
+    }));
+
+    res.json({
+      success: true,
+      count: devices.length,
+      devices: devicesWithOnlineStatus,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao buscar dispositivos',
+      details: error.message,
+    });
+  }
+});
+
 // ==========================================================
 // ROTAS PARA DESCOBERTA E CONFIGURAÇÃO DE ESPs
 // ==========================================================
