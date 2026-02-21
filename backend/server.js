@@ -8,6 +8,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const cuid = require('cuid');
+const axios = require('axios');
+const os = require('os');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -360,27 +362,41 @@ app.delete('/api/schedules/:id', authenticateToken, async (req, res) => {
 // ROTA PÚBLICA PARA OS ESP32s (DISPOSITIVOS IoT)
 // ==========================================================
 app.post('/api/heartbeat', async (req, res) => {
-  const { deviceId, status, temperature, humidity } = req.body;
+  const { deviceId, status, isOn, temperature, humidity, setpoint } = req.body;
 
-  if (!deviceId || !status) {
+  const normalizedStatus = status ?? (typeof isOn === 'boolean' ? (isOn ? 'ligado' : 'desligado') : null);
+
+  if (!deviceId || !normalizedStatus) {
     return res.status(400).json({ error: 'deviceId e status são obrigatórios.' });
   }
 
   try {
-    const ac = await prisma.airConditioner.findUnique({
+    let ac = await prisma.airConditioner.findUnique({
       where: { deviceId },
     });
 
     if (!ac) {
-      return res.status(404).json({ error: 'Dispositivo não registrado.', command: 'reboot' });
+      ac = await prisma.airConditioner.create({
+        data: {
+          deviceId,
+          name: `AC ${deviceId.slice(-6).toUpperCase()}`,
+          room: 'Não configurada',
+          status: normalizedStatus,
+          temperature,
+          humidity,
+          setpoint: typeof setpoint === 'number' ? setpoint : 22,
+          lastHeartbeat: new Date(),
+        },
+      });
     }
 
-    const updatedAC = await prisma.airConditioner.update({
+    await prisma.airConditioner.update({
       where: { deviceId },
       data: {
-        status,
+        status: normalizedStatus,
         temperature,
         humidity,
+        setpoint: typeof setpoint === 'number' ? setpoint : undefined,
         lastHeartbeat: new Date(),
         pendingCommand: null,
       },
@@ -395,12 +411,194 @@ app.post('/api/heartbeat', async (req, res) => {
   }
 });
 
+// ==========================================================
+// ROTAS PARA DESCOBERTA E CONFIGURAÇÃO DE ESPs
+// ==========================================================
+
+function isPrivateIPv4(ip) {
+  if (!ip || typeof ip !== 'string') return false;
+  if (ip.startsWith('10.')) return true;
+  if (ip.startsWith('192.168.')) return true;
+
+  const parts = ip.split('.').map((p) => parseInt(p, 10));
+  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return false;
+  return parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31;
+}
+
+function getLocalSubnetPrefixes() {
+  const interfaces = os.networkInterfaces();
+  const prefixes = new Set();
+
+  Object.values(interfaces).forEach((entries) => {
+    (entries || []).forEach((entry) => {
+      if (!entry || entry.family !== 'IPv4' || entry.internal || !isPrivateIPv4(entry.address)) {
+        return;
+      }
+
+      const octets = entry.address.split('.');
+      if (octets.length === 4) {
+        prefixes.add(`${octets[0]}.${octets[1]}.${octets[2]}`);
+      }
+    });
+  });
+
+  return [...prefixes];
+}
+
+function buildDiscoveryIpList() {
+  const ips = new Set();
+
+  for (let i = 1; i <= 10; i++) {
+    ips.add(`192.168.4.${i}`);
+  }
+
+  const localPrefixes = getLocalSubnetPrefixes();
+  localPrefixes.forEach((prefix) => {
+    for (let i = 1; i <= 254; i++) {
+      ips.add(`${prefix}.${i}`);
+    }
+  });
+
+  return [...ips];
+}
+
+async function discoverEspFromIp(ip) {
+  try {
+    const response = await axios.get(`http://${ip}/wifi/status`, { timeout: 1200 });
+    const data = response.data || {};
+
+    if (!data.deviceId) {
+      return null;
+    }
+
+    return {
+      deviceId: data.deviceId,
+      ip,
+      ssid: data.ssid || 'Not configured',
+      connected: Boolean(data.connected),
+      apName: `AC-SETUP-${String(data.deviceId).slice(-6).toUpperCase()}`,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+async function scanIpsWithConcurrency(ips, concurrency = 30) {
+  const found = [];
+  let index = 0;
+
+  async function worker() {
+    while (true) {
+      const current = index;
+      index += 1;
+      if (current >= ips.length) break;
+
+      const result = await discoverEspFromIp(ips[current]);
+      if (result) {
+        found.push(result);
+      }
+    }
+  }
+
+  const workers = [];
+  for (let i = 0; i < concurrency; i++) {
+    workers.push(worker());
+  }
+
+  await Promise.all(workers);
+  return found;
+}
+
+// Endpoint para procurar ESPs disponíveis na rede local (não configurados)
+app.get('/api/esp/discover', async (req, res) => {
+  try {
+    const ips = buildDiscoveryIpList();
+    const discovered = await scanIpsWithConcurrency(ips, 30);
+
+    const uniqueByDevice = new Map();
+    discovered.forEach((esp) => {
+      uniqueByDevice.set(esp.deviceId, esp);
+    });
+
+    const foundESPs = [...uniqueByDevice.values()];
+    
+    res.json({ 
+      success: true, 
+      espList: foundESPs,
+      message: foundESPs.length > 0 ? `${foundESPs.length} ESP(s) encontrado(s)` : 'Nenhum ESP encontrado'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro ao procurar ESPs',
+      details: error.message 
+    });
+  }
+});
+
+// Endpoint para configurar WiFi de um ESP específico
+app.post('/api/esp/configure', async (req, res) => {
+  const { espIp, ssid, password } = req.body;
+  
+  if (!espIp || !ssid || !password) {
+    return res.status(400).json({ error: 'espIp, ssid e password são obrigatórios' });
+  }
+  
+  try {
+    // Relaja uma requisição para o AP do ESP com as credenciais WiFi
+    const response = await axios.post(
+      `http://${espIp}/wifi/configure`,
+      { ssid, password },
+      { timeout: 5000 }
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Configuração enviada. O ESP vai reiniciar em alguns segundos.',
+      espResponse: response.data
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro ao configurar WiFi no ESP',
+      details: error.message
+    });
+  }
+});
+
+// Endpoint alternativo para obter redes WiFi disponíveis de um ESP
+app.get('/api/esp/:ip/networks', async (req, res) => {
+  const { ip } = req.params;
+  
+  try {
+    const response = await axios.get(`http://${ip}/wifi/networks`, { timeout: 5000 });
+    const payload = response.data;
+    const networks = Array.isArray(payload) ? payload : (Array.isArray(payload?.networks) ? payload.networks : []);
+
+    res.json({ 
+      success: true, 
+      networks
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro ao obter redes disponíveis',
+      details: error.message
+    });
+  }
+});
+
 // Inicialização segura: valida variáveis e conecta ao banco antes de iniciar o servidor
 const init = async () => {
   // Verifica variáveis essenciais
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.includes('<')) {
-    console.error('Falta JWT_SECRET válido no ambiente. Configure JWT_SECRET antes de iniciar.');
-    process.exit(1);
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Falta JWT_SECRET válido no ambiente. Configure JWT_SECRET antes de iniciar.');
+      process.exit(1);
+    }
+
+    process.env.JWT_SECRET = 'dev-local-jwt-secret';
+    console.warn('JWT_SECRET ausente/inválido. Usando segredo padrão de desenvolvimento (NÃO usar em produção).');
   }
 
   try {
