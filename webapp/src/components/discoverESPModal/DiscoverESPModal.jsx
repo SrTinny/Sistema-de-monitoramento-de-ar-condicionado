@@ -105,7 +105,11 @@ const DiscoverESPModal = ({ isOpen, onClose, onESPAdded }) => {
         return;
       }
 
-      toast.error('Nenhum ESP encontrado. Verifique se o backend está rodando e se há ESPs na rede.');
+      if (isLocalhost) {
+        toast.error('Nenhum ESP encontrado. Conecte-se ao Wi-Fi AC-SETUP-XXXXX e tente novamente.');
+      } else {
+        toast.error('Configure o ESP pelo WiFiManager (AC-SETUP captive portal). Ele aparecerá automaticamente após conectar.');
+      }
     } catch (error) {
       toast.error('Erro ao procurar ESPs: ' + error.message);
       console.error(error);
