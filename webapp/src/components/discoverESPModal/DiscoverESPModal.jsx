@@ -84,13 +84,19 @@ const DiscoverESPModal = ({ isOpen, onClose, onESPAdded }) => {
   const discoverESPs = async () => {
     setDiscovering(true);
     try {
-      const directList = await discoverDirectFromAp();
-      if (directList.length > 0) {
-        setESPList(directList);
-        toast.success(`${directList.length} ESP(s) encontrado(s)!`);
-        return;
+      // Só tenta conexão direta se estiver em localhost (CSP do Vercel bloqueia IPs privados)
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      
+      if (isLocalhost) {
+        const directList = await discoverDirectFromAp();
+        if (directList.length > 0) {
+          setESPList(directList);
+          toast.success(`${directList.length} ESP(s) encontrado(s)!`);
+          return;
+        }
       }
 
+      // Fallback para backend (obrigatório em produção)
       const response = await api.get('/api/esp/discover');
       const backendList = response?.data?.espList || [];
       if (backendList.length > 0) {
@@ -99,8 +105,7 @@ const DiscoverESPModal = ({ isOpen, onClose, onESPAdded }) => {
         return;
       }
 
-      toast.error('Nenhum ESP encontrado. Conecte-se ao Wi-Fi AC-SETUP-XXXXX e tente novamente.');
-      toast.error('Se estiver em produção, valide também o VITE_API_URL e o deploy do backend.');
+      toast.error('Nenhum ESP encontrado. Verifique se o backend está rodando e se há ESPs na rede.');
     } catch (error) {
       toast.error('Erro ao procurar ESPs: ' + error.message);
       console.error(error);
@@ -112,22 +117,24 @@ const DiscoverESPModal = ({ isOpen, onClose, onESPAdded }) => {
   const fetchNetworks = async (espIp) => {
     setLoadingNetworks(true);
     try {
-      const directNetworks = await fetchNetworksDirect(espIp);
-      if (directNetworks.length > 0) {
-        setNetworks(directNetworks);
-        return;
+      // Só tenta conexão direta se estiver em localhost
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      
+      if (isLocalhost) {
+        const directNetworks = await fetchNetworksDirect(espIp);
+        if (directNetworks.length > 0) {
+          setNetworks(directNetworks);
+          setLoadingNetworks(false);
+          return;
+        }
       }
 
+      // Fallback para backend
       const response = await api.get(`/api/esp/${espIp}/networks`);
       setNetworks(response?.data?.networks || []);
     } catch (error) {
-      try {
-        const response = await api.get(`/api/esp/${espIp}/networks`);
-        setNetworks(response?.data?.networks || []);
-      } catch (backendError) {
-        toast.error('Erro ao obter redes disponíveis: ' + backendError.message);
-        setNetworks([]);
-      }
+      toast.error('Erro ao obter redes disponíveis: ' + error.message);
+      setNetworks([]);
     } finally {
       setLoadingNetworks(false);
     }
@@ -162,17 +169,32 @@ const DiscoverESPModal = ({ isOpen, onClose, onESPAdded }) => {
     setConfiguring(true);
     try {
       let message = 'Configuração enviada. O ESP vai reiniciar em alguns segundos.';
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-      try {
-        const directResponse = await configureDirect(
-          selectedESP.ip,
-          selectedESP.selectedNetwork.ssid,
-          password
-        );
-        if (directResponse?.message) {
-          message = directResponse.message;
+      // Só tenta conexão direta em localhost
+      if (isLocalhost) {
+        try {
+          const directResponse = await configureDirect(
+            selectedESP.ip,
+            selectedESP.selectedNetwork.ssid,
+            password
+          );
+          if (directResponse?.message) {
+            message = directResponse.message;
+          }
+        } catch (directError) {
+          // Fallback para backend se conexão direta falhar
+          const response = await configureViaBackend(
+            selectedESP.ip,
+            selectedESP.selectedNetwork.ssid,
+            password
+          );
+          if (response?.data?.message) {
+            message = response.data.message;
+          }
         }
-      } catch (directError) {
+      } else {
+        // Em produção, usa sempre o backend
         const response = await configureViaBackend(
           selectedESP.ip,
           selectedESP.selectedNetwork.ssid,
