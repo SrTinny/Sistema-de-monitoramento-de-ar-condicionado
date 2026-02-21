@@ -1,7 +1,6 @@
 import React, { useContext } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from '../header/Header';
-import BottomNavBar from '../bottomNavBar/BottomNavBar';
 import AddRoomForm from '../addRoomForm/AddRoomForm';
 import { RoomContext } from '../../contexts/RoomContext';
 import styles from './Layout.module.css';
@@ -18,8 +17,6 @@ const Layout = () => {
       <main className={styles.mainContent}>
         <Outlet />
       </main>
-      
-      <BottomNavBar />
 
       {isFormOpen && (
         <AddRoomForm 

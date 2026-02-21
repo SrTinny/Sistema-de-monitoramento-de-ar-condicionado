@@ -8,9 +8,10 @@
 }
 
 .nav {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
+  gap: 2rem;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -22,6 +23,7 @@
   text-decoration: none;
   display: flex;
   align-items: center;
+  justify-self: start;
 
   /* 2. ADICIONADO: Garante que a saudação não quebre o layout */
   overflow: hidden;
@@ -42,7 +44,44 @@
 .actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
+  justify-self: end;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  justify-self: center;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.navLink:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.navLinkActive {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.navIcon {
+  width: 18px;
+  height: 18px;
 }
 
 .actionButton {

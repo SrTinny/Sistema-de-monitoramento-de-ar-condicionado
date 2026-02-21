@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useContext } from "react";
 import styles from "./Header.module.css";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
-import { FiLogOut } from "react-icons/fi";
+import { FiLogOut, FiHome, FiCalendar } from "react-icons/fi";
 
 export default function Header() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -28,6 +28,10 @@ export default function Header() {
   // 1. MELHORIA NA SAUDAÇÃO: Extrai o nome de usuário do e-mail
   const username = user ? user.email.split('@')[0] : null;
 
+  const getNavLinkClass = ({ isActive }) => {
+    return isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink;
+  };
+
   return (
     <header className={styles.header}>
       <nav className={styles.nav}>
@@ -39,6 +43,17 @@ export default function Header() {
             <img src="/logo_name.png?v=1" alt="Intelifri" className={styles.logoImage} />
           )}
         </Link>
+
+        <div className={styles.navLinks}>
+          <NavLink to="/" className={getNavLinkClass} end>
+            <FiHome className={styles.navIcon} />
+            <span>Início</span>
+          </NavLink>
+          <NavLink to="/agendamentos" className={getNavLinkClass}>
+            <FiCalendar className={styles.navIcon} />
+            <span>Agenda</span>
+          </NavLink>
+        </div>
 
         <div className={styles.actions}>
           <button onClick={toggleTheme} className={styles.actionButton} aria-label="Alternar tema">

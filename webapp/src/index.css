@@ -108,8 +108,7 @@ body {
 }
 
 main {
-  /* Adiciona padding para o BottomNavBar não cobrir o conteúdo */
-  padding-bottom: 80px;
+  padding-bottom: 0;
 }
 
 a {
