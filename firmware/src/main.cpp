@@ -164,9 +164,28 @@ void processBackendPolling() {
     heartbeatUrlLower.toLowerCase();
     bool isHttps = heartbeatUrlLower.startsWith("https://");
 
+    String host = String(backendURL);
+    host.replace("https://", "");
+    host.replace("http://", "");
+    int slashPos = host.indexOf('/');
+    if (slashPos >= 0) {
+        host = host.substring(0, slashPos);
+    }
+
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("❌ Wi-Fi desconectado. Heartbeat não enviado.");
         return;
+    }
+
+    IPAddress resolvedIp;
+    if (WiFi.hostByName(host.c_str(), resolvedIp)) {
+        Serial.print("🔎 DNS OK: ");
+        Serial.print(host);
+        Serial.print(" -> ");
+        Serial.println(resolvedIp);
+    } else {
+        Serial.print("❌ DNS falhou para host: ");
+        Serial.println(host);
     }
 
 #if defined(ESP8266)
@@ -176,6 +195,7 @@ void processBackendPolling() {
 
     if (isHttps) {
         secureClient.setInsecure();
+        secureClient.setTimeout(15000);
         beginOk = http.begin(secureClient, heartbeatUrl);
     } else {
         beginOk = http.begin(plainClient, heartbeatUrl);
@@ -192,6 +212,7 @@ void processBackendPolling() {
 
     if (isHttps) {
         secureClient.setInsecure();
+        secureClient.setTimeout(15000);
         beginOk = http.begin(secureClient, heartbeatUrl);
     } else {
         beginOk = http.begin(plainClient, heartbeatUrl);
@@ -202,6 +223,7 @@ void processBackendPolling() {
         return;
     }
 #endif
+    http.setTimeout(15000);
     http.addHeader("Content-Type", "application/json");
 
     StaticJsonDocument<256> doc;
@@ -213,6 +235,28 @@ void processBackendPolling() {
     serializeJson(doc, jsonBody);
 
     int httpCode = http.POST(jsonBody);
+
+    if (httpCode < 0 && isHttps) {
+        Serial.println("⚠️ HTTPS falhou, tentando HTTP...");
+        http.end();
+
+        HTTPClient retryHttp;
+        WiFiClient retryClient;
+        String retryUrl = heartbeatUrl;
+        retryUrl.replace("https://", "http://");
+        if (retryHttp.begin(retryClient, retryUrl)) {
+            retryHttp.setTimeout(15000);
+            retryHttp.addHeader("Content-Type", "application/json");
+            httpCode = retryHttp.POST(jsonBody);
+            if (httpCode >= 0) {
+                Serial.print("✅ HTTP fallback code: ");
+                Serial.println(httpCode);
+            }
+            retryHttp.end();
+        } else {
+            Serial.println("❌ Falha ao iniciar HTTP fallback");
+        }
+    }
 
     if (httpCode == 200) {
         String response = http.getString();
