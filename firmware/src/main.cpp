@@ -18,8 +18,8 @@ using WebServerType = WebServer;
 #include <WiFiManager.h>
 
 // Configuração do servidor backend
-// const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
-const char *backendURL = "http://192.168.18.109:3001"; 
+const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
+// const char *backendURL = "http://192.168.18.109:3001"; 
 String deviceId;
 
 // Definição dos pinos e constantes
