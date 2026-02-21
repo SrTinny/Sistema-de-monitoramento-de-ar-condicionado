@@ -7,7 +7,7 @@ import { AuthContext } from "../../contexts/AuthContext";
 export default function SettingsModal({ visible, room, onClose, onSave }) {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
-  const { deleteRoom } = useContext(RoomContext);
+  const { deleteRoom, sendCommand } = useContext(RoomContext);
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
@@ -35,6 +35,27 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
         onClose();
       } catch (error) {
         console.error("Erro no componente ao deletar:", error);
+      }
+    }
+  };
+
+  const handleWifiReset = async () => {
+    if (!room?.deviceId) {
+      window.alert("Este dispositivo ainda não possui deviceId registrado.");
+      return;
+    }
+
+    if (
+      window.confirm(
+        `Deseja reconfigurar o Wi-Fi do dispositivo ${room.deviceId}? O ESP será reiniciado e abrirá o portal AC-SETUP.`
+      )
+    ) {
+      try {
+        await sendCommand(room.deviceId, "wifi_reset");
+        window.alert("Comando enviado. Aguarde o reinício do ESP e conecte no Wi-Fi AC-SETUP para configurar a rede.");
+      } catch (error) {
+        console.error("Erro ao solicitar reset de Wi-Fi:", error);
+        window.alert("Não foi possível enviar o comando de reset de Wi-Fi.");
       }
     }
   };
@@ -97,6 +118,14 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
             </button>
           </div>
         </form>
+
+        {user && user.role === "ADMIN" && (
+          <div className={styles.adminSection}>
+            <button onClick={handleWifiReset} className={styles.wifiButton}>
+              Reconfigurar Wi-Fi do ESP
+            </button>
+          </div>
+        )}
 
         {user && user.role === "ADMIN" && (
           <div className={styles.deleteSection}>
