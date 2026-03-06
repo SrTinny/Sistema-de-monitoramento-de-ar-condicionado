@@ -29,6 +29,12 @@ model AirConditioner {
   temperature    Float?
   setpoint       Float?     @default(22)
   lastHeartbeat  DateTime?
+  irSignals      Json?
+  irLearnState   String?
+  irLearnButton  String?
+  irLearnRaw     String?
+  irLearnMessage String?
+  irLearnUpdatedAt DateTime?
   schedules      Schedule[]
 }
 

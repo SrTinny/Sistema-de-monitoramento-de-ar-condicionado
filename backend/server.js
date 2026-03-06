@@ -19,6 +19,47 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+function normalizeIrButton(button) {
+  if (!button || typeof button !== 'string') return null;
+  const normalized = button.trim().toLowerCase();
+  if (normalized === 'ligar' || normalized === 'desligar') return normalized;
+  return null;
+}
+
+function getIrSignalForButton(irSignals, button) {
+  if (!irSignals || typeof irSignals !== 'object') return null;
+  const signal = irSignals[button];
+  if (!signal || typeof signal !== 'object') return null;
+  if (typeof signal.raw !== 'string' || signal.raw.trim().length === 0) return null;
+  return signal;
+}
+
+function validateRawSignal(raw) {
+  if (typeof raw !== 'string' || raw.trim().length === 0) {
+    return { valid: false, reason: 'Sinal IR vazio.' };
+  }
+
+  const values = raw
+    .split(',')
+    .map((value) => parseInt(value.trim(), 10))
+    .filter((value) => !Number.isNaN(value));
+
+  if (values.length < 10) {
+    return { valid: false, reason: 'Sinal IR muito curto.' };
+  }
+
+  if (values.length > 800) {
+    return { valid: false, reason: 'Sinal IR excede o tamanho máximo.' };
+  }
+
+  const hasInvalidValue = values.some((value) => value < 50 || value > 25000);
+  if (hasInvalidValue) {
+    return { valid: false, reason: 'Sinal IR contém valores fora do intervalo permitido.' };
+  }
+
+  return { valid: true };
+}
+
 // ==========================================================
 // ROTA DE HEALTH CHECK (PÚBLICA)
 // ==========================================================
@@ -225,13 +266,134 @@ app.post('/api/command', authenticateToken, async (req, res) => {
   }
 
   try {
+    const updateData = { pendingCommand: command };
+    if (typeof command === 'string' && command.startsWith('learn:')) {
+      const button = normalizeIrButton(command.substring('learn:'.length));
+      if (!button) {
+        return res.status(400).json({ error: 'Botão inválido para aprendizado. Use ligar ou desligar.' });
+      }
+
+      updateData.irLearnState = 'aguardando';
+      updateData.irLearnButton = button;
+      updateData.irLearnRaw = null;
+      updateData.irLearnMessage = `Aguardando captura do botão '${button}'.`;
+      updateData.irLearnUpdatedAt = new Date();
+    }
+
     await prisma.airConditioner.update({
       where: { deviceId },
-      data: { pendingCommand: command },
+      data: updateData,
     });
     res.status(200).json({ message: `Comando '${command}' enfileirado para o dispositivo ${deviceId}.` });
   } catch (error) {
     res.status(404).json({ error: 'Dispositivo não encontrado.' });
+  }
+});
+
+app.post('/api/rooms/:id/ir/learn', authenticateToken, isAdmin, async (req, res) => {
+  const { id } = req.params;
+  const button = normalizeIrButton(req.body?.button);
+
+  if (!button) {
+    return res.status(400).json({ error: 'Botão inválido. Use ligar ou desligar.' });
+  }
+
+  try {
+    const updated = await prisma.airConditioner.update({
+      where: { id },
+      data: {
+        pendingCommand: `learn:${button}`,
+        irLearnState: 'aguardando',
+        irLearnButton: button,
+        irLearnRaw: null,
+        irLearnMessage: `Aguardando captura do botão '${button}'. Aponte o controle para o receptor IR.`,
+        irLearnUpdatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        deviceId: true,
+        irLearnState: true,
+        irLearnButton: true,
+        irLearnRaw: true,
+        irLearnMessage: true,
+        irLearnUpdatedAt: true,
+      },
+    });
+
+    res.status(200).json({
+      message: `Modo de aprendizado iniciado para '${button}'.`,
+      room: updated,
+    });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Aparelho não encontrado.' });
+    }
+    console.error('[ir:learn] erro ao iniciar aprendizado:', error);
+    res.status(500).json({ error: 'Não foi possível iniciar o modo de aprendizado IR.' });
+  }
+});
+
+app.post('/api/rooms/:id/ir/learn/confirm', authenticateToken, isAdmin, async (req, res) => {
+  const { id } = req.params;
+  const save = Boolean(req.body?.save);
+
+  try {
+    const ac = await prisma.airConditioner.findUnique({ where: { id } });
+
+    if (!ac) {
+      return res.status(404).json({ error: 'Aparelho não encontrado.' });
+    }
+
+    const button = normalizeIrButton(ac.irLearnButton);
+    const raw = typeof ac.irLearnRaw === 'string' ? ac.irLearnRaw : '';
+
+    if (!button || !raw) {
+      return res.status(400).json({ error: 'Não há sinal IR capturado pendente para confirmação.' });
+    }
+
+    const updateData = {
+      irLearnUpdatedAt: new Date(),
+    };
+
+    if (save) {
+      const currentSignals = ac.irSignals && typeof ac.irSignals === 'object' ? { ...ac.irSignals } : {};
+      currentSignals[button] = {
+        raw,
+        updatedAt: new Date().toISOString(),
+      };
+
+      updateData.irSignals = currentSignals;
+      updateData.irLearnState = 'salvo';
+      updateData.irLearnMessage = `Sinal '${button}' salvo com sucesso.`;
+    } else {
+      updateData.irLearnState = 'descartado';
+      updateData.irLearnMessage = `Sinal '${button}' descartado.`;
+    }
+
+    updateData.irLearnRaw = null;
+
+    const updated = await prisma.airConditioner.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        deviceId: true,
+        irSignals: true,
+        irLearnState: true,
+        irLearnButton: true,
+        irLearnRaw: true,
+        irLearnMessage: true,
+        irLearnUpdatedAt: true,
+      },
+    });
+
+    res.status(200).json({
+      message: updateData.irLearnMessage,
+      room: updated,
+    });
+  } catch (error) {
+    console.error('[ir:confirm] erro ao confirmar aprendizado:', error);
+    res.status(500).json({ error: 'Não foi possível confirmar o sinal IR capturado.' });
   }
 });
 
@@ -362,7 +524,7 @@ app.delete('/api/schedules/:id', authenticateToken, async (req, res) => {
 // ROTA PÚBLICA PARA OS ESP32s (DISPOSITIVOS IoT)
 // ==========================================================
 app.post('/api/heartbeat', async (req, res) => {
-  const { deviceId, status, isOn, temperature, humidity, setpoint } = req.body;
+  const { deviceId, status, isOn, temperature, humidity, setpoint, learnedSignal } = req.body;
 
   const normalizedStatus = status ?? (typeof isOn === 'boolean' ? (isOn ? 'ligado' : 'desligado') : null);
 
@@ -390,21 +552,64 @@ app.post('/api/heartbeat', async (req, res) => {
       });
     }
 
+    const updateData = {
+      status: normalizedStatus,
+      temperature,
+      humidity,
+      setpoint: typeof setpoint === 'number' ? setpoint : undefined,
+      lastHeartbeat: new Date(),
+      pendingCommand: null,
+    };
+
+    if (learnedSignal && typeof learnedSignal === 'object') {
+      const learnedButton = normalizeIrButton(learnedSignal.button);
+      const learnedStatus = typeof learnedSignal.status === 'string' ? learnedSignal.status.toLowerCase() : '';
+      const learnedMessage = typeof learnedSignal.message === 'string' ? learnedSignal.message : null;
+
+      if (learnedStatus === 'captured' && learnedButton && typeof learnedSignal.raw === 'string') {
+        const validation = validateRawSignal(learnedSignal.raw);
+        if (validation.valid) {
+          updateData.irLearnState = 'capturado_pendente';
+          updateData.irLearnButton = learnedButton;
+          updateData.irLearnRaw = learnedSignal.raw;
+          updateData.irLearnMessage = `Sinal '${learnedButton}' capturado. Confirme no painel para salvar.`;
+          updateData.irLearnUpdatedAt = new Date();
+        } else {
+          updateData.irLearnState = 'erro';
+          updateData.irLearnButton = learnedButton;
+          updateData.irLearnRaw = null;
+          updateData.irLearnMessage = validation.reason;
+          updateData.irLearnUpdatedAt = new Date();
+        }
+      } else if (learnedStatus === 'timeout' && learnedButton) {
+        updateData.irLearnState = 'timeout';
+        updateData.irLearnButton = learnedButton;
+        updateData.irLearnRaw = null;
+        updateData.irLearnMessage = learnedMessage || `Tempo esgotado para capturar o botão '${learnedButton}'.`;
+        updateData.irLearnUpdatedAt = new Date();
+      }
+    }
+
     await prisma.airConditioner.update({
       where: { deviceId },
-      data: {
-        status: normalizedStatus,
-        temperature,
-        humidity,
-        setpoint: typeof setpoint === 'number' ? setpoint : undefined,
-        lastHeartbeat: new Date(),
-        pendingCommand: null,
-      },
+      data: updateData,
     });
 
-    res.status(200).json({
+    const responsePayload = {
       command: ac.pendingCommand || 'none',
-    });
+    };
+
+    if (ac.pendingCommand === 'ligar' || ac.pendingCommand === 'desligar') {
+      const learned = getIrSignalForButton(ac.irSignals, ac.pendingCommand);
+      if (learned) {
+        responsePayload.learnedSignal = {
+          button: ac.pendingCommand,
+          raw: learned.raw,
+        };
+      }
+    }
+
+    res.status(200).json(responsePayload);
 
   } catch (error) {
     res.status(500).json({ error: 'Erro interno no servidor.', command: 'reboot' });
