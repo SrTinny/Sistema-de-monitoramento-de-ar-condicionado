@@ -16,556 +16,723 @@ using WebServerType = WebServer;
 #include <IRremote.h>
 #include <ArduinoJson.h>
 #include <WiFiManager.h>
+#include <map>
 
-// Configuração do servidor backend
+// ============================================================================
+// CONFIGURAÇÃO GERAL
+// ============================================================================
+
+// Backend
 const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
 // const char *backendURL = "http://192.168.18.109:3001"; 
 String deviceId;
 
-// Definição dos pinos e constantes
+// Pinos IR
 #define maxLen 800
-#define rxPinIR 4  // Pino de entrada para receptor IR
-#define txPinIR 26 // Pino de saída para transmissor IR
-#define ligarPin 12  // Pino do botão de ligar
-#define desligarPin 2 // Pino do botão de desligar
+#define rxPinIR 4   // GPIO 4 = D2 (Receptor IR - entrada)
+#define txPinIR 13  // GPIO 13 = D7 (Transmissor IR - saída)
 
-// Inicialização do servidor Web e WebSocket
+// Servidores
 WebServerType server(80);
 WebSocketsServer webSocket(81);
 
-// Variável de estado do ar-condicionado
-bool estadoAC = false;
-float setpointAtual = 22.0; // Setpoint padrão
+// ============================================================================
+// ARMAZENAMENTO DE SINAIS IR APRENDIDOS
+// ============================================================================
 
-// Buffers para armazenamento dos sinais IR
-uint16_t irSignalLigar[] = {4372, 4336, 568, 1572, 564, 528, 568, 1572, 568, 1572, 564, 528, 568, 528, 568, 1572, 568, 524, 568, 528, 568, 1572, 568, 528, 564, 528, 568, 1572, 568, 1568, 572, 528, 564, 1572, 568, 528, 568, 1572, 564, 528, 568, 1572, 568, 1572, 564, 1572, 568, 1572, 564, 1572, 568, 1572, 568, 524, 572, 1568, 568, 528, 568, 528, 568, 524, 572, 524, 568, 528, 568, 528, 568, 528, 568, 1568, 568, 528, 568, 528, 568, 528, 568, 528, 568, 528, 564, 1572, 568, 1568, 572, 524, 572, 1568, 568, 1568, 568, 1572, 568, 1572, 568, 1568, 572, 5196, 4372, 4332, 572, 1568, 568, 528, 568, 1572, 568, 1568, 568, 528, 568, 528, 568, 1572, 564, 528, 568, 528, 568, 1572, 568, 524, 572, 524, 568, 1572, 568, 1568, 568, 528, 568, 1572, 568, 528, 568, 1568, 568, 528, 568, 1572, 564, 1572, 568, 1572, 568, 1568, 572, 1568, 568, 1572, 564, 528, 568, 1572, 568, 528, 564, 528, 568, 532, 564, 532, 564, 528, 568, 528, 568, 528, 564, 1572, 568, 528, 568, 528, 568, 528, 568, 528, 564, 528, 568, 1572, 568, 1572, 564, 528, 568, 1572, 568, 1568, 572, 1568, 568, 1572, 564, 1572, 568}; // Sinal IR para ligar
-uint16_t irSignalDesligar[] = {4376, 4336, 568, 1596, 540, 556, 540, 1596, 544, 1596, 540, 556, 540, 556, 540, 1596, 544, 528, 564, 528, 568, 1596, 544, 552, 544, 552, 540, 1596, 544, 1596, 544, 552, 540, 1596, 544, 552, 544, 1596, 540, 1596, 544, 1596, 540, 1596, 544, 556, 540, 1596, 544, 1596, 540, 1596, 540, 532, 564, 532, 564, 556, 540, 532, 564, 1596, 540, 536, 560, 556, 540, 1596, 544, 1592, 544, 1596, 544, 552, 544, 552, 540, 556, 540, 556, 540, 552, 544, 528, 568, 552, 544, 528, 564, 1596, 544, 1596, 540, 1596, 544, 1596, 544, 1596, 540, 5196, 4376, 4340, 564, 1596, 540, 552, 544, 1596, 540, 1600, 540, 556, 540, 552, 544, 1596, 540, 556, 540, 552, 544, 1596, 544, 528, 564, 556, 540, 1596, 544, 1596, 540, 552, 544, 1596, 544, 532, 560, 1600, 540, 1596, 544, 1596, 540, 1596, 544, 528, 568, 1596, 540, 1596, 544, 1596, 540, 556, 544, 528, 564, 552, 544, 528, 568, 1596, 540, 556, 540, 556, 540, 1596, 540, 1596, 544, 1596, 544, 552, 544, 552, 540, 552, 544, 528, 568, 552, 544, 552, 564, 532, 540, 556, 540, 1596, 544, 1596, 540, 1596, 544, 1596, 544, 1592, 544}; // Sinal IR para desligar
+// Estrutura para armazenar um sinal IR aprendido
+struct IRSignal {
+  String name;                    // Nome do sinal (ex: "power_on", "mode_cool")
+  std::vector<uint16_t> signal;   // Dados do sinal (pares on/off em microsegundos)
+  unsigned long timestamp;        // Quando foi aprendido
+};
 
-// Variáveis voláteis para interrupções IR
+// Mapa de sinais armazenados: nome → dados do sinal
+std::map<String, IRSignal> learnedSignals;
+
+// ============================================================================
+// VARIÁVEIS GLOBAIS DE ESTADO
+// ============================================================================
+
+bool learningActive = false;
+String learningCommandId = "";  // ID do comando que está being aprendido
+unsigned long learningStartedAt = 0;
+
+// Buffers para captura de sinal IR
 volatile unsigned long irBuffer[maxLen];
 volatile unsigned int x = 0;
+volatile unsigned long lastIrEdgeMicros = 0;
 #if defined(ESP32)
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 #endif
 
+// Feedback de aprendizado pendente
+String pendingLearnStatus = "";      // "captured", "timeout", "invalid"
+String pendingLearnCommandId = "";   // ID do comando
+String pendingLearnRaw = "";         // Raw signal
+String pendingLearnMessage = "";     // Mensagem descritiva
+
+// ============================================================================
+// FUNÇÕES AUXILIARES
+// ============================================================================
+
+String getChipSuffix() {
 #if defined(ESP8266)
-const uint8_t buttonMode = INPUT_PULLUP;
-const uint8_t buttonPressedState = LOW;
+  uint32_t chipId = ESP.getChipId();
+  String suffix = String(chipId, HEX);
 #else
-const uint8_t buttonMode = INPUT_PULLDOWN;
-const uint8_t buttonPressedState = HIGH;
+  uint64_t chipId = ESP.getEfuseMac();
+  String suffix = String(static_cast<uint32_t>(chipId & 0xFFFFFF), HEX);
 #endif
-
-String getChipSuffix()
-{
-#if defined(ESP8266)
-    uint32_t chipId = ESP.getChipId();
-    String suffix = String(chipId, HEX);
-#else
-    uint64_t chipId = ESP.getEfuseMac();
-    String suffix = String(static_cast<uint32_t>(chipId & 0xFFFFFF), HEX);
-#endif
-    suffix.toUpperCase();
-    while (suffix.length() < 6)
-    {
-        suffix = "0" + suffix;
-    }
-    return suffix;
+  suffix.toUpperCase();
+  while (suffix.length() < 6) {
+    suffix = "0" + suffix;
+  }
+  return suffix;
 }
 
-void connectWiFiWithPortal()
-{
-    String chipSuffix = getChipSuffix();
-    String apName = "AC-SETUP-" + chipSuffix;
+void connectWiFiWithPortal() {
+  String chipSuffix = getChipSuffix();
+  String apName = "IR-DEVICE-" + chipSuffix;
 
-    WiFi.mode(WIFI_STA);
-    WiFiManager wm;
-    wm.setConfigPortalTimeout(180);
-    wm.setConnectTimeout(20);
+  WiFi.mode(WIFI_STA);
+  WiFiManager wm;
+  wm.setConfigPortalTimeout(180);
+  wm.setConnectTimeout(20);
 
-    Serial.println("\n🌐 Iniciando conexão Wi-Fi...");
-    Serial.println("Se não houver rede salva, abrirá portal de configuração: " + apName);
+  Serial.println("\n🌐 Iniciando conexão Wi-Fi...");
+  Serial.println("AP Portal: " + apName);
 
-    bool connected = wm.autoConnect(apName.c_str());
-    if (!connected)
-    {
-        Serial.println("❌ Falha ao conectar Wi-Fi via portal. Reiniciando...");
-        delay(1500);
-        ESP.restart();
-        return;
-    }
+  bool connected = wm.autoConnect(apName.c_str());
+  if (!connected) {
+    Serial.println("❌ Falha ao conectar Wi-Fi via portal. Reiniciando...");
+    delay(1500);
+    ESP.restart();
+    return;
+  }
 
-    Serial.println("✅ Conectado ao Wi-Fi!");
-    Serial.print("SSID: ");
-    Serial.println(WiFi.SSID());
-    Serial.print("Endereço IP: ");
-    Serial.println(WiFi.localIP());
+  Serial.println("✅ Conectado ao Wi-Fi!");
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
 }
 
-// Função de interrupção para capturar sinais IR recebidos
-void IRAM_ATTR rxIR_Interrupt_Handler()
-{
+// ============================================================================
+// FUNÇÕES DE INTERRUPÇÃO E CAPTURA IR
+// ============================================================================
+
+void IRAM_ATTR rxIR_Interrupt_Handler() {
 #if defined(ESP32)
-    portENTER_CRITICAL_ISR(&mux);
+  portENTER_CRITICAL_ISR(&mux);
 #endif
-    if (x < maxLen)
-    {
-        irBuffer[x++] = micros();
-    }
+  if (x < maxLen) {
+    irBuffer[x++] = micros();
+    lastIrEdgeMicros = irBuffer[x - 1];
+  }
 #if defined(ESP32)
-    portEXIT_CRITICAL_ISR(&mux);
+  portEXIT_CRITICAL_ISR(&mux);
 #endif
 }
 
-// Envia o estado atual do AC para os clientes WebSocket
-void sendStateToClients() {
-    String message = estadoAC ? "ligado" : "desligado";
-    webSocket.broadcastTXT(message);
-}
+// ============================================================================
+// FUNÇÕES DE APRENDIZADO DE SINAIS IR
+// ============================================================================
 
-// Envia sinais IR e imprime os valores de forma organizada
-void sendIRSignalToClients(String action, uint16_t signal[], size_t length) {
-    Serial.println("\n➡️ Sinal IR enviado para " + action + ":");
-    for (size_t i = 0; i < length; i++) {
-        Serial.print(signal[i]);
-        Serial.print(i < length - 1 ? ", " : "\n");
-    }
-    String wsMessage = "Sinal IR enviado para " + action;
-    webSocket.broadcastTXT(wsMessage);
+void startLearningMode(const String &commandId) {
+  learningActive = true;
+  learningCommandId = commandId;
+  learningStartedAt = millis();
+
+#if defined(ESP32)
+  portENTER_CRITICAL(&mux);
+#endif
+  x = 0;
+  lastIrEdgeMicros = 0;
+#if defined(ESP32)
+  portEXIT_CRITICAL(&mux);
+#endif
+
+  Serial.println("🎯 Modo aprendizado IR iniciado para comando: " + commandId);
+  Serial.println("   ⏱️ 15 segundos para capturar sinal...");
+  
+  String learnMessage = "Modo aprendizado ativo para: " + commandId;
+  webSocket.broadcastTXT(learnMessage);
 }
 
 void processIRReception() {
-    if (x > 0) {
-        Serial.println("\n📡 Sinal IR recebido:");
-        for (unsigned int i = 1; i < x; i++) {
-            unsigned long delta = irBuffer[i] - irBuffer[i - 1];
-            Serial.print(delta);
-            Serial.print(i < x - 1 ? ", " : "\n");
-        }
-        x = 0;
+  if (learningActive) {
+    // Timeout de 15 segundos
+    if (millis() - learningStartedAt > 15000) {
+      learningActive = false;
+      pendingLearnStatus = "timeout";
+      pendingLearnCommandId = learningCommandId;
+      pendingLearnMessage = "Tempo esgotado para capturar sinal IR.";
+      Serial.println("⏱️ Timeout no aprendizado IR para: " + learningCommandId);
+      return;
     }
+
+    unsigned int sampleCount = x;
+    unsigned long lastEdge = lastIrEdgeMicros;
+    unsigned long nowMicros = micros();
+
+    // Verifica se houve pausa longa (fim do sinal)
+    if (sampleCount > 15 && lastEdge > 0 && (nowMicros - lastEdge) > 70000) {
+      String rawSignal = "";
+      
+      // Converte o buffer de timestamps em deltas (on/off durations)
+      for (unsigned int i = 1; i < sampleCount; i++) {
+        unsigned long delta = irBuffer[i] - irBuffer[i - 1];
+        if (delta < 50 || delta > 25000) {
+          continue;
+        }
+        rawSignal += String(delta);
+        if (i < sampleCount - 1) {
+          rawSignal += ",";
+        }
+      }
+
+      learningActive = false;
+      pendingLearnCommandId = learningCommandId;
+
+      if (rawSignal.length() > 0) {
+        pendingLearnStatus = "captured";
+        pendingLearnRaw = rawSignal;
+        pendingLearnMessage = "Sinal IR capturado com sucesso.";
+        Serial.println("✅ SINAL IR CAPTURADO COM SUCESSO!");
+        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        Serial.print("Comando: ");
+        Serial.println(learningCommandId);
+        Serial.print("Tamanho: ");
+        Serial.print(rawSignal.length());
+        Serial.println(" caracteres");
+        Serial.println("\n📋 CÓDIGO IR (copie e guarde este código):");
+        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        Serial.println(rawSignal);
+        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+      } else {
+        pendingLearnStatus = "invalid";
+        pendingLearnRaw = "";
+        pendingLearnMessage = "Sinal capturado inválido.";
+        Serial.println("⚠️ Sinal inválido para: " + learningCommandId);
+      }
+
+#if defined(ESP32)
+      portENTER_CRITICAL(&mux);
+#endif
+      x = 0;
+      lastIrEdgeMicros = 0;
+#if defined(ESP32)
+      portEXIT_CRITICAL(&mux);
+#endif
+    }
+    return;
+  }
+
+  // Mostrar sinais IR recebidos fora do modo de aprendizado
+  if (x > 15) {
+    unsigned long lastEdge = lastIrEdgeMicros;
+    unsigned long nowMicros = micros();
+
+    if ((nowMicros - lastEdge) > 70000) {
+      String debugSignal = "";
+      
+      for (unsigned int i = 1; i < x; i++) {
+        unsigned long delta = irBuffer[i] - irBuffer[i - 1];
+        if (delta < 50 || delta > 25000) {
+          continue;
+        }
+        debugSignal += String(delta);
+        if (i < x - 1) {
+          debugSignal += ",";
+        }
+      }
+
+      if (debugSignal.length() > 0) {
+        Serial.println("\n📡 SINAL IR RECEBIDO (DEBUG):");
+        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        Serial.println(debugSignal);
+        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+      }
+
+#if defined(ESP32)
+      portENTER_CRITICAL(&mux);
+#endif
+      x = 0;
+      lastIrEdgeMicros = 0;
+#if defined(ESP32)
+      portEXIT_CRITICAL(&mux);
+#endif
+    }
+  }
 }
 
-void processRequests() {
-    server.handleClient();
-    webSocket.loop();
+// ============================================================================
+// FUNÇÕES DE TRANSMISSÃO DE SINAIS IR
+// ============================================================================
+
+// Sinal IR de teste simples (padrão NEC)
+uint16_t testSignal[] = {
+  9000, 4500,   // Leader code
+  560, 560,     // 0
+  560, 1680,    // 1
+  560, 560,     // 0
+  560, 560,     // 0
+  560, 1680,    // 1
+  560, 1680,    // 1
+  560, 1680,    // 1
+  560, 560,     // 0
+  560, 560,     // 0
+  560, 560,     // 0
+  560, 560,     // 0
+  560, 560,     // 0
+  560, 1680,    // 1
+  560, 1680,    // 1
+  560, 1680,    // 1
+  560, 40000    // Silence
+};
+
+void sendTestSignal() {
+  Serial.println("\n📤 Enviando sinal IR de teste...");
+  IrSender.sendRaw(testSignal, sizeof(testSignal) / sizeof(testSignal[0]), 38);
+  Serial.println("✅ Sinal de teste enviado!\n");
 }
+
+bool sendStoredSignal(const String &commandId) {
+  if (learnedSignals.find(commandId) == learnedSignals.end()) {
+    Serial.println("❌ Sinal não encontrado: " + commandId);
+    return false;
+  }
+
+  IRSignal &signal = learnedSignals[commandId];
+  
+  if (signal.signal.empty()) {
+    Serial.println("❌ Sinal vazio para: " + commandId);
+    return false;
+  }
+
+  Serial.println("📤 Transmitindo sinal: " + commandId);
+  Serial.print("   Comprimento: ");
+  Serial.print(signal.signal.size());
+  Serial.println(" pares on/off");
+
+  // Converte vector de volta para array e transmite
+  uint16_t *signalArray = new uint16_t[signal.signal.size()];
+  std::copy(signal.signal.begin(), signal.signal.end(), signalArray);
+  
+  IrSender.sendRaw(signalArray, signal.signal.size(), 38); // 38 kHz é o padrão
+  
+  delete[] signalArray;
+
+  String wsMessage = "Sinal transmitido: " + commandId;
+  webSocket.broadcastTXT(wsMessage);
+  
+  return true;
+}
+
+bool storeLearnedSignal(const String &commandId, const String &rawSignal) {
+  if (rawSignal.length() == 0) {
+    Serial.println("❌ Raw signal vazio para: " + commandId);
+    return false;
+  }
+
+  std::vector<uint16_t> parsedSignal;
+  int start = 0;
+
+  // Parse CSV do raw signal
+  while (start < rawSignal.length() && parsedSignal.size() < maxLen) {
+    int commaPos = rawSignal.indexOf(',', start);
+    String token = (commaPos == -1) ? rawSignal.substring(start) : rawSignal.substring(start, commaPos);
+    token.trim();
+
+    long value = token.toInt();
+    if (value >= 50 && value <= 25000) {
+      parsedSignal.push_back((uint16_t)value);
+    }
+
+    if (commaPos == -1) break;
+    start = commaPos + 1;
+  }
+
+  if (parsedSignal.size() < 10) {
+    Serial.println("⚠️ Sinal muito curto para: " + commandId);
+    return false;
+  }
+
+  IRSignal newSignal;
+  newSignal.name = commandId;
+  newSignal.signal = parsedSignal;
+  newSignal.timestamp = millis();
+
+  learnedSignals[commandId] = newSignal;
+
+  Serial.println("✅ Sinal armazenado: " + commandId);
+  Serial.print("   Comprimento: ");
+  Serial.print(parsedSignal.size());
+  Serial.println(" valores");
+
+  return true;
+}
+
+// ============================================================================
+// FUNÇÕES DE POLLING DO BACKEND
+// ============================================================================
 
 void processBackendPolling() {
-    static unsigned long lastHeartbeat = 0;
-    if (millis() - lastHeartbeat <= 30000) {
-        return;
-    }
-    lastHeartbeat = millis();
+  static unsigned long lastHeartbeat = 0;
+  if (millis() - lastHeartbeat <= 30000) {
+    return;
+  }
+  lastHeartbeat = millis();
 
-    HTTPClient http;
-    String heartbeatUrl = String(backendURL) + "/api/heartbeat";
-    String heartbeatUrlLower = heartbeatUrl;
-    heartbeatUrlLower.toLowerCase();
-    bool isHttps = heartbeatUrlLower.startsWith("https://");
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("❌ Wi-Fi desconectado. Heartbeat não enviado.");
+    return;
+  }
 
-    String host = String(backendURL);
-    host.replace("https://", "");
-    host.replace("http://", "");
-    int slashPos = host.indexOf('/');
-    if (slashPos >= 0) {
-        host = host.substring(0, slashPos);
-    }
-
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("❌ Wi-Fi desconectado. Heartbeat não enviado.");
-        return;
-    }
-
-    IPAddress resolvedIp;
-    if (WiFi.hostByName(host.c_str(), resolvedIp)) {
-        Serial.print("🔎 DNS OK: ");
-        Serial.print(host);
-        Serial.print(" -> ");
-        Serial.println(resolvedIp);
-    } else {
-        Serial.print("❌ DNS falhou para host: ");
-        Serial.println(host);
-    }
+  HTTPClient http;
+  String heartbeatUrl = String(backendURL) + "/api/heartbeat";
+  String heartbeatUrlLower = heartbeatUrl;
+  heartbeatUrlLower.toLowerCase();
+  bool isHttps = heartbeatUrlLower.startsWith("https://");
 
 #if defined(ESP8266)
-    static BearSSL::WiFiClientSecure secureClient;
-    static WiFiClient plainClient;
-    bool beginOk = false;
+  static BearSSL::WiFiClientSecure secureClient;
+  static WiFiClient plainClient;
+  bool beginOk = false;
 
-    if (isHttps) {
-        secureClient.setInsecure();
-        secureClient.setTimeout(15000);
-        beginOk = http.begin(secureClient, heartbeatUrl);
-    } else {
-        beginOk = http.begin(plainClient, heartbeatUrl);
-    }
-
-    if (!beginOk) {
-        Serial.println("❌ Falha ao iniciar conexão HTTP (ESP8266)");
-        return;
-    }
+  if (isHttps) {
+    secureClient.setInsecure();
+    secureClient.setTimeout(15000);
+    beginOk = http.begin(secureClient, heartbeatUrl);
+  } else {
+    beginOk = http.begin(plainClient, heartbeatUrl);
+  }
 #else
-    static WiFiClientSecure secureClient;
-    static WiFiClient plainClient;
-    bool beginOk = false;
+  static WiFiClientSecure secureClient;
+  static WiFiClient plainClient;
+  bool beginOk = false;
 
-    if (isHttps) {
-        secureClient.setInsecure();
-        secureClient.setTimeout(15000);
-        beginOk = http.begin(secureClient, heartbeatUrl);
-    } else {
-        beginOk = http.begin(plainClient, heartbeatUrl);
-    }
-
-    if (!beginOk) {
-        Serial.println("❌ Falha ao iniciar conexão HTTP (ESP32)");
-        return;
-    }
+  if (isHttps) {
+    secureClient.setInsecure();
+    secureClient.setTimeout(15000);
+    beginOk = http.begin(secureClient, heartbeatUrl);
+  } else {
+    beginOk = http.begin(plainClient, heartbeatUrl);
+  }
 #endif
-    http.setTimeout(15000);
-    http.addHeader("Content-Type", "application/json");
 
-    StaticJsonDocument<256> doc;
-    doc["deviceId"] = deviceId;
-    doc["status"] = estadoAC ? "ligado" : "desligado";
-    doc["setpoint"] = setpointAtual;
+  if (!beginOk) {
+    Serial.println("❌ Falha ao iniciar conexão HTTP");
+    return;
+  }
 
-    String jsonBody;
-    serializeJson(doc, jsonBody);
+  http.setTimeout(15000);
+  http.addHeader("Content-Type", "application/json");
 
-    int httpCode = http.POST(jsonBody);
+  DynamicJsonDocument doc(4096);
+  doc["deviceId"] = deviceId;
+  doc["status"] = "ativo";  // Status do deviceId IR (sempre ativo quando conectado)
+  doc["deviceType"] = "IR_CONTROLLER";
+  doc["signalsStored"] = learnedSignals.size();
 
-    if (httpCode < 0 && isHttps) {
-        Serial.println("⚠️ HTTPS falhou, tentando HTTP...");
-        http.end();
-
-        HTTPClient retryHttp;
-        WiFiClient retryClient;
-        String retryUrl = heartbeatUrl;
-        retryUrl.replace("https://", "http://");
-        if (retryHttp.begin(retryClient, retryUrl)) {
-            retryHttp.setTimeout(15000);
-            retryHttp.addHeader("Content-Type", "application/json");
-            httpCode = retryHttp.POST(jsonBody);
-            if (httpCode >= 0) {
-                Serial.print("✅ HTTP fallback code: ");
-                Serial.println(httpCode);
-            }
-            retryHttp.end();
-        } else {
-            Serial.println("❌ Falha ao iniciar HTTP fallback");
-        }
+  if (pendingLearnStatus.length() > 0 && pendingLearnCommandId.length() > 0) {
+    JsonObject learned = doc.createNestedObject("learnedSignal");
+    learned["status"] = pendingLearnStatus;
+    learned["commandId"] = pendingLearnCommandId;
+    if (pendingLearnRaw.length() > 0) {
+      learned["raw"] = pendingLearnRaw;
     }
-
-    if (httpCode == 200) {
-        String response = http.getString();
-
-        StaticJsonDocument<512> responseDoc;
-        DeserializationError error = deserializeJson(responseDoc, response);
-
-        if (!error) {
-            const char *command = responseDoc["command"];
-
-            if (command != nullptr && String(command) != "none") {
-                Serial.println("📡 Comando recebido do backend: " + String(command));
-
-                if ((String(command) == "TURN_ON" || String(command) == "ligar") && !estadoAC) {
-                    Serial.println("🟢 Executando: LIGAR");
-                    IrSender.sendRaw(irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]), 38);
-                    estadoAC = true;
-                    sendStateToClients();
-                    sendIRSignalToClients("Ligar", irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]));
-                }
-                else if ((String(command) == "TURN_OFF" || String(command) == "desligar") && estadoAC) {
-                    Serial.println("🔴 Executando: DESLIGAR");
-                    IrSender.sendRaw(irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]), 38);
-                    estadoAC = false;
-                    sendStateToClients();
-                    sendIRSignalToClients("Desligar", irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]));
-                }
-                else if (String(command).startsWith("set_temp:")) {
-                    String valor = String(command).substring(String("set_temp:").length());
-                    float novoSetpoint = valor.toFloat();
-                    if (novoSetpoint >= 16 && novoSetpoint <= 30) {
-                        setpointAtual = novoSetpoint;
-                        Serial.println("🌡️ Ajustar setpoint para: " + String(novoSetpoint) + "°C");
-                        String wsSetpointMessage = "Setpoint atualizado para " + String(novoSetpoint) + "°C";
-                        webSocket.broadcastTXT(wsSetpointMessage);
-                    } else {
-                        Serial.println("⚠️ Comando set_temp inválido: " + valor);
-                    }
-                }
-                else if (String(command) == "WIFI_RESET" || String(command) == "wifi_reset") {
-                    Serial.println("🛜 Comando recebido: resetar configuração Wi-Fi");
-                    String wsWifiMessage = "Reconfiguração de Wi-Fi solicitada";
-                    webSocket.broadcastTXT(wsWifiMessage);
-
-                    WiFiManager wm;
-                    wm.resetSettings();
-                    delay(1000);
-                    ESP.restart();
-                }
-            }
-        }
-    } else {
-        Serial.println("❌ Erro na requisição heartbeat: " + String(httpCode) + " - " + HTTPClient::errorToString(httpCode));
-        Serial.println("🔎 URL heartbeat: " + heartbeatUrl);
-        Serial.println("🔎 IP local do dispositivo: " + WiFi.localIP().toString());
+    if (pendingLearnMessage.length() > 0) {
+      learned["message"] = pendingLearnMessage;
     }
+  }
 
-    http.end();
+  String jsonBody;
+  serializeJson(doc, jsonBody);
+
+  int httpCode = http.POST(jsonBody);
+
+  if (httpCode == 200) {
+    String response = http.getString();
+    DynamicJsonDocument responseDoc(12288);
+    DeserializationError error = deserializeJson(responseDoc, response);
+
+    if (!error) {
+      const char *command = responseDoc["command"];
+      const char *commandId = responseDoc["commandId"];
+      const char *learnedRaw = responseDoc["learnedSignal"]["raw"];
+
+      // Limpar pending
+      if (pendingLearnStatus.length() > 0) {
+        pendingLearnStatus = "";
+        pendingLearnCommandId = "";
+        pendingLearnRaw = "";
+        pendingLearnMessage = "";
+      }
+
+      if (command != nullptr) {
+        String cmdStr = String(command);
+        String cmdIdStr = (commandId != nullptr) ? String(commandId) : "";
+
+        if (cmdStr == "learn" && cmdIdStr.length() > 0) {
+          Serial.println("📚 Backend solicita aprendizado de: " + cmdIdStr);
+          startLearningMode(cmdIdStr);
+        }
+        else if (cmdStr == "transmit" && cmdIdStr.length() > 0) {
+          Serial.println("📤 Backend solicita transmissão de: " + cmdIdStr);
+          sendStoredSignal(cmdIdStr);
+        }
+        else if (cmdStr == "store" && cmdIdStr.length() > 0 && learnedRaw != nullptr) {
+          Serial.println("💾 Backend solicita armazenar sinal: " + cmdIdStr);
+          storeLearnedSignal(cmdIdStr, String(learnedRaw));
+        }
+      }
+    }
+  } else {
+    Serial.println("⚠️ Erro no heartbeat: " + String(httpCode));
+  }
+
+  http.end();
 }
 
-void processIRCommands() {
-    static unsigned long lastButtonAction = 0;
-    if (millis() - lastButtonAction < 500) {
-        return;
-    }
+// ============================================================================
+// HANDLER DO SERVIDOR WEB
+// ============================================================================
 
-    if (digitalRead(ligarPin) == buttonPressedState && !estadoAC) {
-        Serial.println("🟢 Botão físico pressionado: LIGAR");
-        IrSender.sendRaw(irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]), 38);
-        estadoAC = true;
-        sendStateToClients();
-        sendIRSignalToClients("Ligar", irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]));
-        lastButtonAction = millis();
-    }
-    if (digitalRead(desligarPin) == buttonPressedState && estadoAC) {
-        Serial.println("🔴 Botão físico pressionado: DESLIGAR");
-        IrSender.sendRaw(irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]), 38);
-        estadoAC = false;
-        sendStateToClients();
-        sendIRSignalToClients("Desligar", irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]));
-        lastButtonAction = millis();
-    }
+void processRequests() {
+  server.handleClient();
+  webSocket.loop();
+}
+
+void processPeriodicTest() {
+  static unsigned long lastTest = 0;
+  // A cada 15 segundos, envia sinal de teste (apenas se não está em modo de aprendizado)
+  if (!learningActive && (millis() - lastTest > 15000)) {
+    lastTest = millis();
+    sendTestSignal();
+  }
 }
 
 #if defined(ESP32)
-void handleIRReception(void *pvParameters) {
-    while (true) {
-        processIRReception();
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-    }
+void handleRequests(void *pvParameters) {
+  while (true) {
+    processRequests();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
 }
 
-void handleRequests(void *pvParameters) {
-    while (true) {
-        processRequests();
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
+void handleIRReception(void *pvParameters) {
+  while (true) {
+    processIRReception();
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+  }
 }
 
 void handleBackendPolling(void *pvParameters) {
-    while (true) {
-        processBackendPolling();
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-}
-
-void handleIRCommands(void *pvParameters) {
-    while (true) {
-        processIRCommands();
-        vTaskDelay(50 / portTICK_PERIOD_MS);
-    }
+  while (true) {
+    processBackendPolling();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
 }
 #endif
 
-// Configuração inicial do sistema
+// ============================================================================
+// SETUP
+// ============================================================================
+
 void setup() {
-    Serial.begin(115200);
+  Serial.begin(115200);
+  delay(1000);
 
-    deviceId = "ac-node-" + getChipSuffix();
-    connectWiFiWithPortal();
+  Serial.println("\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  Serial.println("   🌐 CONTROLADOR IR GENÉRICO - INICIALIZANDO");
+  Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-    Serial.print("Device ID: ");
-    Serial.println(deviceId);
-    Serial.print("Backend URL: ");
-    Serial.println(backendURL);
+  deviceId = "ir-device-" + getChipSuffix();
+  connectWiFiWithPortal();
 
-    server.on("/wifi/status", HTTP_OPTIONS, []() {
-        server.sendHeader("Access-Control-Allow-Origin", "*");
-        server.sendHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-        server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-        server.send(204);
-    });
+  Serial.print("Device ID: ");
+  Serial.println(deviceId);
+  Serial.print("Backend URL: ");
+  Serial.println(backendURL);
 
-    server.on("/wifi/status", HTTP_GET, []() {
-        StaticJsonDocument<256> statusDoc;
-        statusDoc["deviceId"] = deviceId;
-        statusDoc["connected"] = (WiFi.status() == WL_CONNECTED);
-        statusDoc["ssid"] = WiFi.SSID();
-        statusDoc["ip"] = WiFi.localIP().toString();
+  // ========== Rotas do Servidor Web ==========
 
-        String payload;
-        serializeJson(statusDoc, payload);
-        server.sendHeader("Access-Control-Allow-Origin", "*");
-        server.send(200, "application/json", payload);
-    });
+  // Status do dispositivo
+  server.on("/status", HTTP_GET, []() {
+    StaticJsonDocument<512> statusDoc;
+    statusDoc["deviceId"] = deviceId;
+    statusDoc["connected"] = (WiFi.status() == WL_CONNECTED);
+    statusDoc["ssid"] = WiFi.SSID();
+    statusDoc["ip"] = WiFi.localIP().toString();
+    statusDoc["signalsStored"] = learnedSignals.size();
+    statusDoc["learningActive"] = learningActive;
 
-    server.on("/wifi/reset", HTTP_POST, []() {
-        server.sendHeader("Access-Control-Allow-Origin", "*");
-        server.send(200, "application/json", "{\"ok\":true,\"message\":\"Reiniciando configuração Wi-Fi\"}");
+    String payload;
+    serializeJson(statusDoc, payload);
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(200, "application/json", payload);
+  });
 
-        WiFiManager wm;
-        wm.resetSettings();
-        delay(1000);
-        ESP.restart();
-    });
+  // Listar sinais armazenados
+  server.on("/signals", HTTP_GET, []() {
+    DynamicJsonDocument doc(2048);
+    JsonArray signals = doc.createNestedArray("signals");
 
-    server.on("/wifi/networks", HTTP_OPTIONS, []() {
-        server.sendHeader("Access-Control-Allow-Origin", "*");
-        server.sendHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-        server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-        server.send(204);
-    });
+    for (auto &pair : learnedSignals) {
+      JsonObject sig = signals.createNestedObject();
+      sig["commandId"] = pair.first;
+      sig["length"] = pair.second.signal.size();
+      sig["timestamp"] = pair.second.timestamp;
+    }
 
-    server.on("/wifi/networks", HTTP_GET, []() {
-        Serial.println("📡 Escaneando redes WiFi disponíveis...");
-        
-        StaticJsonDocument<512> networksDoc;
-        JsonArray networks = networksDoc.createNestedArray("networks");
-        
-        int numNetworks = WiFi.scanNetworks();
-        Serial.print("Redes encontradas: ");
-        Serial.println(numNetworks);
-        
-        for (int i = 0; i < numNetworks; i++) {
-            JsonObject net = networks.createNestedObject();
-            net["ssid"] = WiFi.SSID(i);
-            net["rssi"] = WiFi.RSSI(i);
-            net["channel"] = WiFi.channel(i);
-            #if defined(ESP8266)
-            net["encryptionType"] = (int)WiFi.encryptionType(i);
-            #endif
-        }
-        
-        String payload;
-        serializeJson(networksDoc, payload);
-        server.sendHeader("Access-Control-Allow-Origin", "*");
-        server.send(200, "application/json", payload);
-    });
+    String payload;
+    serializeJson(doc, payload);
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(200, "application/json", payload);
+  });
 
-    server.on("/wifi/configure", HTTP_OPTIONS, []() {
-        server.sendHeader("Access-Control-Allow-Origin", "*");
-        server.sendHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-        server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-        server.send(204);
-    });
+  // Iniciar aprendizado
+  server.on("/learn", HTTP_POST, []() {
+    if (!server.hasArg("plain")) {
+      server.send(400, "application/json", "{\"error\":\"JSON body required\"}");
+      return;
+    }
 
-    server.on("/wifi/configure", HTTP_POST, []() {
-        if (!server.hasArg("plain")) {
-            server.send(400, "application/json", "{\"error\":\"JSON body required\"}");
-            return;
-        }
-        
-        StaticJsonDocument<256> configDoc;
-        DeserializationError error = deserializeJson(configDoc, server.arg("plain"));
-        
-        if (error) {
-            server.send(400, "application/json", "{\"error\":\"JSON parse error\"}");
-            return;
-        }
-        
-        const char* ssid = configDoc["ssid"];
-        const char* password = configDoc["password"];
-        
-        if (!ssid || !password) {
-            server.send(400, "application/json", "{\"error\":\"ssid and password required\"}");
-            return;
-        }
-        
-        Serial.println("🔧 Configurando WiFi via requisição...");
-        Serial.print("SSID: ");
-        Serial.println(ssid);
-        
-        server.sendHeader("Access-Control-Allow-Origin", "*");
-        server.send(200, "application/json", "{\"ok\":true,\"message\":\"Configuração recebida. Reiniciando...\"}");
-        
-        delay(250);
-        WiFi.mode(WIFI_STA);
-        WiFi.disconnect();
-        delay(200);
-        WiFi.begin(ssid, password);
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, server.arg("plain"));
+    if (error) {
+      server.send(400, "application/json", "{\"error\":\"JSON parse error\"}");
+      return;
+    }
 
-        unsigned long wifiStart = millis();
-        while (WiFi.status() != WL_CONNECTED && millis() - wifiStart < 15000) {
-            delay(500);
-            Serial.print(".");
-        }
-        Serial.println();
+    const char *commandId = doc["commandId"];
+    if (!commandId) {
+      server.send(400, "application/json", "{\"error\":\"commandId required\"}");
+      return;
+    }
 
-        if (WiFi.status() == WL_CONNECTED) {
-            Serial.println("✅ Nova rede aplicada com sucesso.");
-            Serial.print("Novo IP: ");
-            Serial.println(WiFi.localIP());
-        } else {
-            Serial.println("⚠️ Não foi possível conectar com as credenciais enviadas. Reiniciando para modo portal.");
-        }
+    startLearningMode(String(commandId));
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(200, "application/json", "{\"ok\":true}");
+  });
 
-        WiFi.disconnect();
-        ESP.restart();
-    });
+  // Transmitir sinal
+  server.on("/transmit", HTTP_POST, []() {
+    if (!server.hasArg("plain")) {
+      server.send(400, "application/json", "{\"error\":\"JSON body required\"}");
+      return;
+    }
 
-    server.on("/ligar", HTTP_GET, []() {
-        Serial.println("🔴 Recebida requisição para LIGAR.");
-        IrSender.sendRaw(irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]), 38);
-        
-        server.sendHeader("Access-Control-Allow-Origin", "*"); // Permite requisições de qualquer origem
-        server.sendHeader("Access-Control-Allow-Methods", "GET"); // Permite apenas método GET
-        server.send(200, "text/plain", "OK");
-    
-        estadoAC = true;
-        sendStateToClients();
-        sendIRSignalToClients("Ligar", irSignalLigar, sizeof(irSignalLigar) / sizeof(irSignalLigar[0]));
-    });
-    
-    server.on("/desligar", HTTP_GET, []() {
-        Serial.println("🔴 Recebida requisição para DESLIGAR.");
-        IrSender.sendRaw(irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]), 38);
-        
-        server.sendHeader("Access-Control-Allow-Origin", "*");
-        server.sendHeader("Access-Control-Allow-Methods", "GET");
-        server.send(200, "text/plain", "OK");
-    
-        estadoAC = false;
-        sendStateToClients();
-        sendIRSignalToClients("Desligar", irSignalDesligar, sizeof(irSignalDesligar) / sizeof(irSignalDesligar[0]));
-    });
-    
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, server.arg("plain"));
+    if (error) {
+      server.send(400, "application/json", "{\"error\":\"JSON parse error\"}");
+      return;
+    }
 
-    server.onNotFound([]() {
-        Serial.println("⚠️ Rota não encontrada: " + server.uri());
-        server.send(404, "text/plain", "Erro 404: Rota não encontrada");
-    });
+    const char *commandId = doc["commandId"];
+    if (!commandId) {
+      server.send(400, "application/json", "{\"error\":\"commandId required\"}");
+      return;
+    }
 
-    server.begin();
-    webSocket.begin();
+    bool success = sendStoredSignal(String(commandId));
+    if (success) {
+      server.sendHeader("Access-Control-Allow-Origin", "*");
+      server.send(200, "application/json", "{\"ok\":true}");
+    } else {
+      server.send(404, "application/json", "{\"error\":\"Signal not found\"}");
+    }
+  });
 
-    pinMode(rxPinIR, INPUT_PULLUP);
-    pinMode(txPinIR, OUTPUT);
-    pinMode(ligarPin, buttonMode);
-    pinMode(desligarPin, buttonMode);
+  // Armazenar sinal manualmente
+  server.on("/store", HTTP_POST, []() {
+    if (!server.hasArg("plain")) {
+      server.send(400, "application/json", "{\"error\":\"JSON body required\"}");
+      return;
+    }
 
-    IrSender.begin(txPinIR, ENABLE_LED_FEEDBACK);
-    attachInterrupt(digitalPinToInterrupt(rxPinIR), rxIR_Interrupt_Handler, CHANGE);
+    DynamicJsonDocument doc(8192);
+    DeserializationError error = deserializeJson(doc, server.arg("plain"));
+    if (error) {
+      server.send(400, "application/json", "{\"error\":\"JSON parse error\"}");
+      return;
+    }
+
+    const char *commandId = doc["commandId"];
+    const char *rawSignal = doc["raw"];
+    if (!commandId || !rawSignal) {
+      server.send(400, "application/json", "{\"error\":\"commandId and raw required\"}");
+      return;
+    }
+
+    bool success = storeLearnedSignal(String(commandId), String(rawSignal));
+    if (success) {
+      server.sendHeader("Access-Control-Allow-Origin", "*");
+      server.send(200, "application/json", "{\"ok\":true}");
+    } else {
+      server.send(400, "application/json", "{\"error\":\"Failed to store signal\"}");
+    }
+  });
+
+  // Resetar Wi-Fi
+  server.on("/wifi/reset", HTTP_POST, []() {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(200, "application/json", "{\"ok\":true}");
+
+    WiFiManager wm;
+    wm.resetSettings();
+    delay(1000);
+    ESP.restart();
+  });
+
+  // Testar emissão de sinal IR
+  server.on("/test", HTTP_POST, []() {
+    sendTestSignal();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(200, "application/json", "{\"ok\":true,\"message\":\"Sinal de teste enviado\"}");
+  });
+
+  server.onNotFound([]() {
+    server.send(404, "text/plain", "Erro 404: Rota não encontrada");
+  });
+
+  server.begin();
+  webSocket.begin();
+
+  // ========== Configurar Pinos IR ==========
+  pinMode(rxPinIR, INPUT);
+  pinMode(txPinIR, OUTPUT);
+
+  IrSender.begin(txPinIR, ENABLE_LED_FEEDBACK);
+  attachInterrupt(digitalPinToInterrupt(rxPinIR), rxIR_Interrupt_Handler, CHANGE);
+
+  Serial.println("\n✅ Sistema IR inicializado com sucesso!");
+  Serial.println("   Receptor IR: GPIO " + String(rxPinIR));
+  Serial.println("   Transmissor IR: GPIO " + String(txPinIR));
+  Serial.println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
 #if defined(ESP32)
-    xTaskCreatePinnedToCore(handleRequests, "Tarefa Requisições", 4096, NULL, 1, NULL, 1);
-    xTaskCreatePinnedToCore(handleIRCommands, "Tarefa IR", 4096, NULL, 1, NULL, 0);
-    xTaskCreatePinnedToCore(handleIRReception, "Tarefa Recebimento IR", 4096, NULL, 1, NULL, 0);
-    xTaskCreatePinnedToCore(handleBackendPolling, "Tarefa Backend Polling", 8192, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(handleRequests, "Web Requests", 4096, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(handleIRReception, "IR Reception", 4096, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(handleBackendPolling, "Backend Poll", 8192, NULL, 1, NULL, 0);
 #endif
 }
+
+// ============================================================================
+// LOOP PRINCIPAL
+// ============================================================================
 
 void loop() {
 #if defined(ESP32)
-    vTaskDelay(portMAX_DELAY);
+  vTaskDelay(portMAX_DELAY);
 #else
-    processRequests();
-    processIRCommands();
-    processIRReception();
-    processBackendPolling();
-    delay(10);
+  processRequests();
+  processIRReception();
+  processPeriodicTest();
+  processBackendPolling();
+  delay(10);
 #endif
 }
