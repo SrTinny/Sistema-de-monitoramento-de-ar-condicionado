@@ -46,7 +46,3 @@ Próximos passos sugeridos
 
 - Implementar validação adicional no backend para evitar agendamentos no passado.
 - Adicionar testes automatizados (unit/e2e) e CI.
-
-Licença
-
-Arquivo de exemplo — adicione sua licença se necessário.
