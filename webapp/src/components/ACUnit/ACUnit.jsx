@@ -15,7 +15,7 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
   const { user } = useContext(AuthContext);
   const { updateRoom } = useRooms();
 
-  const { id, name, room: roomLocation, status, temperature, setpoint, deviceId } = room;
+  const { id, name, room: roomLocation, status, temperature, setpoint, deviceId, lastHeartbeat } = room;
 
   useEffect(() => {
     setCurrentSetpoint(setpoint ?? 22);
@@ -28,8 +28,10 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
     return ((clamped - min) / (max - min)) * 100;
   }, [currentSetpoint]);
 
-  const statusLabel = status === "ligado" ? "Online" : status === "desligado" ? "Offline" : "Offline";
-  const statusTone = status === "ligado" ? "success" : status === "desligado" ? "warning" : "neutral";
+  const isOnline = Boolean(lastHeartbeat) && (Date.now() - new Date(lastHeartbeat).getTime()) < 70000;
+  const statusLabel = isOnline ? "Online" : "Offline";
+  const statusTone = isOnline ? "success" : "neutral";
+  const cardStatusClass = isOnline ? status : "offline";
 
   const handleTempChange = (e) => {
     const value = parseFloat(e.target.value);
@@ -49,7 +51,7 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
   return (
     <>
       <div
-        className={`${styles.unit} ${styles[status]}`}
+        className={`${styles.unit} ${styles[cardStatusClass]}`}
         data-device-id={deviceId}
       >
         <div className={styles.header}>
@@ -78,7 +80,7 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
             <p className={styles.location}>{roomLocation}</p>
 
             <p>
-              Status:{" "}
+              Operação:{" "}
               <span className={`${styles.statusText} ${styles[status]}`}>
                 {status === "ligado" ? "Ligado" : "Desligado"}
               </span>

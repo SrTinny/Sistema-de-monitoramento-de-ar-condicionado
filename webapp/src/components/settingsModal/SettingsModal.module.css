@@ -204,6 +204,148 @@
   border-top: 1px solid rgba(75, 85, 99, 0.2);
 }
 
+.irSection {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(75, 85, 99, 0.2);
+}
+
+.irSection h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.irHint {
+  margin: 0 0 1rem 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.irButtonsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.cloneControlButton {
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cloneControlButton:hover:enabled {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+}
+
+.cloneControlButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.learnButton {
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: linear-gradient(135deg, var(--primary) 0%, #0077cc 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(0, 149, 255, 0.3);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.learnButton:hover:enabled {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 149, 255, 0.4);
+}
+
+.learnButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.irStatus {
+  margin: 0.9rem 0 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.irReceivingBox,
+.irCapturedBox {
+  margin-top: 0.85rem;
+  border-radius: 12px;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.irReceivingBox p,
+.irCapturedBox p {
+  margin: 0.4rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.signalPreview {
+  width: 100%;
+  min-height: 84px;
+  margin-top: 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--text-primary);
+  padding: 0.6rem;
+  resize: vertical;
+  font-size: 0.8rem;
+}
+
+.signalConfirmActions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.saveSignalButton,
+.discardSignalButton {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.saveSignalButton {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.discardSignalButton {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  color: white;
+}
+
 .wifiButton {
   width: 100%;
   padding: 14px 16px;
@@ -291,6 +433,19 @@
     padding-top: 1.5rem;
   }
 
+  .irSection {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+  }
+
+  .learnButton {
+    font-size: 0.8rem;
+  }
+
+  .cloneControlButton {
+    font-size: 0.8rem;
+  }
+
   .deleteButton {
     padding: 12px 14px;
     font-size: 0.85rem;
@@ -341,6 +496,19 @@
   .deleteSection {
     margin-top: 1.25rem;
     padding-top: 1.25rem;
+  }
+
+  .irSection {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+  }
+
+  .irButtonsRow {
+    grid-template-columns: 1fr;
+  }
+
+  .signalConfirmActions {
+    flex-direction: column;
   }
 
   .deleteButton {

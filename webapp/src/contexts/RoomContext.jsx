@@ -53,12 +53,40 @@ export const RoomProvider = ({ children }) => {
   // Função para enviar um comando para um AC
   const sendCommand = async (deviceId, command) => {
     try {
-      await api.post("/api/command", { deviceId, command });
-      // Para um feedback instantâneo, poderíamos atualizar o estado local aqui
-      // Ou simplesmente esperar o próximo heartbeat do ESP atualizar o status real
+      const response = await api.post("/api/command", { deviceId, command });
       console.log(`Comando '${command}' enviado para ${deviceId}`);
+      return response;
     } catch (error) {
+      const msg = error?.response?.data?.error || error.message || "Erro ao enviar comando.";
+      toast.error(msg);
       console.error("Erro ao enviar comando:", error);
+      throw error;
+    }
+  };
+
+  const startIrLearning = async (roomId, button) => {
+    try {
+      const response = await api.post(`/api/rooms/${roomId}/ir/learn`, { button });
+      toast.success(`Modo de aprendizado iniciado para '${button}'.`);
+      fetchRooms();
+      return response.data;
+    } catch (error) {
+      const msg = error?.response?.data?.error || error.message || "Erro ao iniciar aprendizado IR.";
+      toast.error(msg);
+      throw error;
+    }
+  };
+
+  const confirmIrLearning = async (roomId, save) => {
+    try {
+      const response = await api.post(`/api/rooms/${roomId}/ir/learn/confirm`, { save });
+      toast.success(response?.data?.message || (save ? 'Sinal IR salvo com sucesso.' : 'Sinal IR descartado.'));
+      await fetchRooms();
+      return response.data;
+    } catch (error) {
+      const msg = error?.response?.data?.error || error.message || 'Erro ao confirmar sinal IR.';
+      toast.error(msg);
+      throw error;
     }
   };
 
@@ -144,6 +172,8 @@ export const RoomProvider = ({ children }) => {
         addRoom,
         sendCommand,
         setTemperature,
+        startIrLearning,
+        confirmIrLearning,
         updateRoom,
         deleteRoom,
         addSchedule,
