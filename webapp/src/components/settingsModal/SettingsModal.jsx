@@ -6,6 +6,19 @@ import { AuthContext } from "../../contexts/AuthContext";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 
+const UNCONFIGURED_LABELS = new Set([
+  'não configurada',
+  'nao configurada',
+  'not configured',
+  'unconfigured',
+  '__removed__',
+]);
+
+const isUnconfiguredRoomLabel = (value) => {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return normalized.length === 0 || UNCONFIGURED_LABELS.has(normalized);
+};
+
 export default function SettingsModal({ visible, room, onClose, onSave }) {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
@@ -34,7 +47,7 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
 
     if (isFirstLoadForRoom) {
       setName(room.name || "");
-      setLocation(room.room || "");
+      setLocation(isUnconfiguredRoomLabel(room.room) ? "" : (room.room || ""));
       setLocalRoomState(room);
       setLearningButton(null);
       setIsReceivingSignal(false);
@@ -58,15 +71,22 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(room.id, { name, room: location });
+    const trimmedName = name.trim();
+    const trimmedLocation = location.trim();
+
+    if (!trimmedName || !trimmedLocation) {
+      toast.error("Nome do ar e localização são obrigatórios.");
+      return;
+    }
+
+    if (UNCONFIGURED_LABELS.has(trimmedLocation.toLowerCase())) {
+      toast.error("Defina um nome real para a sala. 'Não configurada' não pode ser salva.");
+      return;
+    }
+
+    onSave(room.id, { name: trimmedName, room: trimmedLocation });
   };
 
-  const UNCONFIGURED_LABELS = new Set([
-    'não configurada',
-    'nao configurada',
-    'not configured',
-    'unconfigured',
-  ]);
   const isRoomAvailable = !room?.room || UNCONFIGURED_LABELS.has((room?.room ?? '').trim().toLowerCase());
 
   const handleDelete = () => {

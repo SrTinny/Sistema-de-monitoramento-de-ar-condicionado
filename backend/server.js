@@ -212,18 +212,25 @@ app.get('/api/rooms/:id', authenticateToken, async (req, res) => {
 app.put('/api/rooms/:id', authenticateToken, isAdmin, async (req, res) => {
   const { id } = req.params;
   const { name, room } = req.body;
+  const trimmedName = String(name ?? '').trim();
+  const trimmedRoom = String(room ?? '').trim();
+  const normalizedRoom = trimmedRoom.toLowerCase();
 
-  if (!name || !room) {
+  if (!trimmedName || !trimmedRoom) {
     return res.status(400).json({ error: 'Nome e sala são obrigatórios.' });
+  }
+
+  if (UNCONFIGURED_ROOM_LABELS.has(normalizedRoom) || normalizedRoom === HIDDEN_REMOVED_ROOM_LABEL) {
+    return res.status(400).json({ error: 'Defina um nome real para a sala antes de salvar a configuração.' });
   }
 
   try {
     // Log para depuração em ambiente dev
     console.log('[rooms:update] user=', req.user && { id: req.user.userId, email: req.user.email, role: req.user.role });
-    console.log('[rooms:update] body=', { name, room });
+    console.log('[rooms:update] body=', { name: trimmedName, room: trimmedRoom });
     const updatedAC = await prisma.airConditioner.update({
       where: { id },
-      data: { name, room },
+      data: { name: trimmedName, room: trimmedRoom },
     });
     res.status(200).json(updatedAC);
   } catch (error) {
