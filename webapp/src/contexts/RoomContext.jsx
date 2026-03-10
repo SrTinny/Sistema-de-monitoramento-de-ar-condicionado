@@ -128,17 +128,18 @@ export const RoomProvider = ({ children }) => {
     }
   };
 
-  // Função para deletar uma sala
+  // Função para deletar uma sala (soft reset para "Não configurada")
   const deleteRoom = async (roomId) => {
     const promise = api.delete(`/api/rooms/${roomId}`);
 
     toast.promise(promise, {
-      loading: 'Deletando sala...',
-      success: () => {
-        setRooms((prevRooms) => prevRooms.filter((room) => room.id !== roomId));
-        return 'Sala deletada com sucesso!';
+      loading: 'Resetando sala...',
+      success: async () => {
+        // Refetch para mostrar sala resetada em "Salas Disponíveis"
+        await fetchRooms();
+        return 'Sala resetada! Reaparecerá em "Salas Disponíveis".';
       },
-      error: 'Erro ao deletar a sala.',
+      error: 'Erro ao resetar a sala.',
     });
     
     return promise;

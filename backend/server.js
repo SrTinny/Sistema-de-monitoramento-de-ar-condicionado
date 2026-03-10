@@ -242,15 +242,32 @@ app.get('/auth/me', authenticateToken, (req, res) => {
 app.delete('/api/rooms/:id', authenticateToken, isAdmin, async (req, res) => {
   const { id } = req.params;
   try {
-    await prisma.airConditioner.delete({
+    // Reset da sala para "Não configurada" (soft delete)
+    // Assim ela reaparece em "Salas Disponíveis" ao enviar heartbeat novamente
+    // em vez de desaparecer permanentemente
+    const resetAC = await prisma.airConditioner.update({
       where: { id },
+      data: {
+        room: 'Não configurada',
+        name: `AC ${id.slice(-6).toUpperCase()}`,
+        // Limpa configurações de IR para reset completo
+        irSignals: null,
+        irLearnState: null,
+        irLearnButton: null,
+        irLearnRaw: null,
+        irLearnMessage: null,
+        pendingCommand: null,
+      },
     });
-    res.status(204).send();
+    res.status(200).json({
+      message: 'Sala resetada para estado não configurado. Reaparecerá em Salas Disponíveis.',
+      room: resetAC,
+    });
   } catch (error) {
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Aparelho não encontrado.' });
     }
-    res.status(500).json({ error: 'Não foi possível deletar o aparelho.' });
+    res.status(500).json({ error: 'Não foi possível resetar o aparelho.' });
   }
 });
 
