@@ -61,19 +61,17 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
     onSave(room.id, { name, room: location });
   };
 
-  const handleDelete = async () => {
-    if (
-      window.confirm(
-        `Tem certeza que deseja deletar a sala "${room.name}"? Esta ação não pode ser desfeita.`
-      )
-    ) {
-      try {
-        await deleteRoom(room.id);
-        onClose();
-      } catch (error) {
-        console.error("Erro no componente ao deletar:", error);
-      }
-    }
+  // Salas Disponíveis têm room = 'Não configurada' (ou vazio); Salas de Controle têm nome real
+  const UNCONFIGURED_LABELS = new Set(['não configurada', 'nao configurada', 'not configured', 'unconfigured']);
+  const isRoomAvailable = !room?.room || UNCONFIGURED_LABELS.has((room?.room ?? '').trim().toLowerCase());
+
+  const handleDelete = () => {
+    const msg = isRoomAvailable
+      ? `Remover dispositivo "${room.name}" da lista? O ESP receberá um comando para abrir o portal Wi-Fi ${setupSsid}.`
+      : `Remover sala "${room.name}" do controle? Ela voltará para Salas Disponíveis.`;
+    if (!window.confirm(msg)) return;
+    deleteRoom(room.id);
+    onClose();
   };
 
   const handleWifiReset = async () => {
@@ -452,7 +450,7 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
               onClick={handleDelete}
               className={`${styles.actionButton} ${styles.deleteButton}`}
             >
-              Deletar Sala
+              {isRoomAvailable ? 'Remover Dispositivo' : 'Remover Sala'}
             </button>
           )}
 

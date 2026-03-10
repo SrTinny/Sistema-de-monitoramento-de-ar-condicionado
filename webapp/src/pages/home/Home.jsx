@@ -35,14 +35,20 @@ const isControlReady = (roomData, nowMs = Date.now()) => {
   return !isPendingConfiguration(roomData) || hasRecentHeartbeat(roomData, nowMs);
 };
 
+// Salas marcadas __removed__ estão aguardando wifi_reset e não devem aparecer na UI
+const isRemovedRoom = (roomData) => String(roomData?.room ?? '').trim() === '__removed__';
+
 export default function Home() {
   const { rooms, loading, fetchRooms, sendCommand, setTemperature, updateRoom, openForm, schedules, fetchSchedules, deleteSchedule } = useRooms();
   const [availableConfigRoom, setAvailableConfigRoom] = useState(null);
   const nowMs = Date.now();
 
-  const controlRooms = useMemo(() => rooms.filter((room) => isControlReady(room, nowMs)), [rooms, nowMs]);
+  const controlRooms = useMemo(
+    () => rooms.filter((room) => !isRemovedRoom(room) && isControlReady(room, nowMs)),
+    [rooms, nowMs]
+  );
   const availableRooms = useMemo(
-    () => rooms.filter((room) => isPendingConfiguration(room) && !isControlReady(room, nowMs)),
+    () => rooms.filter((room) => !isRemovedRoom(room) && isPendingConfiguration(room) && !isControlReady(room, nowMs)),
     [rooms, nowMs]
   );
 

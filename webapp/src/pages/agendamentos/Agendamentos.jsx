@@ -29,10 +29,15 @@ const isControlReady = (roomData, nowMs = Date.now()) => {
   return !isPendingConfiguration(roomData) || hasRecentHeartbeat(roomData, nowMs);
 };
 
+const isRemovedRoom = (roomData) => String(roomData?.room ?? '').trim() === '__removed__';
+
 export default function Agendamentos() {
   const { rooms, fetchRooms, schedules, fetchSchedules, addSchedule, deleteSchedule } = useRooms();
   const nowMs = Date.now();
-  const configuredRooms = useMemo(() => rooms.filter((room) => isControlReady(room, nowMs)), [rooms, nowMs]);
+  const configuredRooms = useMemo(
+    () => rooms.filter((room) => !isRemovedRoom(room) && isControlReady(room, nowMs)),
+    [rooms, nowMs]
+  );
 
   const [form, setForm] = useState({
     airConditionerId: "all", // Permite selecionar todos

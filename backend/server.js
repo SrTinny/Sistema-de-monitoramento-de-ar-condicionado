@@ -241,33 +241,46 @@ app.get('/auth/me', authenticateToken, (req, res) => {
 // ROTA 'DELETE': Deletar um aparelho por ID. (PROTEGIDA - ADMIN)
 app.delete('/api/rooms/:id', authenticateToken, isAdmin, async (req, res) => {
   const { id } = req.params;
+  const UNCONFIGURED_LABELS = new Set(['não configurada', 'nao configurada', 'not configured', 'unconfigured', '']);
   try {
-    // Reset da sala para "Não configurada" (soft delete)
-    // Assim ela reaparece em "Salas Disponíveis" ao enviar heartbeat novamente
-    // em vez de desaparecer permanentemente
-    const resetAC = await prisma.airConditioner.update({
-      where: { id },
-      data: {
-        room: 'Não configurada',
-        name: `AC ${id.slice(-6).toUpperCase()}`,
-        // Limpa configurações de IR para reset completo
-        irSignals: null,
-        irLearnState: null,
-        irLearnButton: null,
-        irLearnRaw: null,
-        irLearnMessage: null,
-        pendingCommand: null,
-        lastHeartbeat: null, // Remove heartbeat anterior para sair de "Salas de Controle"
-      },
-    });
+    const current = await prisma.airConditioner.findUnique({ where: { id }, select: { room: true } });
+    if (!current) return res.status(404).json({ error: 'Aparelho não encontrado.' });
+
+    const normalizedRoom = String(current.room ?? '').trim().toLowerCase();
+    const isAvailableRoom = UNCONFIGURED_LABELS.has(normalizedRoom);
+
+    const sharedReset = {
+      name: `AC ${id.slice(-6).toUpperCase()}`,
+      irSignals: null,
+      irLearnState: null,
+      irLearnButton: null,
+      irLearnRaw: null,
+      irLearnMessage: null,
+      lastHeartbeat: null,
+    };
+
+    let data;
+    if (isAvailableRoom) {
+      // Já está em "Salas Disponíveis": enviar wifi_reset e ocultar com __removed__
+      // O ESP abrirá o portal AC-SETUP. Quando o usuário reconectar via portal,
+      // o heartbeat detecta __removed__ e restaura para 'Não configurada'.
+      data = { ...sharedReset, room: '__removed__', pendingCommand: 'wifi_reset' };
+    } else {
+      // Sala configurada: soft reset para "Salas Disponíveis"
+      data = { ...sharedReset, room: 'Não configurada', pendingCommand: null };
+    }
+
+    const updatedAC = await prisma.airConditioner.update({ where: { id }, data });
+
     res.status(200).json({
-      message: 'Sala resetada para estado não configurado. Reaparecerá em Salas Disponíveis.',
-      room: resetAC,
+      message: isAvailableRoom
+        ? 'Comando wifi_reset enviado. O dispositivo abrirá o portal AC-SETUP em breve.'
+        : 'Sala resetada. Reaparecerá em Salas Disponíveis assim que o ESP enviar heartbeat.',
+      room: updatedAC,
+      mode: isAvailableRoom ? 'force_remove' : 'soft_reset',
     });
   } catch (error) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Aparelho não encontrado.' });
-    }
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Aparelho não encontrado.' });
     res.status(500).json({ error: 'Não foi possível resetar o aparelho.' });
   }
 });
@@ -646,6 +659,12 @@ app.post('/api/heartbeat', async (req, res) => {
         updateData.irLearnMessage = learnedMessage || `Tempo esgotado para capturar o botão '${learnedButton}'.`;
         updateData.irLearnUpdatedAt = new Date();
       }
+    }
+
+    // Quando sala volta online após ter sido removida (room='__removed__') e o ESP
+    // já processou o wifi_reset e se reconectou via portal, restaurar para 'Não configurada'.
+    if (ac.room === '__removed__' && pendingCommand !== 'wifi_reset') {
+      updateData.room = 'Não configurada';
     }
 
     await prisma.airConditioner.update({
