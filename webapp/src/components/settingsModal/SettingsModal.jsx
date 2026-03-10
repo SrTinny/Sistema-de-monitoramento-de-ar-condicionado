@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useContext } from "react";
-import { createPortal } from "react-dom"; // Usando createPortal em vez de ReactDOM
+import React, { useState, useEffect, useContext, useRef } from "react";
+import { createPortal } from "react-dom";
 import styles from "./SettingsModal.module.css";
 import { RoomContext } from "../../contexts/RoomContext";
 import { AuthContext } from "../../contexts/AuthContext";
 import api from "../../services/api";
+import toast from "react-hot-toast";
 
 export default function SettingsModal({ visible, room, onClose, onSave }) {
   const [name, setName] = useState("");
@@ -13,21 +14,44 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
   const [isReceivingSignal, setIsReceivingSignal] = useState(false);
   const [capturedSignal, setCapturedSignal] = useState(null);
   const [localRoomState, setLocalRoomState] = useState(room || null);
+  const [showWifiResetConfirm, setShowWifiResetConfirm] = useState(false);
+  const [isWifiResetSubmitting, setIsWifiResetSubmitting] = useState(false);
+  const initializedRoomIdRef = useRef(null);
   const { deleteRoom, sendCommand, startIrLearning, confirmIrLearning, fetchRooms } = useContext(RoomContext);
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    if (room && visible) {
-      setName(room.name);
-      setLocation(room.room);
+    if (!visible) {
+      initializedRoomIdRef.current = null;
+      return;
+    }
+
+    if (!room) {
+      return;
+    }
+
+    const isFirstLoadForRoom = initializedRoomIdRef.current !== room.id;
+
+    if (isFirstLoadForRoom) {
+      setName(room.name || "");
+      setLocation(room.room || "");
       setLocalRoomState(room);
       setLearningButton(null);
       setIsReceivingSignal(false);
       setCapturedSignal(null);
+      setShowWifiResetConfirm(false);
+      setIsWifiResetSubmitting(false);
+      initializedRoomIdRef.current = room.id;
+      return;
     }
+
+    setLocalRoomState((prev) => ({ ...(prev || {}), ...room }));
   }, [room, visible]);
 
   if (!visible) return null;
+
+  const setupSsidSuffix = String(room?.deviceId || "").slice(-6).toUpperCase();
+  const setupSsid = setupSsidSuffix ? `AC-SETUP-${setupSsidSuffix}` : "AC-SETUP";
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -51,22 +75,89 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
 
   const handleWifiReset = async () => {
     if (!room?.deviceId) {
-      window.alert("Este dispositivo ainda não possui deviceId registrado.");
+      toast.error("Este dispositivo ainda não possui deviceId registrado.");
       return;
     }
 
-    if (
-      window.confirm(
-        `Deseja reconfigurar o Wi-Fi do dispositivo ${room.deviceId}? O ESP será reiniciado e abrirá o portal AC-SETUP.`
-      )
-    ) {
-      try {
-        await sendCommand(room.deviceId, "wifi_reset");
-        window.alert("Comando enviado. Aguarde o reinício do ESP e conecte no Wi-Fi AC-SETUP para configurar a rede.");
-      } catch (error) {
-        console.error("Erro ao solicitar reset de Wi-Fi:", error);
-        window.alert("Não foi possível enviar o comando de reset de Wi-Fi.");
+    const openSetupGuideWindow = () => {
+      if (typeof window === "undefined") return null;
+
+      const guideWindow = window.open("", "_blank");
+      if (!guideWindow) return null;
+
+      guideWindow.document.write(`
+        <html>
+          <head>
+            <title>Configurar Wi-Fi do ESP</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <style>
+              body { font-family: 'Segoe UI', Arial, sans-serif; background: #081224; color: #e2e8f0; margin: 0; padding: 20px; }
+              .card { max-width: 640px; margin: 0 auto; background: #0f172a; border: 1px solid #334155; border-radius: 14px; padding: 20px; }
+              h2 { margin: 0 0 8px; font-size: 1.35rem; }
+              p { margin: 0 0 12px; color: #cbd5e1; }
+              ol { margin: 0 0 14px; padding-left: 20px; }
+              li { margin: 8px 0; line-height: 1.45; }
+              code { background: #1e293b; border-radius: 6px; padding: 2px 6px; }
+              .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+              a { display: inline-block; background: #0ea5e9; color: white; text-decoration: none; padding: 11px 14px; border-radius: 8px; font-weight: 700; }
+              .muted { margin-top: 12px; font-size: 0.9rem; color: #94a3b8; }
+              .warn { margin-top: 12px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h2>Configurar Wi-Fi do ESP</h2>
+              <p>Guia rapido para reconectar o dispositivo na sua rede.</p>
+              <ol>
+                <li>Clique em <strong>Confirmar reconfiguração</strong> no sistema e aguarde de 10 a 20 segundos.</li>
+                <li>No celular/PC, conecte na rede <code>${setupSsid}</code>.</li>
+                <li>Se o aparelho avisar "sem internet", escolha manter conectado mesmo assim.</li>
+                <li>Abra <code>http://192.168.4.1</code> e selecione sua rede Wi-Fi normal.</li>
+                <li>Digite a senha, salve e aguarde o ESP reiniciar automaticamente.</li>
+                <li>Volte ao sistema e confirme se o dispositivo aparece online.</li>
+              </ol>
+              <div class="actions">
+                <a href="http://192.168.4.1">Abrir portal do ESP (192.168.4.1)</a>
+              </div>
+              <div class="warn">
+                Dica: desative dados moveis temporariamente durante a configuracao para evitar troca automatica de rede.
+              </div>
+              <p class="muted">Se a pagina nao abrir de primeira, desconecte e reconecte em ${setupSsid} e tente novamente.</p>
+            </div>
+          </body>
+        </html>
+      `);
+      guideWindow.document.close();
+      return guideWindow;
+    };
+
+    setIsWifiResetSubmitting(true);
+    const loadingId = toast.loading("Enviando comando para reconfigurar o Wi-Fi do ESP...");
+
+    try {
+      await sendCommand(room.deviceId, "wifi_reset");
+      setShowWifiResetConfirm(false);
+
+      const setupPortalWindow = openSetupGuideWindow();
+      if (!setupPortalWindow) {
+        toast.error("Pop-up bloqueado: abra manualmente o guia e depois acesse http://192.168.4.1 apos conectar em AC-SETUP.");
+      } else {
+        setTimeout(() => {
+          if (setupPortalWindow && !setupPortalWindow.closed) {
+            setupPortalWindow.focus();
+          }
+        }, 200);
       }
+
+      toast.success(
+        `Comando enviado. Conecte em ${setupSsid} e siga o tutorial para concluir.`,
+        { id: loadingId }
+      );
+    } catch (error) {
+      console.error("Erro ao solicitar reset de Wi-Fi:", error);
+      toast.error("Não foi possível enviar o comando de reset de Wi-Fi.", { id: loadingId });
+    } finally {
+      setIsWifiResetSubmitting(false);
     }
   };
 
@@ -183,7 +274,7 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form id="room-settings-form" onSubmit={handleSubmit}>
           <div className={styles.inputGroup}>
             <label htmlFor="room-name">Nome do Ar</label>
             <input
@@ -209,19 +300,63 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
             />
           </div>
 
-          <div className={styles.buttonGroup}>
-            <button type="submit" className={styles.saveButton}>
-              Salvar
-            </button>
+        </form>
+
+        {user && user.role === "ADMIN" && (
+          <div className={styles.adminSection}>
+            <h4>Configurar Wi-Fi do ESP</h4>
+            <p className={styles.irHint}>
+              Use este fluxo quando trocar roteador, senha da rede ou quando o ESP ficar offline.
+            </p>
+
+            <div className={styles.wifiGuideBox}>
+              <ol>
+                <li>Clique em "Reconfigurar Wi-Fi do ESP".</li>
+                <li>Aguarde o ESP reiniciar e procure a rede <strong>{setupSsid}</strong>.</li>
+                <li>Conecte nessa rede e abra <strong>http://192.168.4.1</strong>.</li>
+                <li>Selecione sua rede normal, informe a senha e salve.</li>
+              </ol>
+              <p className={styles.wifiGuideHint}>
+                Observação: o navegador não pode listar redes Wi-Fi disponíveis automaticamente. A detecção de ESP nesta tela ocorre por heartbeat do dispositivo no backend.
+              </p>
+            </div>
+
             <button
               type="button"
-              onClick={onClose}
-              className={styles.cancelButton}
+              onClick={() => setShowWifiResetConfirm((prev) => !prev)}
+              className={styles.wifiButton}
+              disabled={isWifiResetSubmitting}
             >
-              Cancelar
+              Reconfigurar Wi-Fi
             </button>
+
+            {showWifiResetConfirm && (
+              <div className={styles.wifiResetConfirmBox}>
+                <p>
+                  Confirmar reconfiguração do Wi-Fi do dispositivo <strong>{room.deviceId}</strong>? O ESP será reiniciado e entrará em modo de configuração na rede <strong>{setupSsid}</strong>.
+                </p>
+                <div className={styles.wifiResetConfirmActions}>
+                  <button
+                    type="button"
+                    onClick={handleWifiReset}
+                    className={styles.confirmWifiResetButton}
+                    disabled={isWifiResetSubmitting}
+                  >
+                    {isWifiResetSubmitting ? "Enviando..." : "Enviar comando"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowWifiResetConfirm(false)}
+                    className={styles.cancelWifiResetButton}
+                    disabled={isWifiResetSubmitting}
+                  >
+                    Voltar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        </form>
+        )}
 
         {user && user.role === "ADMIN" && (
           <div className={styles.irSection}>
@@ -294,21 +429,25 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
           </div>
         )}
 
-        {user && user.role === "ADMIN" && (
-          <div className={styles.adminSection}>
-            <button onClick={handleWifiReset} className={styles.wifiButton}>
-              Reconfigurar Wi-Fi do ESP
-            </button>
-          </div>
-        )}
-
-        {user && user.role === "ADMIN" && (
-          <div className={styles.deleteSection}>
-            <button onClick={handleDelete} className={styles.deleteButton}>
+        <div className={styles.footerActions}>
+          {user && user.role === "ADMIN" && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className={`${styles.actionButton} ${styles.deleteButton}`}
+            >
               Deletar Sala
             </button>
-          </div>
-        )}
+          )}
+
+          <button
+            type="submit"
+            form="room-settings-form"
+            className={`${styles.actionButton} ${styles.saveButton}`}
+          >
+            Salvar
+          </button>
+        </div>
       </div>
     </div>,
     document.getElementById("modal-root")
