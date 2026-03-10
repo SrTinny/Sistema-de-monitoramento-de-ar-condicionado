@@ -102,37 +102,14 @@ void prepareForWifiPortal() {
 }
 
 void startWifiSetupPortalNow() {
-  String chipSuffix = getChipSuffix();
-  String apName = "AC-SETUP-" + chipSuffix;
-
   Serial.println("🛜 Iniciando modo de configuracao Wi-Fi imediatamente...");
+  Serial.println("   Apagando credenciais salvas e reiniciando para o portal...");
 
-  prepareForWifiPortal();
-
-#if defined(ESP8266)
-  WiFi.disconnect(true);
-  delay(250);
+  // ESP.eraseConfig() apaga somente os dados de credenciais Wi-Fi gravados
+  // na flash, sem tocar no stack WiFi/SSL ativo — evita o crash de Exception 3.
+  // No proximo boot o autoConnect() nao encontra rede salva e abre o portal.
   ESP.eraseConfig();
-#else
-  WiFi.disconnect(true, true);
-#endif
-
-  WiFiManager wm;
-  wm.resetSettings();
-  wm.setConfigPortalTimeout(0);
-  wm.setConnectTimeout(20);
-
-  Serial.println("📡 Portal AP ativo em: " + apName);
-  Serial.println("🌐 Acesse: http://192.168.4.1");
-
-  bool configured = wm.startConfigPortal(apName.c_str());
-  if (configured) {
-    Serial.println("✅ Nova rede configurada. Reiniciando para aplicar...");
-  } else {
-    Serial.println("⚠️ Portal encerrado sem configuracao. Reiniciando...");
-  }
-
-  delay(800);
+  delay(300);
   ESP.restart();
 }
 
@@ -145,6 +122,11 @@ void connectWiFiWithPortal() {
   wm.setConfigPortalTimeout(0);
   wm.setConnectTimeout(20);
 
+  bool portalSavedConfig = false;
+  wm.setSaveConfigCallback([&portalSavedConfig]() {
+    portalSavedConfig = true;
+  });
+
   Serial.println("\n🌐 Iniciando conexão Wi-Fi...");
   Serial.println("AP Portal: " + apName);
 
@@ -154,6 +136,12 @@ void connectWiFiWithPortal() {
     delay(1500);
     ESP.restart();
     return;
+  }
+
+  if (portalSavedConfig) {
+    Serial.println("✅ Rede configurada via portal. Reiniciando para estado limpo...");
+    delay(500);
+    ESP.restart();
   }
 
   Serial.println("✅ Conectado ao Wi-Fi!");
@@ -496,15 +484,24 @@ void processBackendPolling() {
   String jsonBody;
   serializeJson(doc, jsonBody);
 
+  Serial.println("⏳ Enviando heartbeat para backend...");
   int httpCode = http.POST(jsonBody);
+  Serial.println("📡 Resposta heartbeat: " + String(httpCode));
 
   if (httpCode == 200) {
     String response = http.getString();
-    DynamicJsonDocument responseDoc(12288);
+    Serial.println("📥 Body (" + String(response.length()) + "b): " + response.substring(0, 120));
+    StaticJsonDocument<512> responseDoc;
     DeserializationError error = deserializeJson(responseDoc, response);
+
+    if (error) {
+      Serial.println("❌ JSON parse error: " + String(error.c_str()));
+    }
 
     if (!error) {
       const char *command = responseDoc["command"];
+      Serial.println("💓 Heartbeat OK | cmd=" + String(command ? command : "null"));
+
       const char *commandId = responseDoc["commandId"];
       const char *learnedRaw = responseDoc["learnedSignal"]["raw"];
 

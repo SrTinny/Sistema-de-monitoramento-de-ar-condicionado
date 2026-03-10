@@ -18,7 +18,7 @@ const UNCONFIGURED_ROOM_LABELS = new Set([
   'unconfigured',
 ]);
 
-const AVAILABLE_HEARTBEAT_WINDOW_MS = 60000;
+const RECENT_HEARTBEAT_WINDOW_MS = 60000;
 
 const isPendingConfiguration = (roomData) => {
   const normalized = String(roomData?.room ?? '').trim().toLowerCase();
@@ -27,17 +27,23 @@ const isPendingConfiguration = (roomData) => {
 
 const hasRecentHeartbeat = (roomData, nowMs = Date.now()) => {
   if (!roomData?.lastHeartbeat) return false;
-  return (nowMs - new Date(roomData.lastHeartbeat).getTime()) < AVAILABLE_HEARTBEAT_WINDOW_MS;
+  return (nowMs - new Date(roomData.lastHeartbeat).getTime()) < RECENT_HEARTBEAT_WINDOW_MS;
+};
+
+const isControlReady = (roomData, nowMs = Date.now()) => {
+  // Permite controle logo apos reconexao do Wi-Fi, mesmo com sala ainda "Nao configurada".
+  return !isPendingConfiguration(roomData) || hasRecentHeartbeat(roomData, nowMs);
 };
 
 export default function Home() {
   const { rooms, loading, fetchRooms, sendCommand, setTemperature, updateRoom, openForm, schedules, fetchSchedules, deleteSchedule } = useRooms();
   const [availableConfigRoom, setAvailableConfigRoom] = useState(null);
+  const nowMs = Date.now();
 
-  const controlRooms = useMemo(() => rooms.filter((room) => !isPendingConfiguration(room)), [rooms]);
+  const controlRooms = useMemo(() => rooms.filter((room) => isControlReady(room, nowMs)), [rooms, nowMs]);
   const availableRooms = useMemo(
-    () => rooms.filter((room) => isPendingConfiguration(room) && hasRecentHeartbeat(room)),
-    [rooms]
+    () => rooms.filter((room) => isPendingConfiguration(room) && !isControlReady(room, nowMs)),
+    [rooms, nowMs]
   );
 
   useEffect(() => {
@@ -85,7 +91,7 @@ export default function Home() {
           <section className={styles.unitsSection}>
             <h2 className={styles.sectionTitle}>Salas de Controle</h2>
             <p className={styles.sectionDescription}>
-              Equipamentos já configurados e prontos para controle remoto.
+              Equipamentos prontos para uso (sala definida ou heartbeat recente).
             </p>
 
             {controlRooms.length > 0 ? (
@@ -112,7 +118,7 @@ export default function Home() {
             <section className={styles.unitsSection}>
               <h2 className={styles.sectionTitle}>Salas Disponíveis</h2>
               <p className={styles.sectionDescription}>
-                ESPs detectados por heartbeat no backend e aguardando configuração da sala.
+                Dispositivos pendentes sem heartbeat recente. Reconfigure o Wi-Fi para voltarem ao controle.
               </p>
 
               <StaggerContainer className={styles.unitsGrid}>
