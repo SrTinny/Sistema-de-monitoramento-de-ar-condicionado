@@ -14,6 +14,7 @@ const os = require('os');
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
+const COMMAND_ONLINE_WINDOW_MS = 35000;
 
 // Middlewares
 app.use(cors());
@@ -266,6 +267,31 @@ app.post('/api/command', authenticateToken, async (req, res) => {
   }
 
   try {
+    const target = await prisma.airConditioner.findUnique({
+      where: { deviceId },
+      select: {
+        id: true,
+        deviceId: true,
+        lastHeartbeat: true,
+      },
+    });
+
+    if (!target) {
+      return res.status(404).json({ error: 'Dispositivo não encontrado.' });
+    }
+
+    const isOnline = Boolean(target.lastHeartbeat)
+      && (Date.now() - new Date(target.lastHeartbeat).getTime()) < COMMAND_ONLINE_WINDOW_MS;
+
+    const normalizedCommand = typeof command === 'string' ? command.toLowerCase().trim() : '';
+    const allowOfflineQueue = normalizedCommand === 'wifi_reset' || normalizedCommand === 'reset_wifi';
+
+    if (!isOnline && !allowOfflineQueue) {
+      return res.status(409).json({
+        error: 'Dispositivo offline no momento. Aguarde heartbeat recente antes de enviar comandos.',
+      });
+    }
+
     const updateData = { pendingCommand: command };
     if (typeof command === 'string' && command.startsWith('learn:')) {
       const button = normalizeIrButton(command.substring('learn:'.length));
@@ -284,7 +310,20 @@ app.post('/api/command', authenticateToken, async (req, res) => {
       where: { deviceId },
       data: updateData,
     });
-    res.status(200).json({ message: `Comando '${command}' enfileirado para o dispositivo ${deviceId}.` });
+
+    if (!isOnline && allowOfflineQueue) {
+      return res.status(202).json({
+        message: `Dispositivo offline. Comando '${command}' ficou pendente para execução no próximo heartbeat de ${deviceId}.`,
+        online: false,
+        queued: true,
+      });
+    }
+
+    res.status(200).json({
+      message: `Comando '${command}' enfileirado para o dispositivo ${deviceId}.`,
+      online: true,
+      queued: true,
+    });
   } catch (error) {
     res.status(404).json({ error: 'Dispositivo não encontrado.' });
   }
