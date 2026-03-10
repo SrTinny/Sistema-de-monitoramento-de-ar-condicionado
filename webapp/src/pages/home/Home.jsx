@@ -18,9 +18,16 @@ const UNCONFIGURED_ROOM_LABELS = new Set([
   'unconfigured',
 ]);
 
+const AVAILABLE_HEARTBEAT_WINDOW_MS = 60000;
+
 const isPendingConfiguration = (roomData) => {
   const normalized = String(roomData?.room ?? '').trim().toLowerCase();
   return normalized.length === 0 || UNCONFIGURED_ROOM_LABELS.has(normalized);
+};
+
+const hasRecentHeartbeat = (roomData, nowMs = Date.now()) => {
+  if (!roomData?.lastHeartbeat) return false;
+  return (nowMs - new Date(roomData.lastHeartbeat).getTime()) < AVAILABLE_HEARTBEAT_WINDOW_MS;
 };
 
 export default function Home() {
@@ -28,7 +35,10 @@ export default function Home() {
   const [availableConfigRoom, setAvailableConfigRoom] = useState(null);
 
   const controlRooms = useMemo(() => rooms.filter((room) => !isPendingConfiguration(room)), [rooms]);
-  const availableRooms = useMemo(() => rooms.filter((room) => isPendingConfiguration(room)), [rooms]);
+  const availableRooms = useMemo(
+    () => rooms.filter((room) => isPendingConfiguration(room) && hasRecentHeartbeat(room)),
+    [rooms]
+  );
 
   useEffect(() => {
     fetchRooms();
