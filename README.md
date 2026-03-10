@@ -1,48 +1,48 @@
-# Intelifri - Sistema Inteligente de Monitoramento de Ar Condicionado
+# Intelifri
 
-Este repositório contém o sistema completo para monitoramento e controle inteligente de unidades de ar condicionado:
+Sistema de monitoramento e controle de ar-condicionado com backend, webapp e firmware ESP.
 
-- backend: API Node.js + Express com Prisma e Postgres
-- webapp: frontend React + Vite
-- firmware: código para microcontroladores (PlatformIO)
-- js, lib, test: scripts e utilitários auxiliares
+## Estrutura
 
-Visão rápida
+- `backend/`: API Node.js + Express + Prisma
+- `webapp/`: Frontend React + Vite
+- `firmware/`: Firmware ESP8266/ESP32 (PlatformIO)
 
-- O backend expõe endpoints para autenticação, gerenciamento de salas/unidades, heartbeats e agendamentos.
-- O frontend consome a API (via JWT) e fornece telas para gerenciamento e agendamento.
-- O firmware (ESP/MCU) se comunica via HTTP com o backend (heartbeat) e aplica comandos pendentes.
+## Início rápido
 
-Quickstart (desenvolvimento)
-
-1. Backend
+### 1. Backend
 
 ```powershell
 cd backend
 npm install
-cp .env.example .env   # ajustar DATABASE_URL, JWT_SECRET
+# criar backend/.env com DATABASE_URL e JWT_SECRET
 npm run dev
 ```
 
-2. Webapp
+### 2. Webapp
 
 ```powershell
 cd webapp
 npm install
+# criar webapp/.env.local com VITE_API_URL=http://localhost:3001
 npm run dev
 ```
 
-3. Firmware
+### 3. Firmware
 
-- Abrir a pasta `firmware/` no VSCode com extensão PlatformIO e carregar no dispositivo.
+```powershell
+cd firmware
+pio run
+pio run -t upload
+```
 
-Observações
+## Documentação essencial
 
-- Migrations do Prisma estão em `backend/prisma/migrations`. Use `npx prisma migrate dev` para aplicar em dev.
-- Scripts úteis para inspeção rápida: `backend/scripts/listSchedules.js` e `backend/scripts/showAC.js`.
-- Agendamentos: o backend possui um executor (polling) que marca schedules como EXECUTADO e grava `pendingCommand` na tabela `AirConditioner`. Dispositivos consultam via `/api/heartbeat`.
+- `docs/SETUP.md`: configuração local passo a passo
+- `docs/API.md`: endpoints principais da API
+- `docs/TROUBLESHOOTING.md`: falhas comuns e diagnóstico rápido
 
-Próximos passos sugeridos
+## Bug conhecido (ainda não corrigido)
 
-- Implementar validação adicional no backend para evitar agendamentos no passado.
-- Adicionar testes automatizados (unit/e2e) e CI.
+- Ao clicar em deletar um AC das Salas de Controle pela primeira vez, ele aparece em Salas Disponíveis e depois volta para Salas de Controle (comportamento incorreto).
+- Ao clicar em deletar o AC que voltou para Salas de Controle, ele some de vez sem aparecer em Salas Disponíveis (comportamento incorreto).

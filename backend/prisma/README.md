@@ -1,24 +1,17 @@
-# Prisma (schema & migrations)
+# Prisma
 
-Local: `backend/prisma/`
+Arquivos de banco de dados do backend.
 
-- Arquivo principal: `schema.prisma` — modelagem do banco (AirConditioner, User, Schedule, etc).
-- Migrações geradas em `migrations/`.
+- Schema: `schema.prisma`
+- Migrações: `migrations/`
 
-Comandos úteis
+## Comandos
 
 ```powershell
-# gerar client
 npx prisma generate
-
-# aplicar migrações em dev
-npx prisma migrate dev --name <descrição>
-
-# introspectar um banco existente
-npx prisma db pull
+npx prisma migrate dev
+npx prisma db push
+npx prisma studio
 ```
 
-Observações
-
-- As migrations existentes incluem uma que adiciona a tabela `Schedule`.
-- Antes de rodar `migrate dev`, confirme a variável `DATABASE_URL` no `.env`.
+Requisito: `DATABASE_URL` configurada em `backend/.env`.
