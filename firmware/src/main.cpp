@@ -413,6 +413,22 @@ bool storeLearnedSignal(const String &commandId, const String &rawSignal) {
 
 void processBackendPolling() {
   static unsigned long lastHeartbeat = 0;
+  static unsigned long lastWifiConnectedTime = 0;
+  static const unsigned long WIFI_DISCONNECT_TIMEOUT_MS = 60000; // 60 segundos para iniciar portal
+
+  // Rastrear quando o Wi-Fi estava conectado
+  if (WiFi.status() == WL_CONNECTED) {
+    lastWifiConnectedTime = millis();
+  } else {
+    // Verificar se desconectado por muito tempo → iniciar portal
+    if (millis() - lastWifiConnectedTime > WIFI_DISCONNECT_TIMEOUT_MS) {
+      Serial.println("🛜 Wi-Fi desconectado por >60s. Iniciando portal AC-SETUP...");
+      delay(500);
+      startWifiSetupPortalNow();
+      return;
+    }
+  }
+
   if (millis() - lastHeartbeat <= HEARTBEAT_INTERVAL_MS) {
     return;
   }
