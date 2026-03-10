@@ -11,15 +11,22 @@ export const RoomProvider = ({ children }) => {
   const [isFormOpen, setIsFormOpen] = useState(false); // Estado para controlar o formulário
 
   // Função para buscar todas as salas do backend
-  const fetchRooms = useCallback(async () => {
-    setLoading(true);
+  const fetchRooms = useCallback(async (options = {}) => {
+    const { silent = false } = options;
+
+    if (!silent) {
+      setLoading(true);
+    }
+
     try {
       const response = await api.get("/api/rooms");
       setRooms(response.data);
     } catch (error) {
       console.error("Erro ao buscar salas:", error);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, []);
 

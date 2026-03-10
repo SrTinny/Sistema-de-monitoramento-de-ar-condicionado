@@ -7,11 +7,14 @@ import { LoadingButton } from "../Spinner/Spinner";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useRooms } from "../../contexts/RoomContext";
 
+const OFFLINE_TIMEOUT_MS = 20000;
+
 export default function ACUnit({ room, onToggle, onTempChange }) {
   const [showModal, setShowModal] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const [currentSetpoint, setCurrentSetpoint] = useState(room.setpoint ?? 22);
   const [isDragging, setIsDragging] = useState(false);
+  const [nowMs, setNowMs] = useState(Date.now());
   const { user } = useContext(AuthContext);
   const { updateRoom } = useRooms();
 
@@ -21,6 +24,14 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
     setCurrentSetpoint(setpoint ?? 22);
   }, [setpoint]);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   const sliderPercent = useMemo(() => {
     const min = 16;
     const max = 30;
@@ -28,7 +39,7 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
     return ((clamped - min) / (max - min)) * 100;
   }, [currentSetpoint]);
 
-  const isOnline = Boolean(lastHeartbeat) && (Date.now() - new Date(lastHeartbeat).getTime()) < 70000;
+  const isOnline = Boolean(lastHeartbeat) && (nowMs - new Date(lastHeartbeat).getTime()) < OFFLINE_TIMEOUT_MS;
   const statusLabel = isOnline ? "Online" : "Offline";
   const statusTone = isOnline ? "success" : "neutral";
   const cardStatusClass = isOnline ? status : "offline";

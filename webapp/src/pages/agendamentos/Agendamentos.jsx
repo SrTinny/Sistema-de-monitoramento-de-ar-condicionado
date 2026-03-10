@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRooms } from "../../contexts/RoomContext";
 import { EmptyStateSchedules } from "../../components/EmptyState/EmptyState";
 import styles from "./Agendamentos.module.css";
@@ -6,8 +6,21 @@ import toast from "react-hot-toast";
 import { format, parseISO } from 'date-fns';
 import { FiTrash2 } from 'react-icons/fi';
 
+const UNCONFIGURED_ROOM_LABELS = new Set([
+  'não configurada',
+  'nao configurada',
+  'not configured',
+  'unconfigured',
+]);
+
+const isPendingConfiguration = (roomData) => {
+  const normalized = String(roomData?.room ?? '').trim().toLowerCase();
+  return normalized.length === 0 || UNCONFIGURED_ROOM_LABELS.has(normalized);
+};
+
 export default function Agendamentos() {
   const { rooms, fetchRooms, schedules, fetchSchedules, addSchedule, deleteSchedule } = useRooms();
+  const configuredRooms = useMemo(() => rooms.filter((room) => !isPendingConfiguration(room)), [rooms]);
 
   const [form, setForm] = useState({
     airConditionerId: "all", // Permite selecionar todos
@@ -37,10 +50,10 @@ export default function Agendamentos() {
   }, []);
 
   useEffect(() => {
-    if (!form.airConditionerId && rooms && rooms.length > 0) {
-      setForm((f) => ({ ...f, airConditionerId: rooms[0].id }));
+    if (!form.airConditionerId && configuredRooms.length > 0) {
+      setForm((f) => ({ ...f, airConditionerId: configuredRooms[0].id }));
     }
-  }, [rooms]);
+  }, [configuredRooms, form.airConditionerId]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -53,7 +66,7 @@ export default function Agendamentos() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (form.airConditionerId === "all" && !rooms.length) {
+    if (form.airConditionerId === "all" && !configuredRooms.length) {
       toast.error("Nenhuma sala disponível.");
       return;
     }
@@ -71,7 +84,7 @@ export default function Agendamentos() {
     try {
       // Se for "todos", cria agendamento para cada sala
       if (form.airConditionerId === "all") {
-        for (const room of rooms) {
+        for (const room of configuredRooms) {
           const scheduleData = {
             airConditionerId: room.id,
             action: form.action,
@@ -81,7 +94,7 @@ export default function Agendamentos() {
           };
           await addSchedule(scheduleData);
         }
-        toast.success(`Agendamento criado para todas as ${rooms.length} salas!`);
+        toast.success(`Agendamento criado para todas as ${configuredRooms.length} salas!`);
       } else {
         const scheduleData = {
           airConditionerId: form.airConditionerId,
@@ -125,7 +138,7 @@ export default function Agendamentos() {
               <label htmlFor="ac-select">Sala</label>
               <select id="ac-select" name="airConditionerId" value={form.airConditionerId} onChange={handleChange}>
                 <option value="all">🔗 Todos os ACs</option>
-                {rooms.map((r) => (
+                {configuredRooms.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name} — {r.room}
                   </option>
