@@ -257,6 +257,7 @@ app.delete('/api/rooms/:id', authenticateToken, isAdmin, async (req, res) => {
         irLearnRaw: null,
         irLearnMessage: null,
         pendingCommand: null,
+        lastHeartbeat: null, // Remove heartbeat anterior para sair de "Salas de Controle"
       },
     });
     res.status(200).json({

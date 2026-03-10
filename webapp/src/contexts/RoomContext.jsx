@@ -134,9 +134,9 @@ export const RoomProvider = ({ children }) => {
 
     toast.promise(promise, {
       loading: 'Resetando sala...',
-      success: async () => {
-        // Refetch para mostrar sala resetada em "Salas Disponíveis"
-        await fetchRooms();
+      success: () => {
+        // Chama refetch sem await (promessas em background são OK)
+        fetchRooms();
         return 'Sala resetada! Reaparecerá em "Salas Disponíveis".';
       },
       error: 'Erro ao resetar a sala.',
