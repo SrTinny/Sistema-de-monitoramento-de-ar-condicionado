@@ -52,6 +52,9 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
 
   const setupSsidSuffix = String(room?.deviceId || "").slice(-6).toUpperCase();
   const setupSsid = setupSsidSuffix ? `AC-SETUP-${setupSsidSuffix}` : "AC-SETUP";
+  const wifiResetOnlineWindowMs = 35000;
+  const roomHeartbeatMs = room?.lastHeartbeat ? new Date(room.lastHeartbeat).getTime() : null;
+  const isHeartbeatRecent = Boolean(roomHeartbeatMs) && (Date.now() - roomHeartbeatMs) < wifiResetOnlineWindowMs;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -135,8 +138,17 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
     const loadingId = toast.loading("Enviando comando para reconfigurar o Wi-Fi do ESP...");
 
     try {
-      await sendCommand(room.deviceId, "wifi_reset");
+      const response = await sendCommand(room.deviceId, "wifi_reset");
+      const queuedOffline = response?.status === 202 || response?.data?.online === false;
       setShowWifiResetConfirm(false);
+
+      if (queuedOffline) {
+        toast.success(
+          `ESP sem heartbeat recente. O comando ficou pendente e sera executado quando ${room.deviceId} voltar online.`,
+          { id: loadingId, duration: 7000 }
+        );
+        return;
+      }
 
       const setupPortalWindow = openSetupGuideWindow();
       if (!setupPortalWindow) {
@@ -155,7 +167,8 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
       );
     } catch (error) {
       console.error("Erro ao solicitar reset de Wi-Fi:", error);
-      toast.error("Não foi possível enviar o comando de reset de Wi-Fi.", { id: loadingId });
+      const message = error?.response?.data?.error || "Não foi possível enviar o comando de reset de Wi-Fi.";
+      toast.error(message, { id: loadingId });
     } finally {
       setIsWifiResetSubmitting(false);
     }
@@ -316,6 +329,9 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
                 <li>Conecte nessa rede e abra <strong>http://192.168.4.1</strong>.</li>
                 <li>Selecione sua rede normal, informe a senha e salve.</li>
               </ol>
+              <p className={styles.wifiGuideHint}>
+                Status atual do dispositivo: <strong>{isHeartbeatRecent ? "online com heartbeat recente" : "offline ou sem heartbeat recente"}</strong>.
+              </p>
               <p className={styles.wifiGuideHint}>
                 Observação: o navegador não pode listar redes Wi-Fi disponíveis automaticamente. A detecção de ESP nesta tela ocorre por heartbeat do dispositivo no backend.
               </p>

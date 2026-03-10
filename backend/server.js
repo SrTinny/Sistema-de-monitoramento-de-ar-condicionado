@@ -591,13 +591,14 @@ app.post('/api/heartbeat', async (req, res) => {
       });
     }
 
+    const pendingCommand = ac.pendingCommand || null;
+
     const updateData = {
       status: normalizedStatus,
       temperature,
       humidity,
       setpoint: typeof setpoint === 'number' ? setpoint : undefined,
       lastHeartbeat: new Date(),
-      pendingCommand: null,
     };
 
     if (learnedSignal && typeof learnedSignal === 'object') {
@@ -634,15 +635,29 @@ app.post('/api/heartbeat', async (req, res) => {
       data: updateData,
     });
 
+    if (pendingCommand) {
+      // Limpa apenas se o comando lido ainda for o mesmo, evitando apagar
+      // um comando novo que tenha chegado durante este heartbeat.
+      await prisma.airConditioner.updateMany({
+        where: {
+          deviceId,
+          pendingCommand,
+        },
+        data: {
+          pendingCommand: null,
+        },
+      });
+    }
+
     const responsePayload = {
-      command: ac.pendingCommand || 'none',
+      command: pendingCommand || 'none',
     };
 
-    if (ac.pendingCommand === 'ligar' || ac.pendingCommand === 'desligar') {
-      const learned = getIrSignalForButton(ac.irSignals, ac.pendingCommand);
+    if (pendingCommand === 'ligar' || pendingCommand === 'desligar') {
+      const learned = getIrSignalForButton(ac.irSignals, pendingCommand);
       if (learned) {
         responsePayload.learnedSignal = {
-          button: ac.pendingCommand,
+          button: pendingCommand,
           raw: learned.raw,
         };
       }
