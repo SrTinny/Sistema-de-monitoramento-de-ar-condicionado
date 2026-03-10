@@ -13,30 +13,20 @@ const UNCONFIGURED_ROOM_LABELS = new Set([
   'unconfigured',
 ]);
 
-const RECENT_HEARTBEAT_WINDOW_MS = 60000;
-
 const isPendingConfiguration = (roomData) => {
   const normalized = String(roomData?.room ?? '').trim().toLowerCase();
   return normalized.length === 0 || UNCONFIGURED_ROOM_LABELS.has(normalized);
 };
 
-const hasRecentHeartbeat = (roomData, nowMs = Date.now()) => {
-  if (!roomData?.lastHeartbeat) return false;
-  return (nowMs - new Date(roomData.lastHeartbeat).getTime()) < RECENT_HEARTBEAT_WINDOW_MS;
-};
-
-const isControlReady = (roomData, nowMs = Date.now()) => {
-  return !isPendingConfiguration(roomData) || hasRecentHeartbeat(roomData, nowMs);
-};
+const isControlReady = (roomData) => !isPendingConfiguration(roomData);
 
 const isRemovedRoom = (roomData) => String(roomData?.room ?? '').trim() === '__removed__';
 
 export default function Agendamentos() {
   const { rooms, fetchRooms, schedules, fetchSchedules, addSchedule, deleteSchedule } = useRooms();
-  const nowMs = Date.now();
   const configuredRooms = useMemo(
-    () => rooms.filter((room) => !isRemovedRoom(room) && isControlReady(room, nowMs)),
-    [rooms, nowMs]
+    () => rooms.filter((room) => !isRemovedRoom(room) && isControlReady(room)),
+    [rooms]
   );
 
   const [form, setForm] = useState({

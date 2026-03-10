@@ -61,8 +61,12 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
     onSave(room.id, { name, room: location });
   };
 
-  // Salas Disponíveis têm room = 'Não configurada' (ou vazio); Salas de Controle têm nome real
-  const UNCONFIGURED_LABELS = new Set(['não configurada', 'nao configurada', 'not configured', 'unconfigured']);
+  const UNCONFIGURED_LABELS = new Set([
+    'não configurada',
+    'nao configurada',
+    'not configured',
+    'unconfigured',
+  ]);
   const isRoomAvailable = !room?.room || UNCONFIGURED_LABELS.has((room?.room ?? '').trim().toLowerCase());
 
   const handleDelete = () => {

@@ -15,6 +15,8 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 const COMMAND_ONLINE_WINDOW_MS = 35000;
+const UNCONFIGURED_ROOM_LABELS = new Set(['não configurada', 'nao configurada', 'not configured', 'unconfigured', '']);
+const HIDDEN_REMOVED_ROOM_LABEL = '__removed__';
 
 // Middlewares
 app.use(cors());
@@ -241,13 +243,13 @@ app.get('/auth/me', authenticateToken, (req, res) => {
 // ROTA 'DELETE': Deletar um aparelho por ID. (PROTEGIDA - ADMIN)
 app.delete('/api/rooms/:id', authenticateToken, isAdmin, async (req, res) => {
   const { id } = req.params;
-  const UNCONFIGURED_LABELS = new Set(['não configurada', 'nao configurada', 'not configured', 'unconfigured', '']);
   try {
     const current = await prisma.airConditioner.findUnique({ where: { id }, select: { room: true } });
     if (!current) return res.status(404).json({ error: 'Aparelho não encontrado.' });
 
     const normalizedRoom = String(current.room ?? '').trim().toLowerCase();
-    const isAvailableRoom = UNCONFIGURED_LABELS.has(normalizedRoom);
+    const isAvailableRoom = UNCONFIGURED_ROOM_LABELS.has(normalizedRoom)
+      || normalizedRoom === HIDDEN_REMOVED_ROOM_LABEL;
 
     const sharedReset = {
       name: `AC ${id.slice(-6).toUpperCase()}`,
@@ -264,9 +266,9 @@ app.delete('/api/rooms/:id', authenticateToken, isAdmin, async (req, res) => {
       // Já está em "Salas Disponíveis": enviar wifi_reset e ocultar com __removed__
       // O ESP abrirá o portal AC-SETUP. Quando o usuário reconectar via portal,
       // o heartbeat detecta __removed__ e restaura para 'Não configurada'.
-      data = { ...sharedReset, room: '__removed__', pendingCommand: 'wifi_reset' };
+      data = { ...sharedReset, room: HIDDEN_REMOVED_ROOM_LABEL, pendingCommand: 'wifi_reset' };
     } else {
-      // Sala configurada: soft reset para "Salas Disponíveis"
+      // Sala configurada: soft reset para "Salas Disponíveis".
       data = { ...sharedReset, room: 'Não configurada', pendingCommand: null };
     }
 
@@ -275,7 +277,7 @@ app.delete('/api/rooms/:id', authenticateToken, isAdmin, async (req, res) => {
     res.status(200).json({
       message: isAvailableRoom
         ? 'Comando wifi_reset enviado. O dispositivo abrirá o portal AC-SETUP em breve.'
-        : 'Sala resetada. Reaparecerá em Salas Disponíveis assim que o ESP enviar heartbeat.',
+        : 'Sala resetada e movida para Salas Disponíveis.',
       room: updatedAC,
       mode: isAvailableRoom ? 'force_remove' : 'soft_reset',
     });
@@ -303,6 +305,7 @@ app.post('/api/command', authenticateToken, async (req, res) => {
       select: {
         id: true,
         deviceId: true,
+        room: true,
         lastHeartbeat: true,
       },
     });
@@ -324,6 +327,7 @@ app.post('/api/command', authenticateToken, async (req, res) => {
     }
 
     const updateData = { pendingCommand: command };
+
     if (typeof command === 'string' && command.startsWith('learn:')) {
       const button = normalizeIrButton(command.substring('learn:'.length));
       if (!button) {
@@ -661,9 +665,9 @@ app.post('/api/heartbeat', async (req, res) => {
       }
     }
 
-    // Quando sala volta online após ter sido removida (room='__removed__') e o ESP
-    // já processou o wifi_reset e se reconectou via portal, restaurar para 'Não configurada'.
-    if (ac.room === '__removed__' && pendingCommand !== 'wifi_reset') {
+    // Quando sala volta online após wifi_reset e o ESP se reconectou via portal,
+    // restaurar para 'Não configurada' para aparecer em Salas Disponíveis.
+    if (ac.room === HIDDEN_REMOVED_ROOM_LABEL && pendingCommand !== 'wifi_reset') {
       updateData.room = 'Não configurada';
     }
 

@@ -18,38 +18,28 @@ const UNCONFIGURED_ROOM_LABELS = new Set([
   'unconfigured',
 ]);
 
-const RECENT_HEARTBEAT_WINDOW_MS = 60000;
-
 const isPendingConfiguration = (roomData) => {
   const normalized = String(roomData?.room ?? '').trim().toLowerCase();
   return normalized.length === 0 || UNCONFIGURED_ROOM_LABELS.has(normalized);
 };
 
-const hasRecentHeartbeat = (roomData, nowMs = Date.now()) => {
-  if (!roomData?.lastHeartbeat) return false;
-  return (nowMs - new Date(roomData.lastHeartbeat).getTime()) < RECENT_HEARTBEAT_WINDOW_MS;
-};
+// Sala está pronta para controle se tiver nome de sala definido (não unconfigured)
+const isControlReady = (roomData) => !isPendingConfiguration(roomData);
 
-const isControlReady = (roomData, nowMs = Date.now()) => {
-  // Permite controle logo apos reconexao do Wi-Fi, mesmo com sala ainda "Nao configurada".
-  return !isPendingConfiguration(roomData) || hasRecentHeartbeat(roomData, nowMs);
-};
-
-// Salas marcadas __removed__ estão aguardando wifi_reset e não devem aparecer na UI
+// Salas marcadas __removed__ aguardam wifi_reset e não aparecem em nenhuma lista
 const isRemovedRoom = (roomData) => String(roomData?.room ?? '').trim() === '__removed__';
 
 export default function Home() {
   const { rooms, loading, fetchRooms, sendCommand, setTemperature, updateRoom, openForm, schedules, fetchSchedules, deleteSchedule } = useRooms();
   const [availableConfigRoom, setAvailableConfigRoom] = useState(null);
-  const nowMs = Date.now();
 
   const controlRooms = useMemo(
-    () => rooms.filter((room) => !isRemovedRoom(room) && isControlReady(room, nowMs)),
-    [rooms, nowMs]
+    () => rooms.filter((room) => !isRemovedRoom(room) && isControlReady(room)),
+    [rooms]
   );
   const availableRooms = useMemo(
-    () => rooms.filter((room) => !isRemovedRoom(room) && isPendingConfiguration(room) && !isControlReady(room, nowMs)),
-    [rooms, nowMs]
+    () => rooms.filter((room) => !isRemovedRoom(room) && isPendingConfiguration(room)),
+    [rooms]
   );
 
   useEffect(() => {
@@ -124,7 +114,7 @@ export default function Home() {
             <section className={styles.unitsSection}>
               <h2 className={styles.sectionTitle}>Salas Disponíveis</h2>
               <p className={styles.sectionDescription}>
-                Dispositivos pendentes sem heartbeat recente. Reconfigure o Wi-Fi para voltarem ao controle.
+                Dispositivos pendentes sem heartbeat recente ou em reconfiguração de Wi-Fi.
               </p>
 
               <StaggerContainer className={styles.unitsGrid}>
