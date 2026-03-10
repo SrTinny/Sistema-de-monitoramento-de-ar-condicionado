@@ -23,9 +23,12 @@ using WebServerType = WebServer;
 // ============================================================================
 
 // Backend
-const char *backendURL = "https://sistema-de-monitoramento-de-ar.onrender.com";
-// const char *backendURL = "http://192.168.18.109:3001"; 
+#ifndef BACKEND_URL
+#define BACKEND_URL "https://sistema-de-monitoramento-de-ar.onrender.com"
+#endif
+const char *backendURL = BACKEND_URL;
 String deviceId;
+const unsigned long HEARTBEAT_INTERVAL_MS = 10000;
 
 // Pinos IR
 #define maxLen 800
@@ -57,6 +60,7 @@ std::map<String, IRSignal> learnedSignals;
 bool learningActive = false;
 String learningCommandId = "";  // ID do comando que está being aprendido
 unsigned long learningStartedAt = 0;
+bool pendingWifiResetPortal = false;
 
 // Buffers para captura de sinal IR
 volatile unsigned long irBuffer[maxLen];
@@ -91,13 +95,54 @@ String getChipSuffix() {
   return suffix;
 }
 
+void prepareForWifiPortal() {
+  // WiFiManager usa a porta 80; precisamos liberar o servidor local antes.
+  server.stop();
+  delay(100);
+}
+
+void startWifiSetupPortalNow() {
+  String chipSuffix = getChipSuffix();
+  String apName = "AC-SETUP-" + chipSuffix;
+
+  Serial.println("🛜 Iniciando modo de configuracao Wi-Fi imediatamente...");
+
+  prepareForWifiPortal();
+
+#if defined(ESP8266)
+  WiFi.disconnect(true);
+  delay(250);
+  ESP.eraseConfig();
+#else
+  WiFi.disconnect(true, true);
+#endif
+
+  WiFiManager wm;
+  wm.resetSettings();
+  wm.setConfigPortalTimeout(0);
+  wm.setConnectTimeout(20);
+
+  Serial.println("📡 Portal AP ativo em: " + apName);
+  Serial.println("🌐 Acesse: http://192.168.4.1");
+
+  bool configured = wm.startConfigPortal(apName.c_str());
+  if (configured) {
+    Serial.println("✅ Nova rede configurada. Reiniciando para aplicar...");
+  } else {
+    Serial.println("⚠️ Portal encerrado sem configuracao. Reiniciando...");
+  }
+
+  delay(800);
+  ESP.restart();
+}
+
 void connectWiFiWithPortal() {
   String chipSuffix = getChipSuffix();
-  String apName = "IR-DEVICE-" + chipSuffix;
+  String apName = "AC-SETUP-" + chipSuffix;
 
   WiFi.mode(WIFI_STA);
   WiFiManager wm;
-  wm.setConfigPortalTimeout(180);
+  wm.setConfigPortalTimeout(0);
   wm.setConnectTimeout(20);
 
   Serial.println("\n🌐 Iniciando conexão Wi-Fi...");
@@ -380,7 +425,7 @@ bool storeLearnedSignal(const String &commandId, const String &rawSignal) {
 
 void processBackendPolling() {
   static unsigned long lastHeartbeat = 0;
-  if (millis() - lastHeartbeat <= 30000) {
+  if (millis() - lastHeartbeat <= HEARTBEAT_INTERVAL_MS) {
     return;
   }
   lastHeartbeat = millis();
@@ -474,6 +519,7 @@ void processBackendPolling() {
       if (command != nullptr) {
         String cmdStr = String(command);
         String cmdIdStr = (commandId != nullptr) ? String(commandId) : "";
+        String learnedRawStr = (learnedRaw != nullptr) ? String(learnedRaw) : "";
 
         if (cmdStr == "learn" && cmdIdStr.length() > 0) {
           Serial.println("📚 Backend solicita aprendizado de: " + cmdIdStr);
@@ -487,13 +533,42 @@ void processBackendPolling() {
           Serial.println("💾 Backend solicita armazenar sinal: " + cmdIdStr);
           storeLearnedSignal(cmdIdStr, String(learnedRaw));
         }
+        else if (cmdStr == "ligar" || cmdStr == "desligar") {
+          Serial.println("🕹️ Comando manual recebido do painel: " + cmdStr);
+
+          bool sent = false;
+          if (learnedRawStr.length() > 0) {
+            if (storeLearnedSignal(cmdStr, learnedRawStr)) {
+              sent = sendStoredSignal(cmdStr);
+            }
+          } else {
+            sent = sendStoredSignal(cmdStr);
+          }
+
+          if (!sent) {
+            Serial.println("⚠️ Nao foi possivel transmitir IR para: " + cmdStr);
+          }
+        }
+        else if (cmdStr == "wifi_reset" || cmdStr == "reset_wifi") {
+          Serial.println("🛜 Backend solicitou reset de Wi-Fi. Portal sera iniciado apos heartbeat.");
+          pendingWifiResetPortal = true;
+        }
       }
     }
   } else {
-    Serial.println("⚠️ Erro no heartbeat: " + String(httpCode));
+    Serial.println("⚠️ Erro no heartbeat: " + String(httpCode) + " (" + http.errorToString(httpCode) + ")");
+    Serial.println("   URL: " + heartbeatUrl);
+    Serial.println("   WiFi SSID: " + WiFi.SSID());
+    Serial.println("   WiFi IP: " + WiFi.localIP().toString());
   }
 
   http.end();
+
+  if (pendingWifiResetPortal) {
+    pendingWifiResetPortal = false;
+    startWifiSetupPortalNow();
+    return;
+  }
 }
 
 // ============================================================================
@@ -503,15 +578,6 @@ void processBackendPolling() {
 void processRequests() {
   server.handleClient();
   webSocket.loop();
-}
-
-void processPeriodicTest() {
-  static unsigned long lastTest = 0;
-  // A cada 15 segundos, envia sinal de teste (apenas se não está em modo de aprendizado)
-  if (!learningActive && (millis() - lastTest > 15000)) {
-    lastTest = millis();
-    sendTestSignal();
-  }
 }
 
 #if defined(ESP32)
@@ -681,18 +747,7 @@ void setup() {
   server.on("/wifi/reset", HTTP_POST, []() {
     server.sendHeader("Access-Control-Allow-Origin", "*");
     server.send(200, "application/json", "{\"ok\":true}");
-
-    WiFiManager wm;
-    wm.resetSettings();
-    delay(1000);
-    ESP.restart();
-  });
-
-  // Testar emissão de sinal IR
-  server.on("/test", HTTP_POST, []() {
-    sendTestSignal();
-    server.sendHeader("Access-Control-Allow-Origin", "*");
-    server.send(200, "application/json", "{\"ok\":true,\"message\":\"Sinal de teste enviado\"}");
+    pendingWifiResetPortal = true;
   });
 
   server.onNotFound([]() {
@@ -701,6 +756,11 @@ void setup() {
 
   server.begin();
   webSocket.begin();
+
+  if (pendingWifiResetPortal) {
+    pendingWifiResetPortal = false;
+    startWifiSetupPortalNow();
+  }
 
   // ========== Configurar Pinos IR ==========
   pinMode(rxPinIR, INPUT);
@@ -731,7 +791,6 @@ void loop() {
 #else
   processRequests();
   processIRReception();
-  processPeriodicTest();
   processBackendPolling();
   delay(10);
 #endif
