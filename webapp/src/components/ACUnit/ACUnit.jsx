@@ -9,9 +9,10 @@ import { useRooms } from "../../contexts/RoomContext";
 
 const OFFLINE_TIMEOUT_MS = 20000;
 
-export default function ACUnit({ room, onToggle, onTempChange }) {
+export default function ACUnit({ room, onToggle, onTempChange, onIrCommand }) {
   const [showModal, setShowModal] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
+  const [isSendingIr, setIsSendingIr] = useState(false);
   const [currentSetpoint, setCurrentSetpoint] = useState(room.setpoint ?? 22);
   const [isDragging, setIsDragging] = useState(false);
   const [nowMs, setNowMs] = useState(Date.now());
@@ -56,6 +57,19 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
       await onToggle(roomData);
     } finally {
       setIsToggling(false);
+    }
+  };
+
+  const handleIrCommand = async (command) => {
+    if (!onIrCommand) {
+      return;
+    }
+
+    setIsSendingIr(true);
+    try {
+      await onIrCommand(deviceId, command);
+    } finally {
+      setIsSendingIr(false);
     }
   };
 
@@ -142,6 +156,25 @@ export default function ACUnit({ room, onToggle, onTempChange }) {
               >
                 {currentSetpoint.toFixed(0)}°C
               </div>
+            </div>
+
+            <div className={styles.tempControls}>
+              <button
+                type="button"
+                className={`${styles.tempButton} ${styles.tempDownButton}`}
+                onClick={() => handleIrCommand("temp_down")}
+                disabled={isToggling || isSendingIr}
+              >
+                Temp -
+              </button>
+              <button
+                type="button"
+                className={`${styles.tempButton} ${styles.tempUpButton}`}
+                onClick={() => handleIrCommand("temp_up")}
+                disabled={isToggling || isSendingIr}
+              >
+                Temp +
+              </button>
             </div>
           </div>
         </div>

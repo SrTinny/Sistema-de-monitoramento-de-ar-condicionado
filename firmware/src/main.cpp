@@ -13,7 +13,13 @@ using WebServerType = ESP8266WebServer;
 using WebServerType = WebServer;
 #endif
 #include <WebSocketsServer.h>
-#include <IRremote.h>
+#ifndef RAW_BUFFER_LENGTH
+#define RAW_BUFFER_LENGTH 1200
+#endif
+#ifndef RECORD_GAP_MICROS
+#define RECORD_GAP_MICROS 20000
+#endif
+#include <IRremote.hpp>
 #include <ArduinoJson.h>
 #include <WiFiManager.h>
 #include <map>
@@ -29,11 +35,17 @@ using WebServerType = WebServer;
 const char *backendURL = BACKEND_URL;
 String deviceId;
 const unsigned long HEARTBEAT_INTERVAL_MS = 10000;
+const unsigned long LEARNING_TIMEOUT_MS = 30000;
 
 // Pinos IR
-#define maxLen 800
-#define rxPinIR 4   // GPIO 4 = D2 (Receptor IR - entrada)
-#define txPinIR 13  // GPIO 13 = D7 (Transmissor IR - saída)
+#define maxLen 2000
+#if defined(ESP8266)
+constexpr uint8_t rxPinIR = D5;   // GPIO 14 (Receptor IR - entrada)
+constexpr uint8_t txPinIR = D2;   // GPIO 4  (Transmissor IR - saida)
+#else
+constexpr uint8_t rxPinIR = 4;    // GPIO 4  (Receptor IR - entrada)
+constexpr uint8_t txPinIR = 13;   // GPIO 13 (Transmissor IR - saida)
+#endif
 
 // Servidores
 WebServerType server(80);
@@ -47,6 +59,9 @@ WebSocketsServer webSocket(81);
 struct IRSignal {
   String name;                    // Nome do sinal (ex: "power_on", "mode_cool")
   std::vector<uint16_t> signal;   // Dados do sinal (pares on/off em microsegundos)
+  bool isNEC = false;             // Sinal salvo como protocolo NEC
+  uint16_t necAddress = 0;        // Endereco NEC
+  uint8_t necCommand = 0;         // Comando NEC
   unsigned long timestamp;        // Quando foi aprendido
 };
 
@@ -60,15 +75,12 @@ std::map<String, IRSignal> learnedSignals;
 bool learningActive = false;
 String learningCommandId = "";  // ID do comando que está being aprendido
 unsigned long learningStartedAt = 0;
+bool learningAwaitingConfirm = false;
+String learningFirstCaptureRaw = "";
 bool pendingWifiResetPortal = false;
-
-// Buffers para captura de sinal IR
-volatile unsigned long irBuffer[maxLen];
-volatile unsigned int x = 0;
-volatile unsigned long lastIrEdgeMicros = 0;
-#if defined(ESP32)
-portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
-#endif
+unsigned long lastIrTxAt = 0;
+bool powerStateOn = false;
+unsigned long lastLearningNoiseLogAt = 0;
 
 // Feedback de aprendizado pendente
 String pendingLearnStatus = "";      // "captured", "timeout", "invalid"
@@ -152,152 +164,181 @@ void connectWiFiWithPortal() {
 }
 
 // ============================================================================
-// FUNÇÕES DE INTERRUPÇÃO E CAPTURA IR
-// ============================================================================
-
-void IRAM_ATTR rxIR_Interrupt_Handler() {
-#if defined(ESP32)
-  portENTER_CRITICAL_ISR(&mux);
-#endif
-  if (x < maxLen) {
-    irBuffer[x++] = micros();
-    lastIrEdgeMicros = irBuffer[x - 1];
-  }
-#if defined(ESP32)
-  portEXIT_CRITICAL_ISR(&mux);
-#endif
-}
-
-// ============================================================================
 // FUNÇÕES DE APRENDIZADO DE SINAIS IR
 // ============================================================================
 
+void cancelLearningMode(const String &reason) {
+  if (!learningActive) {
+    return;
+  }
+
+  pendingLearnStatus = "cancelled";
+  pendingLearnCommandId = learningCommandId;
+  pendingLearnRaw = "";
+  pendingLearnMessage = reason;
+
+  learningActive = false;
+  learningAwaitingConfirm = false;
+  learningFirstCaptureRaw = "";
+
+  Serial.println("🛑 Aprendizado cancelado: " + reason);
+}
+
 void startLearningMode(const String &commandId) {
+  if (learningActive && learningCommandId == commandId) {
+    Serial.println("ℹ️ Aprendizado ja ativo para: " + commandId);
+    return;
+  }
+
   learningActive = true;
   learningCommandId = commandId;
   learningStartedAt = millis();
-
-#if defined(ESP32)
-  portENTER_CRITICAL(&mux);
-#endif
-  x = 0;
-  lastIrEdgeMicros = 0;
-#if defined(ESP32)
-  portEXIT_CRITICAL(&mux);
-#endif
+  learningAwaitingConfirm = false;
+  learningFirstCaptureRaw = "";
 
   Serial.println("🎯 Modo aprendizado IR iniciado para comando: " + commandId);
-  Serial.println("   ⏱️ 15 segundos para capturar sinal...");
+  Serial.println("   ⏱️ 30 segundos para capturar e confirmar sinal...");
+  Serial.println("   1) Aponte o controle para o receptor IR");
+  Serial.println("   2) Pressione o botao uma vez (captura)");
+  Serial.println("   3) Pressione novamente para confirmar");
   
   String learnMessage = "Modo aprendizado ativo para: " + commandId;
   webSocket.broadcastTXT(learnMessage);
 }
 
 void processIRReception() {
-  if (learningActive) {
-    // Timeout de 15 segundos
-    if (millis() - learningStartedAt > 15000) {
+  if (!IrReceiver.decode()) {
+    if (learningActive && millis() - learningStartedAt > LEARNING_TIMEOUT_MS) {
       learningActive = false;
+      learningAwaitingConfirm = false;
+      learningFirstCaptureRaw = "";
       pendingLearnStatus = "timeout";
       pendingLearnCommandId = learningCommandId;
-      pendingLearnMessage = "Tempo esgotado para capturar sinal IR.";
+      pendingLearnMessage = "Tempo esgotado para capturar/confirmar sinal IR.";
       Serial.println("⏱️ Timeout no aprendizado IR para: " + learningCommandId);
-      return;
-    }
-
-    unsigned int sampleCount = x;
-    unsigned long lastEdge = lastIrEdgeMicros;
-    unsigned long nowMicros = micros();
-
-    // Verifica se houve pausa longa (fim do sinal)
-    if (sampleCount > 15 && lastEdge > 0 && (nowMicros - lastEdge) > 70000) {
-      String rawSignal = "";
-      
-      // Converte o buffer de timestamps em deltas (on/off durations)
-      for (unsigned int i = 1; i < sampleCount; i++) {
-        unsigned long delta = irBuffer[i] - irBuffer[i - 1];
-        if (delta < 50 || delta > 25000) {
-          continue;
-        }
-        rawSignal += String(delta);
-        if (i < sampleCount - 1) {
-          rawSignal += ",";
-        }
-      }
-
-      learningActive = false;
-      pendingLearnCommandId = learningCommandId;
-
-      if (rawSignal.length() > 0) {
-        pendingLearnStatus = "captured";
-        pendingLearnRaw = rawSignal;
-        pendingLearnMessage = "Sinal IR capturado com sucesso.";
-        Serial.println("✅ SINAL IR CAPTURADO COM SUCESSO!");
-        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        Serial.print("Comando: ");
-        Serial.println(learningCommandId);
-        Serial.print("Tamanho: ");
-        Serial.print(rawSignal.length());
-        Serial.println(" caracteres");
-        Serial.println("\n📋 CÓDIGO IR (copie e guarde este código):");
-        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        Serial.println(rawSignal);
-        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-      } else {
-        pendingLearnStatus = "invalid";
-        pendingLearnRaw = "";
-        pendingLearnMessage = "Sinal capturado inválido.";
-        Serial.println("⚠️ Sinal inválido para: " + learningCommandId);
-      }
-
-#if defined(ESP32)
-      portENTER_CRITICAL(&mux);
-#endif
-      x = 0;
-      lastIrEdgeMicros = 0;
-#if defined(ESP32)
-      portEXIT_CRITICAL(&mux);
-#endif
     }
     return;
   }
 
-  // Mostrar sinais IR recebidos fora do modo de aprendizado
-  if (x > 15) {
-    unsigned long lastEdge = lastIrEdgeMicros;
-    unsigned long nowMicros = micros();
+  // Evita interpretar o próprio disparo do emissor como sinal recebido.
+  if ((millis() - lastIrTxAt) < 250) {
+    IrReceiver.resume();
+    return;
+  }
 
-    if ((nowMicros - lastEdge) > 70000) {
-      String debugSignal = "";
-      
-      for (unsigned int i = 1; i < x; i++) {
-        unsigned long delta = irBuffer[i] - irBuffer[i - 1];
-        if (delta < 50 || delta > 25000) {
-          continue;
-        }
-        debugSignal += String(delta);
-        if (i < x - 1) {
-          debugSignal += ",";
-        }
-      }
+  const IRData &dados = IrReceiver.decodedIRData;
 
-      if (debugSignal.length() > 0) {
-        Serial.println("\n📡 SINAL IR RECEBIDO (DEBUG):");
-        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        Serial.println(debugSignal);
-        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-      }
+  bool isEmptyFrame = (dados.rawDataPtr == nullptr) || (dados.rawDataPtr->rawlen <= 2);
+  if (learningActive && isEmptyFrame) {
+    if (millis() - lastLearningNoiseLogAt > 1000) {
+      lastLearningNoiseLogAt = millis();
+      Serial.println("ℹ️ Frame IR vazio/ruido ignorado durante aprendizado. Aguardando sinal valido...");
+    }
+    IrReceiver.resume();
+    return;
+  }
 
-#if defined(ESP32)
-      portENTER_CRITICAL(&mux);
-#endif
-      x = 0;
-      lastIrEdgeMicros = 0;
-#if defined(ESP32)
-      portEXIT_CRITICAL(&mux);
-#endif
+  // Filtra ruído elétrico/ambiental: pulsos UNKNOWN muito curtos inundam o serial
+  // e escondem os logs úteis de heartbeat/comandos reais.
+  bool isShortUnknown = (dados.protocol == UNKNOWN)
+    && ((dados.rawDataPtr == nullptr) || (dados.rawDataPtr->rawlen <= 2) || (dados.decodedRawData == 0));
+
+  if (isShortUnknown && !learningActive) {
+    IrReceiver.resume();
+    return;
+  }
+
+  Serial.print("[RECEPTOR] t=");
+  Serial.print(millis());
+  Serial.print(" ms | protocolo=");
+  Serial.print(getProtocolString(dados.protocol));
+  Serial.print(" | endereco=0x");
+  Serial.print(dados.address, HEX);
+  Serial.print(" | comando=0x");
+  Serial.print(dados.command, HEX);
+  Serial.print(" | raw=0x");
+  Serial.print(dados.decodedRawData, HEX);
+  Serial.print(" | repeticao=");
+  Serial.println((dados.flags & IRDATA_FLAGS_IS_REPEAT) ? "sim" : "nao");
+
+  Serial.print("[RECEPTOR] raw bytes: ");
+  for (uint16_t i = 1; i < dados.rawDataPtr->rawlen; i++) {
+    Serial.print(dados.rawDataPtr->rawbuf[i] * MICROS_PER_TICK);
+    if (i < dados.rawDataPtr->rawlen - 1) {
+      Serial.print(",");
     }
   }
+  Serial.println();
+
+  IrReceiver.printIRResultShort(&Serial);
+  IrReceiver.printIRSendUsage(&Serial);
+
+  if (learningActive) {
+    pendingLearnCommandId = learningCommandId;
+
+    String rawCsv = "";
+    uint16_t validCount = 0;
+    if (dados.rawDataPtr != nullptr) {
+      for (uint16_t i = 1; i < dados.rawDataPtr->rawlen; i++) {
+        unsigned long pulse = dados.rawDataPtr->rawbuf[i] * MICROS_PER_TICK;
+        if (pulse < 50 || pulse > 40000) {
+          continue;
+        }
+        if (rawCsv.length() > 0) {
+          rawCsv += ",";
+        }
+        rawCsv += String(pulse);
+        validCount++;
+      }
+    }
+
+    String encoded = "";
+    if (dados.protocol == NEC) {
+      encoded = "NEC:" + String(dados.address) + ":" + String(dados.command);
+    }
+
+    if (encoded.length() > 0 || validCount >= 10) {
+      String capturedRaw = encoded.length() > 0 ? encoded : rawCsv;
+
+      if (!learningAwaitingConfirm) {
+        learningAwaitingConfirm = true;
+        learningFirstCaptureRaw = capturedRaw;
+        learningStartedAt = millis();
+
+        pendingLearnStatus = "awaiting_confirmation";
+        pendingLearnRaw = "";
+        pendingLearnMessage = "Sinal IR recebido. Pressione o mesmo botao novamente para confirmar.";
+
+        Serial.println("✅ Sinal IR recebido (1/2). Aguardando confirmacao...");
+        Serial.println("   Pressione o mesmo botao novamente no controle.");
+      } else {
+        pendingLearnStatus = "captured";
+        pendingLearnRaw = capturedRaw;
+        pendingLearnMessage = "Botao clonado com sucesso.";
+
+        learningActive = false;
+        learningAwaitingConfirm = false;
+        learningFirstCaptureRaw = "";
+
+        Serial.println("✅ SINAL IR CONFIRMADO E CLONADO COM SUCESSO!");
+        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        Serial.print("Comando: ");
+        Serial.println(pendingLearnCommandId);
+        Serial.print("Codigo clonado: ");
+        Serial.println(pendingLearnRaw);
+        Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      }
+    } else {
+      pendingLearnStatus = learningAwaitingConfirm ? "awaiting_confirmation" : "invalid";
+      pendingLearnRaw = "";
+      pendingLearnMessage = learningAwaitingConfirm
+        ? "Sinal invalido na confirmacao. Pressione novamente o mesmo botao."
+        : "Sinal capturado invalido ou curto demais para clonagem.";
+      Serial.println("⚠️ Sinal inválido para aprendizado: " + String(getProtocolString(dados.protocol)));
+    }
+  }
+
+  IrReceiver.resume();
 }
 
 // ============================================================================
@@ -327,37 +368,159 @@ uint16_t testSignal[] = {
 
 void sendTestSignal() {
   Serial.println("\n📤 Enviando sinal IR de teste...");
+  lastIrTxAt = millis();
   IrSender.sendRaw(testSignal, sizeof(testSignal) / sizeof(testSignal[0]), 38);
   Serial.println("✅ Sinal de teste enviado!\n");
 }
 
+String resolveStoredCommandId(const String &requestedCommandId) {
+  if (learnedSignals.find(requestedCommandId) != learnedSignals.end()) {
+    return requestedCommandId;
+  }
+
+  if (requestedCommandId == "ligar") {
+    const char *candidates[] = {"power_on", "on", "liga", "power", "turn_on"};
+    for (const char *candidate : candidates) {
+      String candidateStr(candidate);
+      if (learnedSignals.find(candidateStr) != learnedSignals.end()) {
+        return candidateStr;
+      }
+    }
+  }
+
+  if (requestedCommandId == "desligar") {
+    const char *candidates[] = {"power_off", "off", "desliga", "turn_off"};
+    for (const char *candidate : candidates) {
+      String candidateStr(candidate);
+      if (learnedSignals.find(candidateStr) != learnedSignals.end()) {
+        return candidateStr;
+      }
+    }
+  }
+
+  if (requestedCommandId == "temp_up" || requestedCommandId == "aumentar_temp") {
+    const char *candidates[] = {"temp_up", "aumentar_temp", "increase_temp", "increase", "up", "temp+"};
+    for (const char *candidate : candidates) {
+      String candidateStr(candidate);
+      if (learnedSignals.find(candidateStr) != learnedSignals.end()) {
+        return candidateStr;
+      }
+    }
+  }
+
+  if (requestedCommandId == "temp_down" || requestedCommandId == "diminuir_temp") {
+    const char *candidates[] = {"temp_down", "diminuir_temp", "decrease_temp", "decrease", "down", "temp-"};
+    for (const char *candidate : candidates) {
+      String candidateStr(candidate);
+      if (learnedSignals.find(candidateStr) != learnedSignals.end()) {
+        return candidateStr;
+      }
+    }
+  }
+
+  return "";
+}
+
+void logStoredCommands() {
+  Serial.print("📚 Sinais armazenados (");
+  Serial.print(learnedSignals.size());
+  Serial.println("): ");
+  for (auto &pair : learnedSignals) {
+    Serial.print("   - ");
+    Serial.println(pair.first);
+  }
+}
+
+bool isDirectReplayCommand(const String &commandId) {
+  return commandId == "ligar"
+    || commandId == "desligar"
+    || commandId == "temp_up"
+    || commandId == "temp_down"
+    || commandId == "aumentar_temp"
+    || commandId == "diminuir_temp";
+}
+
+void applyCommandSideEffects(const String &requestedCommandId, const String &resolvedCommandId) {
+  if (requestedCommandId == "ligar" || resolvedCommandId == "ligar") {
+    powerStateOn = true;
+    Serial.println("🔛 Estado do ar atualizado: ligado");
+    return;
+  }
+
+  if (requestedCommandId == "desligar" || resolvedCommandId == "desligar") {
+    powerStateOn = false;
+    Serial.println("🔌 Estado do ar atualizado: desligado");
+    return;
+  }
+
+  if (requestedCommandId == "temp_up" || requestedCommandId == "aumentar_temp" || resolvedCommandId == "temp_up") {
+    Serial.println("🌡️ Comando de temperatura transmitido: aumentar");
+    return;
+  }
+
+  if (requestedCommandId == "temp_down" || requestedCommandId == "diminuir_temp" || resolvedCommandId == "temp_down") {
+    Serial.println("🌡️ Comando de temperatura transmitido: diminuir");
+    return;
+  }
+}
+
 bool sendStoredSignal(const String &commandId) {
-  if (learnedSignals.find(commandId) == learnedSignals.end()) {
+  String resolvedCommandId = resolveStoredCommandId(commandId);
+  if (resolvedCommandId.length() == 0) {
     Serial.println("❌ Sinal não encontrado: " + commandId);
+    logStoredCommands();
     return false;
   }
 
-  IRSignal &signal = learnedSignals[commandId];
-  
-  if (signal.signal.empty()) {
-    Serial.println("❌ Sinal vazio para: " + commandId);
+  if (resolvedCommandId != commandId) {
+    Serial.println("↪️ Usando alias de comando: " + commandId + " -> " + resolvedCommandId);
+  }
+
+  IRSignal &signal = learnedSignals[resolvedCommandId];
+
+  if (!signal.isNEC && signal.signal.empty()) {
+    Serial.println("❌ Sinal vazio para: " + resolvedCommandId);
     return false;
   }
 
-  Serial.println("📤 Transmitindo sinal: " + commandId);
-  Serial.print("   Comprimento: ");
-  Serial.print(signal.signal.size());
-  Serial.println(" pares on/off");
+  Serial.println("📤 Transmitindo sinal: " + resolvedCommandId);
 
-  // Converte vector de volta para array e transmite
-  uint16_t *signalArray = new uint16_t[signal.signal.size()];
-  std::copy(signal.signal.begin(), signal.signal.end(), signalArray);
-  
-  IrSender.sendRaw(signalArray, signal.signal.size(), 38); // 38 kHz é o padrão
-  
-  delete[] signalArray;
+  if (signal.isNEC) {
+    Serial.print("   NEC addr=0x");
+    Serial.print(signal.necAddress, HEX);
+    Serial.print(" cmd=0x");
+    Serial.println(signal.necCommand, HEX);
+    Serial.print("   Codigo enviado: NEC:");
+    Serial.print(signal.necAddress);
+    Serial.print(":");
+    Serial.println(signal.necCommand);
+    lastIrTxAt = millis();
+    IrSender.sendNEC(signal.necAddress, signal.necCommand, 0);
+  } else {
+    Serial.print("   Comprimento: ");
+    Serial.print(signal.signal.size());
+    Serial.println(" pares on/off");
 
-  String wsMessage = "Sinal transmitido: " + commandId;
+    Serial.print("   Codigo enviado: ");
+    for (size_t i = 0; i < signal.signal.size(); i++) {
+      Serial.print(signal.signal[i]);
+      if (i < signal.signal.size() - 1) {
+        Serial.print(",");
+      }
+    }
+    Serial.println();
+
+    // Converte vector de volta para array e transmite
+    uint16_t *signalArray = new uint16_t[signal.signal.size()];
+    std::copy(signal.signal.begin(), signal.signal.end(), signalArray);
+    lastIrTxAt = millis();
+    IrSender.sendRaw(signalArray, signal.signal.size(), 38); // 38 kHz e o padrao
+    delete[] signalArray;
+  }
+
+  applyCommandSideEffects(commandId, resolvedCommandId);
+
+  String wsMessage = "Sinal transmitido: " + resolvedCommandId;
   webSocket.broadcastTXT(wsMessage);
   
   return true;
@@ -369,17 +532,48 @@ bool storeLearnedSignal(const String &commandId, const String &rawSignal) {
     return false;
   }
 
+  if (rawSignal.startsWith("NEC:")) {
+    int firstSep = rawSignal.indexOf(':');
+    int secondSep = rawSignal.indexOf(':', firstSep + 1);
+    if (firstSep > -1 && secondSep > -1) {
+      String addrStr = rawSignal.substring(firstSep + 1, secondSep);
+      String cmdStr = rawSignal.substring(secondSep + 1);
+
+      long addr = addrStr.toInt();
+      long cmd = cmdStr.toInt();
+      if (addr >= 0 && addr <= 0xFFFF && cmd >= 0 && cmd <= 0xFF) {
+        IRSignal newSignal;
+        newSignal.name = commandId;
+        newSignal.isNEC = true;
+        newSignal.necAddress = static_cast<uint16_t>(addr);
+        newSignal.necCommand = static_cast<uint8_t>(cmd);
+        newSignal.timestamp = millis();
+        learnedSignals[commandId] = newSignal;
+
+        Serial.println("✅ Sinal NEC armazenado: " + commandId);
+        Serial.print("   Addr=0x");
+        Serial.print(newSignal.necAddress, HEX);
+        Serial.print(" Cmd=0x");
+        Serial.println(newSignal.necCommand, HEX);
+        return true;
+      }
+    }
+
+    Serial.println("⚠️ Formato NEC invalido para: " + commandId);
+    return false;
+  }
+
   std::vector<uint16_t> parsedSignal;
   int start = 0;
 
   // Parse CSV do raw signal
-  while (start < rawSignal.length() && parsedSignal.size() < maxLen) {
+  while (start < static_cast<int>(rawSignal.length()) && parsedSignal.size() < maxLen) {
     int commaPos = rawSignal.indexOf(',', start);
     String token = (commaPos == -1) ? rawSignal.substring(start) : rawSignal.substring(start, commaPos);
     token.trim();
 
     long value = token.toInt();
-    if (value >= 50 && value <= 25000) {
+    if (value >= 50 && value <= 40000) {
       parsedSignal.push_back((uint16_t)value);
     }
 
@@ -395,6 +589,7 @@ bool storeLearnedSignal(const String &commandId, const String &rawSignal) {
   IRSignal newSignal;
   newSignal.name = commandId;
   newSignal.signal = parsedSignal;
+  newSignal.isNEC = false;
   newSignal.timestamp = millis();
 
   learnedSignals[commandId] = newSignal;
@@ -481,14 +676,24 @@ void processBackendPolling() {
 
   DynamicJsonDocument doc(4096);
   doc["deviceId"] = deviceId;
-  doc["status"] = "ativo";  // Status do deviceId IR (sempre ativo quando conectado)
+  doc["status"] = powerStateOn ? "ligado" : "desligado";
   doc["deviceType"] = "IR_CONTROLLER";
   doc["signalsStored"] = learnedSignals.size();
+  doc["learningActive"] = learningActive;
+
+  if (learningActive) {
+    JsonObject learning = doc.createNestedObject("learning");
+    learning["button"] = learningCommandId;
+    learning["stage"] = learningAwaitingConfirm ? "awaiting_confirmation" : "awaiting_signal";
+    learning["message"] = learningAwaitingConfirm
+      ? "Sinal recebido, confirme pressionando o botao novamente."
+      : "Aguardando sinal IR do controle.";
+  }
 
   if (pendingLearnStatus.length() > 0 && pendingLearnCommandId.length() > 0) {
     JsonObject learned = doc.createNestedObject("learnedSignal");
     learned["status"] = pendingLearnStatus;
-    learned["commandId"] = pendingLearnCommandId;
+    learned["button"] = pendingLearnCommandId;
     if (pendingLearnRaw.length() > 0) {
       learned["raw"] = pendingLearnRaw;
     }
@@ -507,16 +712,24 @@ void processBackendPolling() {
   if (httpCode == 200) {
     String response = http.getString();
     Serial.println("📥 Body (" + String(response.length()) + "b): " + response.substring(0, 120));
-    StaticJsonDocument<512> responseDoc;
+    // O payload pode carregar learnedSignal.raw com centenas de bytes.
+    // Usamos capacidade dinâmica para evitar NoMemory em respostas maiores.
+    const size_t jsonCapacity = response.length() + 512;
+    DynamicJsonDocument responseDoc(jsonCapacity);
     DeserializationError error = deserializeJson(responseDoc, response);
 
     if (error) {
       Serial.println("❌ JSON parse error: " + String(error.c_str()));
+      Serial.println("   JSON capacity usada: " + String(jsonCapacity));
     }
 
     if (!error) {
       const char *command = responseDoc["command"];
       Serial.println("💓 Heartbeat OK | cmd=" + String(command ? command : "null"));
+
+      Serial.print("📦 Heartbeat payload bruto: ");
+      serializeJson(responseDoc, Serial);
+      Serial.println();
 
       const char *commandId = responseDoc["commandId"];
       const char *learnedRaw = responseDoc["learnedSignal"]["raw"];
@@ -534,9 +747,28 @@ void processBackendPolling() {
         String cmdIdStr = (commandId != nullptr) ? String(commandId) : "";
         String learnedRawStr = (learnedRaw != nullptr) ? String(learnedRaw) : "";
 
+        if (cmdStr.startsWith("learn:")) {
+          cmdIdStr = cmdStr.substring(String("learn:").length());
+          cmdStr = "learn";
+        } else if (cmdStr.startsWith("learn_confirm:")) {
+          cmdIdStr = cmdStr.substring(String("learn_confirm:").length());
+          cmdStr = "learn";
+        }
+
+        Serial.println("🧭 Comando recebido do backend: " + cmdStr);
+        if (cmdIdStr.length() > 0) {
+          Serial.println("🆔 commandId: " + cmdIdStr);
+        }
+        if (learnedRawStr.length() > 0) {
+          Serial.println("🧾 raw recebido: " + learnedRawStr);
+        }
+
         if (cmdStr == "learn" && cmdIdStr.length() > 0) {
           Serial.println("📚 Backend solicita aprendizado de: " + cmdIdStr);
           startLearningMode(cmdIdStr);
+        }
+        else if (cmdStr == "learn_cancel" || cmdStr == "cancel_learn") {
+          cancelLearningMode("Cancelado pelo usuario.");
         }
         else if (cmdStr == "transmit" && cmdIdStr.length() > 0) {
           Serial.println("📤 Backend solicita transmissão de: " + cmdIdStr);
@@ -546,20 +778,26 @@ void processBackendPolling() {
           Serial.println("💾 Backend solicita armazenar sinal: " + cmdIdStr);
           storeLearnedSignal(cmdIdStr, String(learnedRaw));
         }
-        else if (cmdStr == "ligar" || cmdStr == "desligar") {
+        else if (isDirectReplayCommand(cmdStr)) {
           Serial.println("🕹️ Comando manual recebido do painel: " + cmdStr);
 
           bool sent = false;
           if (learnedRawStr.length() > 0) {
+            Serial.println("💾 Sinal salvo no banco recebido para o comando: " + cmdStr);
+            Serial.print("   raw = ");
+            Serial.println(learnedRawStr);
             if (storeLearnedSignal(cmdStr, learnedRawStr)) {
               sent = sendStoredSignal(cmdStr);
+            } else {
+              Serial.println("❌ Não foi possível armazenar o sinal vindo do banco para: " + cmdStr);
             }
           } else {
-            sent = sendStoredSignal(cmdStr);
+            Serial.println("⚠️ Nenhum sinal IR salvo no banco para: " + cmdStr);
+            sent = false;
           }
 
           if (!sent) {
-            Serial.println("⚠️ Nao foi possivel transmitir IR para: " + cmdStr);
+            Serial.println("❌ Comando ignorado: não há sinal IR salvo no banco para " + cmdStr);
           }
         }
         else if (cmdStr == "wifi_reset" || cmdStr == "reset_wifi") {
@@ -697,6 +935,13 @@ void setup() {
     server.send(200, "application/json", "{\"ok\":true}");
   });
 
+  // Cancelar aprendizado
+  server.on("/learn/cancel", HTTP_POST, []() {
+    cancelLearningMode("Cancelado via API local.");
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(200, "application/json", "{\"ok\":true}");
+  });
+
   // Transmitir sinal
   server.on("/transmit", HTTP_POST, []() {
     if (!server.hasArg("plain")) {
@@ -776,11 +1021,10 @@ void setup() {
   }
 
   // ========== Configurar Pinos IR ==========
-  pinMode(rxPinIR, INPUT);
   pinMode(txPinIR, OUTPUT);
 
-  IrSender.begin(txPinIR, ENABLE_LED_FEEDBACK);
-  attachInterrupt(digitalPinToInterrupt(rxPinIR), rxIR_Interrupt_Handler, CHANGE);
+  IrSender.begin(txPinIR, DISABLE_LED_FEEDBACK);
+  IrReceiver.begin(rxPinIR, DISABLE_LED_FEEDBACK);
 
   Serial.println("\n✅ Sistema IR inicializado com sucesso!");
   Serial.println("   Receptor IR: GPIO " + String(rxPinIR));

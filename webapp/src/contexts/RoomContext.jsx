@@ -97,6 +97,19 @@ export const RoomProvider = ({ children }) => {
     }
   };
 
+  const cancelIrLearning = async (roomId) => {
+    try {
+      const response = await api.post(`/api/rooms/${roomId}/ir/learn/cancel`);
+      toast.success(response?.data?.message || 'Clonagem IR cancelada.');
+      await fetchRooms();
+      return response.data;
+    } catch (error) {
+      const msg = error?.response?.data?.error || error.message || 'Erro ao cancelar clonagem IR.';
+      toast.error(msg);
+      throw error;
+    }
+  };
+
   // Função para alterar setpoint de temperatura
   const setTemperature = async (roomId, temperature) => {
     try {
@@ -182,6 +195,7 @@ export const RoomProvider = ({ children }) => {
         setTemperature,
         startIrLearning,
         confirmIrLearning,
+        cancelIrLearning,
         updateRoom,
         deleteRoom,
         addSchedule,

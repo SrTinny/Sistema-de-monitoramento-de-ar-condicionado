@@ -328,6 +328,108 @@
   font-size: 0.85rem;
 }
 
+.learningOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.72);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 2200;
+}
+
+.learningCard {
+  width: 100%;
+  max-width: 360px;
+  border-radius: 14px;
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  background: linear-gradient(160deg, rgba(2, 6, 23, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
+  padding: 1rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.learningCard h5 {
+  margin: 0;
+  color: #e0f2fe;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.learningSubtitle {
+  margin: 0.45rem 0 0;
+  color: #bae6fd;
+  font-size: 0.86rem;
+}
+
+.learningSteps {
+  margin: 0.85rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.learningSteps li {
+  margin: 0.35rem 0;
+  color: #e2e8f0;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.learningMessage {
+  margin: 0.85rem 0 0;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.learningSignalBox {
+  margin-top: 0.85rem;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 10px;
+  background: rgba(2, 132, 199, 0.08);
+  padding: 0.6rem;
+}
+
+.learningSignalBox strong {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: #dbeafe;
+  font-size: 0.82rem;
+}
+
+.learningSignalPreview {
+  width: 100%;
+  min-height: 92px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.65);
+  color: #cbd5e1;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  resize: vertical;
+  padding: 0.5rem;
+}
+
+.learningActions {
+  margin-top: 0.9rem;
+  display: flex;
+}
+
+.learningCancelButton {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.learningCancelButton:hover {
+  filter: brightness(1.05);
+}
+
 .irReceivingBox,
 .irCapturedBox {
   margin-top: 0.85rem;

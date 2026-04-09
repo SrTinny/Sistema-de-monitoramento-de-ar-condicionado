@@ -25,16 +25,124 @@ app.use(express.json());
 function normalizeIrButton(button) {
   if (!button || typeof button !== 'string') return null;
   const normalized = button.trim().toLowerCase();
-  if (normalized === 'ligar' || normalized === 'desligar') return normalized;
+  const aliases = {
+    ligar: 'ligar',
+    power_on: 'ligar',
+    on: 'ligar',
+    liga: 'ligar',
+    turn_on: 'ligar',
+    ac_on: 'ligar',
+    start: 'ligar',
+    desligar: 'desligar',
+    power_off: 'desligar',
+    off: 'desligar',
+    desliga: 'desligar',
+    turn_off: 'desligar',
+    ac_off: 'desligar',
+    stop: 'desligar',
+    temp_up: 'temp_up',
+    up: 'temp_up',
+    increase: 'temp_up',
+    increase_temp: 'temp_up',
+    aumentar: 'temp_up',
+    aumentar_temp: 'temp_up',
+    temp_down: 'temp_down',
+    down: 'temp_down',
+    decrease: 'temp_down',
+    decrease_temp: 'temp_down',
+    diminuir: 'temp_down',
+    diminuir_temp: 'temp_down',
+  };
+  return aliases[normalized] || null;
+}
+
+function getSignalColumnByButton(button) {
+  const normalized = normalizeIrButton(button);
+  if (normalized === 'ligar') return 'irSignalLigar';
+  if (normalized === 'desligar') return 'irSignalDesligar';
+  if (normalized === 'temp_up') return 'irSignalTempUp';
+  if (normalized === 'temp_down') return 'irSignalTempDown';
+  return null;
+}
+
+function getSignalFromDedicatedColumns(ac, button) {
+  const column = getSignalColumnByButton(button);
+  if (!column) return null;
+  const raw = typeof ac?.[column] === 'string' ? ac[column].trim() : '';
+  if (!raw) return null;
+  return { button: normalizeIrButton(button), raw };
+}
+
+function buildSignalColumnUpdate(button, raw) {
+  const column = getSignalColumnByButton(button);
+  if (!column) return {};
+  return { [column]: raw };
+}
+
+function resolveIrSignalButtonKey(irSignals, button) {
+  if (!irSignals || typeof irSignals !== 'object') return null;
+
+  const normalized = normalizeIrButton(button);
+  const aliases = {
+    ligar: ['ligar', 'power_on', 'on', 'liga', 'power', 'turn_on', 'ac_on', 'start'],
+    desligar: ['desligar', 'power_off', 'off', 'desliga', 'turn_off', 'ac_off', 'stop'],
+    temp_up: ['temp_up', 'up', 'increase', 'increase_temp', 'aumentar', 'aumentar_temp'],
+    temp_down: ['temp_down', 'down', 'decrease', 'decrease_temp', 'diminuir', 'diminuir_temp'],
+  };
+
+  const candidates = normalized && aliases[normalized] ? aliases[normalized] : [String(button).trim().toLowerCase()];
+
+  for (const candidate of candidates) {
+    const signal = irSignals[candidate];
+    if (!signal || typeof signal !== 'object') {
+      continue;
+    }
+
+    if (typeof signal.raw === 'string' && signal.raw.trim().length > 0) {
+      return candidate;
+    }
+  }
+
+  if (normalized) {
+    const preferredPattern = normalized === 'ligar'
+      ? /(lig|on|power.*on|turn.*on|start|ac[_-]?on)/i
+      : normalized === 'desligar'
+        ? /(deslig|off|power.*off|turn.*off|stop|ac[_-]?off)/i
+        : normalized === 'temp_up'
+          ? /(temp.*up|up|increase|aument)/i
+          : /(temp.*down|down|decrease|diminu)/i;
+
+    for (const [candidateKey, signal] of Object.entries(irSignals)) {
+      if (!signal || typeof signal !== 'object') {
+        continue;
+      }
+
+      if (typeof signal.raw !== 'string' || signal.raw.trim().length === 0) {
+        continue;
+      }
+
+      if (preferredPattern.test(candidateKey)) {
+        return candidateKey;
+      }
+    }
+
+    const rawKeys = Object.entries(irSignals).filter(([, signal]) => signal && typeof signal === 'object' && typeof signal.raw === 'string' && signal.raw.trim().length > 0);
+    if (rawKeys.length === 1) {
+      return rawKeys[0][0];
+    }
+  }
+
   return null;
 }
 
 function getIrSignalForButton(irSignals, button) {
-  if (!irSignals || typeof irSignals !== 'object') return null;
-  const signal = irSignals[button];
+  const resolvedButton = resolveIrSignalButtonKey(irSignals, button);
+  if (!resolvedButton) return null;
+
+  const signal = irSignals[resolvedButton];
   if (!signal || typeof signal !== 'object') return null;
   if (typeof signal.raw !== 'string' || signal.raw.trim().length === 0) return null;
-  return signal;
+  return { button: resolvedButton, raw: signal.raw };
 }
 
 function validateRawSignal(raw) {
@@ -42,7 +150,27 @@ function validateRawSignal(raw) {
     return { valid: false, reason: 'Sinal IR vazio.' };
   }
 
-  const values = raw
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('NEC:')) {
+    const parts = trimmed.split(':');
+    if (parts.length !== 3) {
+      return { valid: false, reason: 'Formato NEC inválido.' };
+    }
+
+    const address = Number(parts[1]);
+    const command = Number(parts[2]);
+    if (!Number.isInteger(address) || address < 0 || address > 0xffff) {
+      return { valid: false, reason: 'Endereço NEC inválido.' };
+    }
+
+    if (!Number.isInteger(command) || command < 0 || command > 0xff) {
+      return { valid: false, reason: 'Comando NEC inválido.' };
+    }
+
+    return { valid: true, normalized: `NEC:${address}:${command}` };
+  }
+
+  const values = trimmed
     .split(',')
     .map((value) => parseInt(value.trim(), 10))
     .filter((value) => !Number.isNaN(value));
@@ -51,7 +179,7 @@ function validateRawSignal(raw) {
     return { valid: false, reason: 'Sinal IR muito curto.' };
   }
 
-  if (values.length > 800) {
+  if (values.length > 4000) {
     return { valid: false, reason: 'Sinal IR excede o tamanho máximo.' };
   }
 
@@ -60,7 +188,7 @@ function validateRawSignal(raw) {
     return { valid: false, reason: 'Sinal IR contém valores fora do intervalo permitido.' };
   }
 
-  return { valid: true };
+  return { valid: true, normalized: values.join(',') };
 }
 
 // ==========================================================
@@ -261,6 +389,10 @@ app.delete('/api/rooms/:id', authenticateToken, isAdmin, async (req, res) => {
     const sharedReset = {
       name: `AC ${id.slice(-6).toUpperCase()}`,
       irSignals: null,
+      irSignalLigar: null,
+      irSignalDesligar: null,
+      irSignalTempUp: null,
+      irSignalTempDown: null,
       irLearnState: null,
       irLearnButton: null,
       irLearnRaw: null,
@@ -334,17 +466,22 @@ app.post('/api/command', authenticateToken, async (req, res) => {
     }
 
     const updateData = { pendingCommand: command };
+    if (normalizedCommand === 'ligar') {
+      updateData.status = 'ligado';
+    } else if (normalizedCommand === 'desligar') {
+      updateData.status = 'desligado';
+    }
 
     if (typeof command === 'string' && command.startsWith('learn:')) {
       const button = normalizeIrButton(command.substring('learn:'.length));
       if (!button) {
-        return res.status(400).json({ error: 'Botão inválido para aprendizado. Use ligar ou desligar.' });
+        return res.status(400).json({ error: 'Botão inválido para aprendizado. Use ligar, desligar, temp_up ou temp_down.' });
       }
 
-      updateData.irLearnState = 'aguardando';
+      updateData.irLearnState = 'aguardando_primeiro';
       updateData.irLearnButton = button;
       updateData.irLearnRaw = null;
-      updateData.irLearnMessage = `Aguardando captura do botão '${button}'.`;
+      updateData.irLearnMessage = `Aguardando 1ª captura do botão '${button}'.`;
       updateData.irLearnUpdatedAt = new Date();
     }
 
@@ -376,7 +513,7 @@ app.post('/api/rooms/:id/ir/learn', authenticateToken, isAdmin, async (req, res)
   const button = normalizeIrButton(req.body?.button);
 
   if (!button) {
-    return res.status(400).json({ error: 'Botão inválido. Use ligar ou desligar.' });
+    return res.status(400).json({ error: 'Botão inválido. Use ligar, desligar, temp_up ou temp_down.' });
   }
 
   try {
@@ -384,10 +521,10 @@ app.post('/api/rooms/:id/ir/learn', authenticateToken, isAdmin, async (req, res)
       where: { id },
       data: {
         pendingCommand: `learn:${button}`,
-        irLearnState: 'aguardando',
+        irLearnState: 'aguardando_primeiro',
         irLearnButton: button,
         irLearnRaw: null,
-        irLearnMessage: `Aguardando captura do botão '${button}'. Aponte o controle para o receptor IR.`,
+        irLearnMessage: `Aguardando 1ª captura do botão '${button}'. Aponte o controle para o receptor IR.`,
         irLearnUpdatedAt: new Date(),
       },
       select: {
@@ -411,6 +548,50 @@ app.post('/api/rooms/:id/ir/learn', authenticateToken, isAdmin, async (req, res)
     }
     console.error('[ir:learn] erro ao iniciar aprendizado:', error);
     res.status(500).json({ error: 'Não foi possível iniciar o modo de aprendizado IR.' });
+  }
+});
+
+app.post('/api/rooms/:id/ir/learn/cancel', authenticateToken, isAdmin, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const ac = await prisma.airConditioner.findUnique({ where: { id } });
+
+    if (!ac) {
+      return res.status(404).json({ error: 'Aparelho não encontrado.' });
+    }
+
+    const pending = typeof ac.pendingCommand === 'string' ? ac.pendingCommand : '';
+    const clearPending = pending.startsWith('learn:') || pending.startsWith('learn_confirm:');
+
+    const updated = await prisma.airConditioner.update({
+      where: { id },
+      data: {
+        pendingCommand: clearPending ? null : ac.pendingCommand,
+        irLearnState: 'cancelado',
+        irLearnRaw: null,
+        irLearnMessage: 'Clonagem IR cancelada pelo usuário.',
+        irLearnUpdatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        deviceId: true,
+        pendingCommand: true,
+        irLearnState: true,
+        irLearnButton: true,
+        irLearnRaw: true,
+        irLearnMessage: true,
+        irLearnUpdatedAt: true,
+      },
+    });
+
+    res.status(200).json({
+      message: 'Aprendizado IR cancelado.',
+      room: updated,
+    });
+  } catch (error) {
+    console.error('[ir:cancel] erro ao cancelar aprendizado:', error);
+    res.status(500).json({ error: 'Não foi possível cancelar o aprendizado IR.' });
   }
 });
 
@@ -444,6 +625,7 @@ app.post('/api/rooms/:id/ir/learn/confirm', authenticateToken, isAdmin, async (r
       };
 
       updateData.irSignals = currentSignals;
+      Object.assign(updateData, buildSignalColumnUpdate(button, raw));
       updateData.irLearnState = 'salvo';
       updateData.irLearnMessage = `Sinal '${button}' salvo com sucesso.`;
     } else {
@@ -644,18 +826,63 @@ app.post('/api/heartbeat', async (req, res) => {
     };
 
     if (learnedSignal && typeof learnedSignal === 'object') {
-      const learnedButton = normalizeIrButton(learnedSignal.button);
+      const learnedButton = normalizeIrButton(learnedSignal.button || learnedSignal.commandId);
       const learnedStatus = typeof learnedSignal.status === 'string' ? learnedSignal.status.toLowerCase() : '';
       const learnedMessage = typeof learnedSignal.message === 'string' ? learnedSignal.message : null;
 
       if (learnedStatus === 'captured' && learnedButton && typeof learnedSignal.raw === 'string') {
         const validation = validateRawSignal(learnedSignal.raw);
         if (validation.valid) {
-          updateData.irLearnState = 'capturado_pendente';
-          updateData.irLearnButton = learnedButton;
-          updateData.irLearnRaw = learnedSignal.raw;
-          updateData.irLearnMessage = `Sinal '${learnedButton}' capturado. Confirme no painel para salvar.`;
-          updateData.irLearnUpdatedAt = new Date();
+          const normalizedRaw = validation.normalized || learnedSignal.raw;
+          const isSecondStep = ac.irLearnState === 'aguardando_segundo'
+            && normalizeIrButton(ac.irLearnButton) === learnedButton
+            && typeof ac.irLearnRaw === 'string'
+            && ac.irLearnRaw.length > 0;
+
+          if (isSecondStep) {
+            if (ac.irLearnRaw === normalizedRaw) {
+              const currentSignals = ac.irSignals && typeof ac.irSignals === 'object' ? { ...ac.irSignals } : {};
+              currentSignals[learnedButton] = {
+                raw: normalizedRaw,
+                updatedAt: new Date().toISOString(),
+                validated: true,
+                captures: 2,
+                draft: false,
+              };
+
+              updateData.irSignals = currentSignals;
+              Object.assign(updateData, buildSignalColumnUpdate(learnedButton, normalizedRaw));
+              updateData.irLearnState = 'salvo';
+              updateData.irLearnButton = learnedButton;
+              updateData.irLearnRaw = null;
+              updateData.irLearnMessage = `Sinal '${learnedButton}' confirmado em 2 capturas e salvo com sucesso.`;
+              updateData.irLearnUpdatedAt = new Date();
+            } else {
+              updateData.irLearnState = 'erro';
+              updateData.irLearnButton = learnedButton;
+              updateData.irLearnRaw = null;
+              updateData.irLearnMessage = `2ª captura do botão '${learnedButton}' diferente da 1ª. Reinicie a clonagem.`;
+              updateData.irLearnUpdatedAt = new Date();
+            }
+          } else {
+            const currentSignals = ac.irSignals && typeof ac.irSignals === 'object' ? { ...ac.irSignals } : {};
+            currentSignals[learnedButton] = {
+              raw: normalizedRaw,
+              updatedAt: new Date().toISOString(),
+              validated: false,
+              captures: 1,
+              draft: true,
+            };
+
+            updateData.irLearnState = 'aguardando_segundo';
+            updateData.irLearnButton = learnedButton;
+            updateData.irLearnRaw = normalizedRaw;
+            updateData.irSignals = currentSignals;
+            Object.assign(updateData, buildSignalColumnUpdate(learnedButton, normalizedRaw));
+            updateData.irLearnMessage = `1ª captura de '${learnedButton}' recebida. Envie novamente para confirmar.`;
+            updateData.irLearnUpdatedAt = new Date();
+            updateData.pendingCommand = `learn_confirm:${learnedButton}`;
+          }
         } else {
           updateData.irLearnState = 'erro';
           updateData.irLearnButton = learnedButton;
@@ -667,7 +894,7 @@ app.post('/api/heartbeat', async (req, res) => {
         updateData.irLearnState = 'timeout';
         updateData.irLearnButton = learnedButton;
         updateData.irLearnRaw = null;
-        updateData.irLearnMessage = learnedMessage || `Tempo esgotado para capturar o botão '${learnedButton}'.`;
+        updateData.irLearnMessage = learnedMessage || `Tempo esgotado para capturar o botão '${learnedButton}'. Reinicie a clonagem.`;
         updateData.irLearnUpdatedAt = new Date();
       }
     }
@@ -701,12 +928,25 @@ app.post('/api/heartbeat', async (req, res) => {
       command: pendingCommand || 'none',
     };
 
-    if (pendingCommand === 'ligar' || pendingCommand === 'desligar') {
-      const learned = getIrSignalForButton(ac.irSignals, pendingCommand);
+    const commandButton = normalizeIrButton(pendingCommand);
+    if (commandButton) {
+      const learnedFromColumns = getSignalFromDedicatedColumns(ac, commandButton);
+      const learned = learnedFromColumns || getIrSignalForButton(ac.irSignals, commandButton);
+      const pendingLearnedButton = normalizeIrButton(ac.irLearnButton);
+      const pendingLearnedRaw = typeof ac.irLearnRaw === 'string' ? ac.irLearnRaw.trim() : '';
+
       if (learned) {
         responsePayload.learnedSignal = {
-          button: pendingCommand,
+          button: learned.button,
           raw: learned.raw,
+        };
+      } else if (
+        pendingLearnedRaw.length > 0
+        && (!pendingLearnedButton || pendingLearnedButton === commandButton)
+      ) {
+        responsePayload.learnedSignal = {
+          button: commandButton,
+          raw: pendingLearnedRaw,
         };
       }
     }

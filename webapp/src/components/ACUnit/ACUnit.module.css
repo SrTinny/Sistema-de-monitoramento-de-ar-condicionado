@@ -205,6 +205,41 @@
   padding: 0.25rem 0;
 }
 
+.tempControls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.tempButton {
+  border: none;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.tempButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.tempButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.tempDownButton {
+  background: linear-gradient(135deg, #0f172a, #334155);
+}
+
+.tempUpButton {
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+}
+
 .rangeInput {
   -webkit-appearance: none;
   appearance: none;
@@ -304,6 +339,15 @@
   .mainButton {
     padding: 10px;
     font-size: 0.9rem;
+  }
+
+  .tempControls {
+    gap: 0.5rem;
+  }
+
+  .tempButton {
+    padding: 0.75rem 0.9rem;
+    font-size: 0.85rem;
   }
 }
 

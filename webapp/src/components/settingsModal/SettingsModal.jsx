@@ -25,13 +25,20 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
   const [showCloneOptions, setShowCloneOptions] = useState(false);
   const [learningButton, setLearningButton] = useState(null);
   const [isReceivingSignal, setIsReceivingSignal] = useState(false);
-  const [capturedSignal, setCapturedSignal] = useState(null);
+  const [learningDialog, setLearningDialog] = useState({
+    visible: false,
+    step: "idle",
+    button: null,
+    message: "",
+  });
+  const [learningSignalPreview, setLearningSignalPreview] = useState("");
   const [localRoomState, setLocalRoomState] = useState(room || null);
   const [showWifiResetConfirm, setShowWifiResetConfirm] = useState(false);
   const [isWifiResetSubmitting, setIsWifiResetSubmitting] = useState(false);
   const initializedRoomIdRef = useRef(null);
-  const { deleteRoom, sendCommand, startIrLearning, confirmIrLearning, fetchRooms } = useContext(RoomContext);
+  const { deleteRoom, sendCommand, startIrLearning, cancelIrLearning, fetchRooms } = useContext(RoomContext);
   const { user } = useContext(AuthContext);
+  const learningCancelledRef = useRef(false);
 
   useEffect(() => {
     if (!visible) {
@@ -51,7 +58,8 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
       setLocalRoomState(room);
       setLearningButton(null);
       setIsReceivingSignal(false);
-      setCapturedSignal(null);
+      setLearningDialog({ visible: false, step: "idle", button: null, message: "" });
+      setLearningSignalPreview("");
       setShowWifiResetConfirm(false);
       setIsWifiResetSubmitting(false);
       initializedRoomIdRef.current = room.id;
@@ -199,13 +207,40 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const hasLearnedSignal = (button) => {
-    return Boolean(localRoomState?.irSignals?.[button]?.raw);
+    const fromJson = Boolean(localRoomState?.irSignals?.[button]?.raw);
+    if (fromJson) return true;
+
+    const columnByButton = {
+      ligar: "irSignalLigar",
+      desligar: "irSignalDesligar",
+      temp_up: "irSignalTempUp",
+      temp_down: "irSignalTempDown",
+    };
+
+    const column = columnByButton[button];
+    const raw = column ? localRoomState?.[column] : null;
+    return typeof raw === "string" && raw.trim().length > 0;
   };
 
-  const truncateSignal = (raw) => {
-    if (!raw) return "";
-    if (raw.length <= 300) return raw;
-    return `${raw.slice(0, 300)}...`;
+  const closeLearningDialog = () => {
+    setLearningDialog({ visible: false, step: "idle", button: null, message: "" });
+    setLearningSignalPreview("");
+  };
+
+  const handleCancelLearning = async () => {
+    learningCancelledRef.current = true;
+    setIsReceivingSignal(false);
+    setLearningButton(null);
+
+    if (room?.id) {
+      try {
+        await cancelIrLearning(room.id);
+      } catch (error) {
+        console.error("Erro ao cancelar clonagem IR:", error);
+      }
+    }
+
+    closeLearningDialog();
   };
 
   const handleLearnIr = async (button) => {
@@ -215,16 +250,33 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
     }
 
     const startedAtMs = Date.now();
+    learningCancelledRef.current = false;
 
     try {
-      setCapturedSignal(null);
       setLearningButton(button);
       setIsReceivingSignal(true);
+      setLearningDialog({
+        visible: true,
+        step: "waiting",
+        button,
+        message: `Aguardando 1ª captura do botão '${button}'.`,
+      });
+      setLearningSignalPreview("");
       await startIrLearning(room.id, button);
 
       let attempts = 0;
+      let secondCapturePrompted = false;
       while (attempts < 18) {
+        if (learningCancelledRef.current) {
+          return;
+        }
+
         await wait(2000);
+
+        if (learningCancelledRef.current) {
+          return;
+        }
+
         const response = await api.get(`/api/rooms/${room.id}`);
         const latest = response.data;
         setLocalRoomState(latest);
@@ -234,26 +286,63 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
         const state = latest?.irLearnState;
 
         if (isCurrentButton && updatedAt >= startedAtMs) {
-          if (state === "capturado_pendente" && latest?.irLearnRaw) {
-            setCapturedSignal({
+          if (state === "aguardando_segundo") {
+            if (latest?.irLearnRaw) {
+              setLearningSignalPreview(latest.irLearnRaw);
+            }
+            if (!secondCapturePrompted) {
+              toast.success(latest?.irLearnMessage || `1ª captura de '${button}' recebida. Pressione novamente para confirmar.`);
+              setLearningDialog({
+                visible: true,
+                step: "confirm",
+                button,
+                message: latest?.irLearnMessage || `Sinal IR recebido para '${button}'. Envie novamente para confirmar.`,
+              });
+              secondCapturePrompted = true;
+            }
+            attempts += 1;
+            continue;
+          }
+
+          if (state === "salvo") {
+            const savedSignal = latest?.irSignals?.[button]?.raw || learningSignalPreview;
+            if (savedSignal) {
+              setLearningSignalPreview(savedSignal);
+            }
+            toast.success(latest?.irLearnMessage || `Sinal '${button}' validado em dupla captura e salvo.`);
+            setLearningDialog({
+              visible: true,
+              step: "success",
               button,
-              raw: latest.irLearnRaw,
-              message: latest.irLearnMessage || `Sinal '${button}' recebido. Deseja salvar?`,
+              message: latest?.irLearnMessage || `Botão '${button}' clonado com sucesso.`,
+            });
+            setIsReceivingSignal(false);
+            setLearningButton(null);
+            await fetchRooms();
+            await wait(1400);
+            closeLearningDialog();
+            return;
+          }
+
+          if (state === "timeout") {
+            setLearningDialog({
+              visible: true,
+              step: "error",
+              button,
+              message: latest?.irLearnMessage || `Tempo esgotado ao capturar sinal '${button}'.`,
             });
             setIsReceivingSignal(false);
             setLearningButton(null);
             return;
           }
 
-          if (state === "timeout") {
-            window.alert(latest.irLearnMessage || `Tempo esgotado ao capturar sinal '${button}'.`);
-            setIsReceivingSignal(false);
-            setLearningButton(null);
-            return;
-          }
-
           if (state === "erro") {
-            window.alert(latest.irLearnMessage || `Falha ao capturar sinal '${button}'.`);
+            setLearningDialog({
+              visible: true,
+              step: "error",
+              button,
+              message: latest?.irLearnMessage || `Falha ao capturar sinal '${button}'.`,
+            });
             setIsReceivingSignal(false);
             setLearningButton(null);
             return;
@@ -263,30 +352,23 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
         attempts += 1;
       }
 
-      window.alert("Não houve confirmação de captura a tempo. Verifique se o ESP está online e tente novamente.");
+      setLearningDialog({
+        visible: true,
+        step: "error",
+        button,
+        message: "Não houve confirmação de captura a tempo. Verifique se o ESP está online e tente novamente.",
+      });
     } catch (error) {
       console.error("Erro ao clonar sinal IR:", error);
-      window.alert("Não foi possível concluir a clonagem do sinal IR.");
+      setLearningDialog({
+        visible: true,
+        step: "error",
+        button,
+        message: "Não foi possível concluir a clonagem do sinal IR.",
+      });
     } finally {
       setIsReceivingSignal(false);
       setLearningButton(null);
-    }
-  };
-
-  const handleConfirmCapturedSignal = async (save) => {
-    if (!capturedSignal) {
-      return;
-    }
-
-    try {
-      const result = await confirmIrLearning(room.id, save);
-      if (result?.room) {
-        setLocalRoomState((prev) => ({ ...(prev || {}), ...result.room }));
-      }
-      setCapturedSignal(null);
-      await fetchRooms();
-    } catch (error) {
-      console.error("Erro ao confirmar sinal capturado:", error);
     }
   };
 
@@ -294,7 +376,7 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
     <div
       className={styles.modalOverlay} // Renomeado para consistência
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && !learningDialog.visible) onClose();
       }}
     >
       <div className={styles.modalContent}>
@@ -303,6 +385,8 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
           <button
             onClick={onClose}
             className={styles.closeButton}
+            disabled={learningDialog.visible}
+            title={learningDialog.visible ? "Finalize ou cancele a clonagem IR para fechar" : "Fechar"}
             aria-label="Fechar modal" // Adicionada acessibilidade
           >
             &times;
@@ -400,14 +484,14 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
           <div className={styles.irSection}>
             <h4>Clonar controle remoto (IR)</h4>
             <p className={styles.irHint}>
-              Capture separadamente os botões de ligar e desligar do controle original.
+              Capture os botões principais do controle original: ligar, desligar, aumentar e diminuir temperatura.
             </p>
 
             <button
               type="button"
               onClick={() => setShowCloneOptions((prev) => !prev)}
               className={styles.cloneControlButton}
-              disabled={isReceivingSignal}
+              disabled={isReceivingSignal || learningDialog.visible}
             >
               {showCloneOptions ? "Ocultar opções de clonagem" : "Clonar controle"}
             </button>
@@ -418,7 +502,7 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
                   type="button"
                   onClick={() => handleLearnIr("ligar")}
                   className={styles.learnButton}
-                  disabled={Boolean(learningButton)}
+                  disabled={Boolean(learningButton) || learningDialog.visible}
                 >
                   Clonar botão Ligar
                 </button>
@@ -427,42 +511,36 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
                   type="button"
                   onClick={() => handleLearnIr("desligar")}
                   className={styles.learnButton}
-                  disabled={Boolean(learningButton)}
+                  disabled={Boolean(learningButton) || learningDialog.visible}
                 >
                   Clonar botão Desligar
                 </button>
-              </div>
-            )}
 
-            {isReceivingSignal && learningButton && (
-              <div className={styles.irReceivingBox}>
-                <strong>ESP recebendo sinal IR...</strong>
-                <p>Pressione agora o botão '{learningButton}' no controle remoto.</p>
-              </div>
-            )}
+                <button
+                  type="button"
+                  onClick={() => handleLearnIr("temp_up")}
+                  className={styles.learnButton}
+                  disabled={Boolean(learningButton) || learningDialog.visible}
+                >
+                  Clonar botão Temp +
+                </button>
 
-            {capturedSignal && (
-              <div className={styles.irCapturedBox}>
-                <strong>Sinal recebido para '{capturedSignal.button}'</strong>
-                <p>{capturedSignal.message}</p>
-                <textarea
-                  className={styles.signalPreview}
-                  readOnly
-                  value={truncateSignal(capturedSignal.raw)}
-                />
-                <div className={styles.signalConfirmActions}>
-                  <button type="button" className={styles.saveSignalButton} onClick={() => handleConfirmCapturedSignal(true)}>
-                    Salvar sinal
-                  </button>
-                  <button type="button" className={styles.discardSignalButton} onClick={() => handleConfirmCapturedSignal(false)}>
-                    Descartar
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => handleLearnIr("temp_down")}
+                  className={styles.learnButton}
+                  disabled={Boolean(learningButton) || learningDialog.visible}
+                >
+                  Clonar botão Temp -
+                </button>
               </div>
             )}
 
             <p className={styles.irStatus}>
               Ligar: {hasLearnedSignal("ligar") ? "configurado" : "não configurado"} | Desligar: {hasLearnedSignal("desligar") ? "configurado" : "não configurado"}
+            </p>
+            <p className={styles.irStatus}>
+              Temp +: {hasLearnedSignal("temp_up") ? "configurado" : "não configurado"} | Temp -: {hasLearnedSignal("temp_down") ? "configurado" : "não configurado"}
             </p>
           </div>
         )}
@@ -487,6 +565,42 @@ export default function SettingsModal({ visible, room, onClose, onSave }) {
           </button>
         </div>
       </div>
+
+      {learningDialog.visible && (
+        <div className={styles.learningOverlay} role="dialog" aria-modal="true" aria-label="Clonagem IR em andamento">
+          <div className={styles.learningCard}>
+            <h5>Aguardando sinal IR</h5>
+            <p className={styles.learningSubtitle}>Botão alvo: <strong>{learningDialog.button || "-"}</strong></p>
+
+            <ol className={styles.learningSteps}>
+              <li>{learningDialog.step === "confirm" || learningDialog.step === "success" ? "1ª captura recebida" : "Aguardando 1ª captura"}</li>
+              <li>{learningDialog.step === "success" ? "2ª captura confirmada" : "Envie novamente para confirmar"}</li>
+              <li>{learningDialog.step === "success" ? "Botão clonado com sucesso" : "Salvar automaticamente após validação"}</li>
+            </ol>
+
+            <p className={styles.learningMessage}>{learningDialog.message}</p>
+
+            {learningSignalPreview && (
+              <div className={styles.learningSignalBox}>
+                <strong>Sinal IR recebido/clonado:</strong>
+                <textarea
+                  className={styles.learningSignalPreview}
+                  readOnly
+                  value={learningSignalPreview}
+                />
+              </div>
+            )}
+
+            <div className={styles.learningActions}>
+              {learningDialog.step !== "success" && (
+                <button type="button" className={styles.learningCancelButton} onClick={handleCancelLearning}>
+                  Cancelar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>,
     document.getElementById("modal-root")
   );

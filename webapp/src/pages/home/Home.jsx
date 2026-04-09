@@ -65,6 +65,11 @@ export default function Home() {
     await setTemperature(roomId, temp);
   };
 
+  const handleIrCommand = async (roomId, command) => {
+    await sendCommand(roomId, command);
+    setTimeout(fetchRooms, 500);
+  };
+
   return (
     <main className={styles.container}>
       {/* Dashboard Header com estatísticas */}
@@ -98,6 +103,7 @@ export default function Home() {
                       room={sala}
                       onToggle={toggleAC}
                       onTempChange={handleTemperatureChange}
+                      onIrCommand={handleIrCommand}
                       onUpdate={updateRoom}
                     />
                   </StaggerItem>

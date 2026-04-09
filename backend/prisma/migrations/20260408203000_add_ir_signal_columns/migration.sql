@@ -1,0 +1,5 @@
+ALTER TABLE "AirConditioner"
+ADD COLUMN IF NOT EXISTS "irSignalLigar" TEXT,
+ADD COLUMN IF NOT EXISTS "irSignalDesligar" TEXT,
+ADD COLUMN IF NOT EXISTS "irSignalTempUp" TEXT,
+ADD COLUMN IF NOT EXISTS "irSignalTempDown" TEXT; 
