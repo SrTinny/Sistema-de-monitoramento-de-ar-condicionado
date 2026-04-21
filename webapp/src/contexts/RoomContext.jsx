@@ -152,7 +152,7 @@ export const RoomProvider = ({ children }) => {
         fetchRooms();
         return 'Sala resetada! Reaparecerá em "Salas Disponíveis".';
       },
-      error: 'Erro ao resetar a sala.',
+      error: (err) => err?.response?.data?.error || 'Erro ao resetar a sala.',
     });
     
     return promise;

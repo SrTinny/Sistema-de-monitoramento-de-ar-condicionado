@@ -54,6 +54,7 @@ const Login = () => {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="seu@email.com"
             required
+            autoComplete="email"
             autoFocus // Foco automático no primeiro campo
           />
         </div>
@@ -67,6 +68,7 @@ const Login = () => {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Sua senha"
             required
+            autoComplete="current-password"
           />
         </div>
 
