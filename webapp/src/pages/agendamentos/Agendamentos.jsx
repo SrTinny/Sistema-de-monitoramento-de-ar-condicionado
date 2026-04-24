@@ -22,8 +22,20 @@ const isControlReady = (roomData) => !isPendingConfiguration(roomData);
 
 const isRemovedRoom = (roomData) => String(roomData?.room ?? '').trim() === '__removed__';
 
+const formatNextExecution = (schedule) => {
+  if (!schedule?.scheduledAt) {
+    return 'Próxima execução não definida';
+  }
+
+  try {
+    return `Próxima execução: ${format(parseISO(schedule.scheduledAt), 'dd/MM/yyyy HH:mm')}`;
+  } catch {
+    return 'Próxima execução inválida';
+  }
+};
+
 export default function Agendamentos() {
-  const { rooms, fetchRooms, schedules, fetchSchedules, addSchedule, deleteSchedule } = useRooms();
+  const { rooms, fetchRooms, schedules, fetchSchedules, addSchedule, addSchedulesBulk, deleteSchedule } = useRooms();
   const configuredRooms = useMemo(
     () => rooms.filter((room) => !isRemovedRoom(room) && isControlReady(room)),
     [rooms]
@@ -89,19 +101,17 @@ export default function Agendamentos() {
     }
 
     try {
-      // Se for "todos", cria agendamento para cada sala
+      // Se for "todos", cria em lote para evitar estado parcial.
       if (form.airConditionerId === "all") {
-        for (const room of configuredRooms) {
-          const scheduleData = {
-            airConditionerId: room.id,
-            action: form.action,
-            isRecurring: form.isRecurring,
-            recurringTime: form.recurringTime,
-            scheduledAt: form.scheduledAt,
-          };
-          await addSchedule(scheduleData);
-        }
-        toast.success(`Agendamento criado para todas as ${configuredRooms.length} salas!`);
+        const bulkResult = await addSchedulesBulk({
+          airConditionerIds: configuredRooms.map((room) => room.id),
+          action: form.action,
+          isRecurring: form.isRecurring,
+          recurringTime: form.recurringTime,
+          scheduledAt: form.scheduledAt,
+        });
+
+        toast.success(`${bulkResult?.createdCount || configuredRooms.length} agendamento(s) criado(s) em lote com sucesso!`);
       } else {
         const scheduleData = {
           airConditionerId: form.airConditionerId,
@@ -183,7 +193,7 @@ export default function Agendamentos() {
                     onChange={handleChange}
                   />
                   <small className={styles.helperText}>
-                    Vai repetir todos os dias nesta hora
+                    Vai repetir todos os dias nesta hora e reagendar automaticamente a próxima execução.
                   </small>
                 </div>
               )}
@@ -220,7 +230,7 @@ export default function Agendamentos() {
                     <span className={styles.itemTitle}>{s.airConditioner?.name || 'Sala desconhecida'}</span>
                     <span className={styles.itemMeta}>
                       {s.isRecurring ? (
-                        <span>🔄 Todos os dias às {s.recurringTime || 'hora não definida'}</span>
+                        <span>🔄 Diário às {s.recurringTime || 'hora não definida'} · {formatNextExecution(s)}</span>
                       ) : (
                         s.scheduledAt ? format(parseISO(s.scheduledAt), 'dd/MM/yyyy HH:mm') : 'Data inválida'
                       )}

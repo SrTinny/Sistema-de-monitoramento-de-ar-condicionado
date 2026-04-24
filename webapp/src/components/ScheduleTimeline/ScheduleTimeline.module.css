@@ -202,13 +202,13 @@
 
 .badge.ligar {
   background: rgba(16, 185, 129, 0.1);
-  color: #065f46;
+  color: var(--success-text, #065f46);
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .badge.desligar {
   background: rgba(59, 130, 246, 0.1);
-  color: #0c4a6e;
+  color: var(--info-text, #0c4a6e);
   border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
@@ -230,6 +230,28 @@
   animation: slideDown 0.3s ease;
 }
 
+.detailsHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-bottom: 0.85rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.detailsTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.detailsSubtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -246,23 +268,29 @@
   justify-content: space-between;
   padding: 0.5rem 0;
   font-size: 0.875rem;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.detailRow:last-of-type {
+  border-bottom: none;
 }
 
 .label {
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .value {
-  color: #1f2937;
+  color: var(--text-primary);
   font-weight: 600;
   text-align: right;
 }
 
 .status {
   padding: 0.75rem;
-  background: #ecfdf5;
-  color: #065f46;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--success-text, #065f46);
   border-radius: 0.5rem;
   font-size: 0.875rem;
   margin: 0.5rem 0;
@@ -273,9 +301,9 @@
   width: 100%;
   margin-top: 0.75rem;
   padding: 0.75rem;
-  background: #fee2e2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger-text, #dc2626);
+  border: 1px solid rgba(239, 68, 68, 0.22);
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-weight: 600;
@@ -288,8 +316,57 @@
 }
 
 .deleteBtn:hover {
-  background: #fecaca;
-  color: #991b1b;
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--danger-text-hover, #991b1b);
+}
+
+:global(body.dark-mode) .badge.ligar {
+  background: rgba(16, 185, 129, 0.18);
+  color: #d1fae5;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+:global(body.dark-mode) .badge.desligar {
+  background: rgba(59, 130, 246, 0.18);
+  color: #dbeafe;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+:global(body.dark-mode) .status {
+  background: rgba(16, 185, 129, 0.18);
+  color: #d1fae5;
+}
+
+:global(body.dark-mode) .deleteBtn {
+  background: rgba(239, 68, 68, 0.16);
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+:global(body.dark-mode) .deleteBtn:hover {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fee2e2;
+}
+
+:global(body.dark-mode) .cardDetails {
+  background: rgba(15, 23, 42, 0.92);
+  border-top-color: rgba(148, 163, 184, 0.18);
+}
+
+:global(body.dark-mode) .detailsHeader {
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+}
+
+:global(body.dark-mode) .detailRow {
+  border-bottom-color: rgba(148, 163, 184, 0.12);
+}
+
+:global(body.dark-mode) .detailsTitle {
+  color: #f8fafc;
+}
+
+:global(body.dark-mode) .detailsSubtitle {
+  color: #cbd5e1;
 }
 
 /* Empty State */

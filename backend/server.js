@@ -191,6 +191,68 @@ function validateRawSignal(raw) {
   return { valid: true, normalized: values.join(',') };
 }
 
+function parseRecurringTime(recurringTime) {
+  if (typeof recurringTime !== 'string') {
+    return null;
+  }
+
+  const match = recurringTime.trim().match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    hours: Number(match[1]),
+    minutes: Number(match[2]),
+  };
+}
+
+function getNextRecurringDate(recurringTime, referenceDate = new Date()) {
+  const parsed = parseRecurringTime(recurringTime);
+  if (!parsed) {
+    return null;
+  }
+
+  const nextDate = new Date(referenceDate);
+  nextDate.setSeconds(0, 0);
+  nextDate.setHours(parsed.hours, parsed.minutes, 0, 0);
+
+  if (nextDate <= referenceDate) {
+    nextDate.setDate(nextDate.getDate() + 1);
+  }
+
+  return nextDate;
+}
+
+function buildScheduleData({ airConditionerId, action, scheduledAt, isRecurring, recurringTime }) {
+  if (!airConditionerId || !action) {
+    return { error: 'airConditionerId e action são obrigatórios.' };
+  }
+
+  if (!isRecurring && !scheduledAt) {
+    return { error: 'scheduledAt é obrigatório para agendamentos únicos.' };
+  }
+
+  if (isRecurring && !recurringTime) {
+    return { error: 'recurringTime é obrigatório para agendamentos recorrentes.' };
+  }
+
+  const nextRecurringDate = isRecurring ? getNextRecurringDate(recurringTime) : null;
+  if (isRecurring && !nextRecurringDate) {
+    return { error: 'recurringTime deve estar no formato HH:mm.' };
+  }
+
+  return {
+    data: {
+      airConditionerId,
+      action,
+      scheduledAt: !isRecurring ? new Date(scheduledAt) : nextRecurringDate,
+      isRecurring: Boolean(isRecurring),
+      recurringTime: isRecurring ? recurringTime : null,
+    },
+  };
+}
+
 // ==========================================================
 // ROTA DE HEALTH CHECK (PÚBLICA)
 // ==========================================================
@@ -716,29 +778,20 @@ app.post('/api/ac/:id/setpoint', authenticateToken, async (req, res) => {
 app.post('/api/schedules', authenticateToken, async (req, res) => {
   const { airConditionerId, action, scheduledAt, isRecurring, recurringTime } = req.body;
   try {
-    // Validação básica
-    if (!airConditionerId || !action) {
-      return res.status(400).json({ error: 'airConditionerId e action são obrigatórios.' });
-    }
+    const schedulePayload = buildScheduleData({
+      airConditionerId,
+      action,
+      scheduledAt,
+      isRecurring,
+      recurringTime,
+    });
 
-    // Se não for recorrente, scheduledAt é obrigatório
-    if (!isRecurring && !scheduledAt) {
-      return res.status(400).json({ error: 'scheduledAt é obrigatório para agendamentos únicos.' });
-    }
-
-    // Se for recorrente, recurringTime é obrigatório
-    if (isRecurring && !recurringTime) {
-      return res.status(400).json({ error: 'recurringTime é obrigatório para agendamentos recorrentes.' });
+    if (schedulePayload.error) {
+      return res.status(400).json({ error: schedulePayload.error });
     }
 
     const newSchedule = await prisma.schedule.create({
-      data: {
-        airConditionerId,
-        action,
-        scheduledAt: !isRecurring ? new Date(scheduledAt) : null,
-        isRecurring: Boolean(isRecurring),
-        recurringTime: isRecurring ? recurringTime : null,
-      },
+      data: schedulePayload.data,
       include: {
         airConditioner: {
           select: { name: true, room: true },
@@ -749,6 +802,72 @@ app.post('/api/schedules', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Não foi possível criar o agendamento.' });
+  }
+});
+
+// ROTA 'CREATE BULK': Criar agendamentos para vários ACs de forma atômica
+app.post('/api/schedules/bulk', authenticateToken, async (req, res) => {
+  const { airConditionerIds, action, scheduledAt, isRecurring, recurringTime } = req.body;
+
+  try {
+    if (!Array.isArray(airConditionerIds) || airConditionerIds.length === 0) {
+      return res.status(400).json({ error: 'airConditionerIds deve ser um array não vazio.' });
+    }
+
+    const uniqueIds = [...new Set(airConditionerIds.filter((id) => typeof id === 'string' && id.trim().length > 0))];
+    if (uniqueIds.length === 0) {
+      return res.status(400).json({ error: 'Nenhum airConditionerId válido foi informado.' });
+    }
+
+    const validation = buildScheduleData({
+      airConditionerId: uniqueIds[0],
+      action,
+      scheduledAt,
+      isRecurring,
+      recurringTime,
+    });
+
+    if (validation.error) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const existingAcs = await prisma.airConditioner.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true },
+    });
+
+    if (existingAcs.length !== uniqueIds.length) {
+      return res.status(400).json({ error: 'Um ou mais aparelhos informados não existem.' });
+    }
+
+    const createdCount = await prisma.$transaction(async (tx) => {
+      let count = 0;
+      for (const acId of uniqueIds) {
+        const payload = buildScheduleData({
+          airConditionerId: acId,
+          action,
+          scheduledAt,
+          isRecurring,
+          recurringTime,
+        });
+
+        if (payload.error) {
+          throw new Error(payload.error);
+        }
+
+        await tx.schedule.create({ data: payload.data });
+        count += 1;
+      }
+      return count;
+    });
+
+    res.status(201).json({
+      message: `${createdCount} agendamento(s) criado(s) com sucesso.`,
+      createdCount,
+    });
+  } catch (error) {
+    console.error('[schedules:bulk] erro ao criar agendamentos em lote:', error && error.stack ? error.stack : error);
+    res.status(500).json({ error: 'Não foi possível criar os agendamentos em lote.' });
   }
 });
 
@@ -778,8 +897,33 @@ app.get('/api/schedules', authenticateToken, async (req, res) => {
 app.delete('/api/schedules/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
-    await prisma.schedule.delete({ where: { id } });
-    res.status(204).send();
+    const existingSchedule = await prisma.schedule.findUnique({
+      where: { id },
+      select: { id: true, status: true },
+    });
+
+    if (!existingSchedule) {
+      return res.status(404).json({ error: 'Agendamento não encontrado.' });
+    }
+
+    if (existingSchedule.status !== 'PENDENTE') {
+      return res.status(409).json({ error: 'Só é possível cancelar agendamentos pendentes.' });
+    }
+
+    const canceledSchedule = await prisma.schedule.update({
+      where: { id },
+      data: { status: 'CANCELADO' },
+      include: {
+        airConditioner: {
+          select: { name: true, room: true },
+        },
+      },
+    });
+
+    res.status(200).json({
+      message: 'Agendamento cancelado com sucesso.',
+      schedule: canceledSchedule,
+    });
   } catch (error) {
     console.error(error);
     res.status(404).json({ error: 'Agendamento não encontrado.' });
@@ -1278,9 +1422,21 @@ const executePendingSchedules = async () => {
         // Determina o comando a enviar para o AC (string em português, compatível com pendingCommand existente)
         const command = s.action === 'LIGAR' ? 'ligar' : 'desligar';
 
-        // Faz a atualização em transação: marca schedule como EXECUTADO e seta pendingCommand no AC
+        const nextRecurringDate = s.isRecurring ? getNextRecurringDate(s.recurringTime, now) : null;
+
+        // Recorrentes são reagendados; únicos são finalizados como executados.
         await prisma.$transaction([
-          prisma.schedule.update({ where: { id: s.id }, data: { status: 'EXECUTADO' } }),
+          prisma.schedule.update({
+            where: { id: s.id },
+            data: s.isRecurring
+              ? {
+                  scheduledAt: nextRecurringDate || s.scheduledAt,
+                  status: 'PENDENTE',
+                }
+              : {
+                  status: 'EXECUTADO',
+                },
+          }),
           prisma.airConditioner.update({ where: { id: s.airConditionerId }, data: { pendingCommand: command } }),
         ]);
 

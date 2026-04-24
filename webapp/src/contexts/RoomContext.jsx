@@ -171,13 +171,26 @@ export const RoomProvider = ({ children }) => {
     }
   };
 
+  const addSchedulesBulk = async (bulkScheduleData) => {
+    try {
+      const response = await api.post('/api/schedules/bulk', bulkScheduleData);
+      await fetchSchedules();
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const deleteSchedule = async (scheduleId) => {
     try {
       await api.delete(`/api/schedules/${scheduleId}`);
-      setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
+      await fetchSchedules();
       toast.success('Agendamento cancelado!');
     } catch (error) {
-      toast.error('Erro ao cancelar agendamento.');
+      const msg = error?.response?.status === 409
+        ? error?.response?.data?.error || 'Só é possível cancelar agendamentos pendentes.'
+        : error?.response?.data?.error || 'Erro ao cancelar agendamento.';
+      toast.error(msg);
       console.error(error);
     }
   };
@@ -199,6 +212,7 @@ export const RoomProvider = ({ children }) => {
         updateRoom,
         deleteRoom,
         addSchedule,
+        addSchedulesBulk,
         deleteSchedule,
         isFormOpen,
         openForm,

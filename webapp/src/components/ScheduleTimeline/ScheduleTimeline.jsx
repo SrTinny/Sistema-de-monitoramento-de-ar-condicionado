@@ -4,6 +4,18 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import styles from './ScheduleTimeline.module.css';
 
+const getRecurringNextExecutionText = (schedule) => {
+  if (!schedule?.scheduledAt) {
+    return 'Próxima execução não definida';
+  }
+
+  try {
+    return format(parseISO(schedule.scheduledAt), 'dd/MM HH:mm', { locale: ptBR });
+  } catch {
+    return 'Data inválida';
+  }
+};
+
 /**
  * Timeline de Agendamentos com filtros
  */
@@ -121,6 +133,8 @@ function TimelineItem({
   onToggleExpand,
   onDelete,
 }) {
+  const recurringNextExecution = getRecurringNextExecutionText(schedule);
+
   // Para agendamentos recorrentes
   if (schedule.isRecurring) {
     return (
@@ -139,13 +153,13 @@ function TimelineItem({
             <div className={styles.cardInfo}>
               <div className={styles.timeBlock}>
                 <span className={styles.time}>🔄 {schedule.recurringTime}</span>
-                <span className={styles.date}>Todos os dias</span>
+                <span className={styles.date}>Próxima: {recurringNextExecution}</span>
               </div>
               <div className={styles.details}>
                 <p className={styles.roomName}>
                   {schedule.airConditioner?.name || 'Sala desconhecida'}
                 </p>
-                <p className={styles.day}>Recorrente</p>
+                <p className={styles.day}>Recorrente diário</p>
               </div>
             </div>
 
@@ -162,18 +176,27 @@ function TimelineItem({
 
           {isExpanded && (
             <div className={styles.cardDetails}>
-              <div className={styles.detailsContent}>
-                <span>Agendamento recorrente diário</span>
-                <button
-                  className={styles.deleteBtn}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete();
-                  }}
-                >
-                  <Trash2 size={16} /> Cancelar
-                </button>
+              <div className={styles.detailsHeader}>
+                <p className={styles.detailsTitle}>Detalhes do agendamento recorrente</p>
+                <span className={styles.detailsSubtitle}>A próxima execução é recalculada automaticamente após cada disparo.</span>
               </div>
+              <div className={styles.detailRow}>
+                <span className={styles.label}>Recorrência:</span>
+                <span className={styles.value}>Diária às {schedule.recurringTime || '--:--'}</span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.label}>Próxima execução:</span>
+                <span className={styles.value}>{recurringNextExecution}</span>
+              </div>
+              <button
+                className={styles.deleteBtn}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+              >
+                <Trash2 size={16} /> Cancelar
+              </button>
             </div>
           )}
         </div>
@@ -232,6 +255,10 @@ function TimelineItem({
         {/* Detalhes expandidos */}
         {isExpanded && (
           <div className={styles.cardDetails}>
+            <div className={styles.detailsHeader}>
+              <p className={styles.detailsTitle}>Detalhes do agendamento</p>
+              <span className={styles.detailsSubtitle}>Essas informações ajudam a entender a execução e o histórico.</span>
+            </div>
             <div className={styles.detailRow}>
               <span className={styles.label}>Ação:</span>
               <span className={styles.value}>
