@@ -81,7 +81,7 @@ export default function Home() {
 
       {/* Gráficos históricos */}
       <section className={styles.chartsSection}>
-        <UsageCharts rooms={controlRooms} schedules={schedules} />
+        <UsageCharts rooms={rooms} />
       </section>
 
       {/* Seção de Salas */}

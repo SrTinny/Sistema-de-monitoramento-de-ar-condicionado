@@ -86,6 +86,63 @@
   position: relative;
 }
 
+.scrollArea {
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.25rem;
+}
+
+.chartInner {
+  min-width: 760px;
+  height: 100%;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  width: 100%;
+}
+
+.statCard {
+  background: linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0.18));
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 14px;
+  padding: 1rem;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.4rem;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.04);
+}
+
+.statCardPrimary {
+  background: linear-gradient(135deg, rgba(59,130,246,0.14), rgba(16,185,129,0.08));
+  border-color: rgba(59,130,246,0.22);
+}
+
+.statLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.statValue {
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+}
+
+.statMeta {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
 .legend {
   display: inline-flex;
   gap: 0.6rem;
@@ -123,5 +180,13 @@
   .chartWrapper {
     min-height: 260px;
     max-height: 320px;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .chartInner {
+    min-width: 640px;
   }
 }
