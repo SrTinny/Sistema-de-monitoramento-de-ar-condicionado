@@ -79,11 +79,6 @@ export default function Home() {
       {/* Dashboard Header com estatísticas */}
       <DashboardHeader rooms={dashboardRooms} schedules={schedules} />
 
-      {/* Gráficos históricos */}
-      <section className={styles.chartsSection}>
-        <UsageCharts rooms={rooms} />
-      </section>
-
       {/* Seção de Salas */}
       {loading ? (
         <section className={styles.unitsSection}>
@@ -118,6 +113,11 @@ export default function Home() {
                 Nenhuma sala de controle configurada ainda.
               </p>
             )}
+          </section>
+
+          {/* Resumo dos ambientes */}
+          <section className={styles.chartsSection}>
+            <UsageCharts rooms={rooms} />
           </section>
 
           {availableRooms.length > 0 && (

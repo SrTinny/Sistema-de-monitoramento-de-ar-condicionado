@@ -35,8 +35,7 @@ export default function Header() {
   return (
     <header className={styles.header}>
       <nav className={styles.nav}>
-        <Link to="/" className={styles.logo}>
-          {/* Logo com nome do projeto */}
+        <Link to="/" className={styles.logo} aria-label="Ir para a página inicial">
           {user ? (
             <span className={styles.greeting}>👋 Olá, {username}</span>
           ) : (
@@ -56,8 +55,12 @@ export default function Header() {
         </div>
 
         <div className={styles.actions}>
-          <button onClick={toggleTheme} className={styles.actionButton} aria-label="Alternar tema">
-            {/* O SVG continua igual */}
+          <button
+            onClick={toggleTheme}
+            className={styles.actionButton}
+            aria-label={isDarkMode ? "Alternar para tema claro" : "Alternar para tema escuro"}
+            title={isDarkMode ? "Tema claro" : "Tema escuro"}
+          >
             <svg className={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
               {isDarkMode ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21.752 15.002A9.718 9.718 0 0112 21.75 9.719 9.719 0 013.75 15c0-3.58 2.016-6.79 5.002-8.498a0.75 0.75 0 00.25-1.212 7.487 7.487 0 009.872 9.872 0.75 0.75 0 001.212-.25A9.704 9.704 0 0121.752 15z" />
@@ -68,7 +71,7 @@ export default function Header() {
           </button>
 
           {user && (
-            <button onClick={logout} className={styles.actionButton} aria-label="Sair">
+            <button onClick={logout} className={styles.actionButton} aria-label="Sair" title="Sair">
               <FiLogOut className={styles.icon} />
             </button>
           )}
