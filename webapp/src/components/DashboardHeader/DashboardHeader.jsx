@@ -17,8 +17,11 @@ export default function DashboardHeader({ rooms = [], schedules = [] }) {
   // Calcular estatísticas
   const onlineRooms = rooms.filter(r => r.status === 'ligado').length;
   const totalRooms = rooms.length;
-  const averageTemp = rooms.length > 0
-    ? (rooms.reduce((sum, r) => sum + (r.temperature || 0), 0) / rooms.length).toFixed(1)
+  const tempSamples = rooms
+    .map((room) => room.temperature)
+    .filter((temperature) => typeof temperature === 'number' && Number.isFinite(temperature));
+  const averageTemp = tempSamples.length > 0
+    ? (tempSamples.reduce((sum, temperature) => sum + temperature, 0) / tempSamples.length).toFixed(1)
     : '--';
   const pendingSchedules = schedules.length;
 
@@ -53,11 +56,11 @@ export default function DashboardHeader({ rooms = [], schedules = [] }) {
         {/* Stat Card: Temperatura Média */}
         <StatCard
           icon={<TrendingUp size={20} />}
-          label="Temp. Média"
+          label="Temp. Ambiente"
           value={averageTemp}
           unit="°C"
           color="info"
-          tooltip="Temperatura média de todas as salas"
+          tooltip="Média das leituras de temperatura recebidas no último heartbeat"
         />
 
         {/* Stat Card: Agendamentos */}

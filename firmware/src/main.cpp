@@ -21,8 +21,11 @@ using WebServerType = WebServer;
 #endif
 #include <IRremote.hpp>
 #include <ArduinoJson.h>
-#include <WiFiManager.h>
 #include <map>
+
+#include "wifi_setup.h"
+
+float lerTemperaturaC();
 
 // ============================================================================
 // CONFIGURAÇÃO GERAL
@@ -32,7 +35,13 @@ using WebServerType = WebServer;
 #ifndef BACKEND_URL
 #define BACKEND_URL "https://sistema-de-monitoramento-de-ar.onrender.com"
 #endif
+#ifndef BACKEND_PORT
+#define BACKEND_PORT 3001
+#endif
 const char *backendURL = BACKEND_URL;
+String activeBackendURL = BACKEND_URL;
+unsigned long lastBackendDiscoveryAttempt = 0;
+const unsigned long BACKEND_DISCOVERY_INTERVAL_MS = 60000;
 String deviceId;
 const unsigned long HEARTBEAT_INTERVAL_MS = 10000;
 const unsigned long LEARNING_TIMEOUT_MS = 30000;
@@ -91,77 +100,6 @@ String pendingLearnMessage = "";     // Mensagem descritiva
 // ============================================================================
 // FUNÇÕES AUXILIARES
 // ============================================================================
-
-String getChipSuffix() {
-#if defined(ESP8266)
-  uint32_t chipId = ESP.getChipId();
-  String suffix = String(chipId, HEX);
-#else
-  uint64_t chipId = ESP.getEfuseMac();
-  String suffix = String(static_cast<uint32_t>(chipId & 0xFFFFFF), HEX);
-#endif
-  suffix.toUpperCase();
-  while (suffix.length() < 6) {
-    suffix = "0" + suffix;
-  }
-  return suffix;
-}
-
-void prepareForWifiPortal() {
-  // WiFiManager usa a porta 80; precisamos liberar o servidor local antes.
-  server.stop();
-  delay(100);
-}
-
-void startWifiSetupPortalNow() {
-  Serial.println("🛜 Iniciando modo de configuracao Wi-Fi imediatamente...");
-  Serial.println("   Apagando credenciais salvas e reiniciando para o portal...");
-
-  // ESP.eraseConfig() apaga somente os dados de credenciais Wi-Fi gravados
-  // na flash, sem tocar no stack WiFi/SSL ativo — evita o crash de Exception 3.
-  // No proximo boot o autoConnect() nao encontra rede salva e abre o portal.
-  ESP.eraseConfig();
-  delay(300);
-  ESP.restart();
-}
-
-void connectWiFiWithPortal() {
-  String chipSuffix = getChipSuffix();
-  String apName = "AC-SETUP-" + chipSuffix;
-
-  WiFi.mode(WIFI_STA);
-  WiFiManager wm;
-  wm.setConfigPortalTimeout(0);
-  wm.setConnectTimeout(20);
-
-  bool portalSavedConfig = false;
-  wm.setSaveConfigCallback([&portalSavedConfig]() {
-    portalSavedConfig = true;
-  });
-
-  Serial.println("\n🌐 Iniciando conexão Wi-Fi...");
-  Serial.println("AP Portal: " + apName);
-
-  bool connected = wm.autoConnect(apName.c_str());
-  if (!connected) {
-    Serial.println("❌ Falha ao conectar Wi-Fi via portal. Reiniciando...");
-    delay(1500);
-    ESP.restart();
-    return;
-  }
-
-  if (portalSavedConfig) {
-    Serial.println("✅ Rede configurada via portal. Reiniciando para estado limpo...");
-    delay(500);
-    ESP.restart();
-  }
-
-  Serial.println("✅ Conectado ao Wi-Fi!");
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-  Serial.print("IP: ");
-  Serial.println(WiFi.localIP());
-}
 
 // ============================================================================
 // FUNÇÕES DE APRENDIZADO DE SINAIS IR
@@ -606,6 +544,142 @@ bool storeLearnedSignal(const String &commandId, const String &rawSignal) {
 // FUNÇÕES DE POLLING DO BACKEND
 // ============================================================================
 
+String buildBackendUrlFromIp(const IPAddress &ip) {
+  return String("http://") + ip.toString() + ":" + String(BACKEND_PORT);
+}
+
+bool probeBackendUrl(const String &candidateUrl) {
+  HTTPClient http;
+  String probeUrl = candidateUrl;
+  if (!probeUrl.endsWith("/")) {
+    probeUrl += "/";
+  }
+
+  String probeUrlLower = probeUrl;
+  probeUrlLower.toLowerCase();
+  bool isHttps = probeUrlLower.startsWith("https://");
+
+#if defined(ESP8266)
+  static BearSSL::WiFiClientSecure secureClient;
+  static WiFiClient plainClient;
+  bool beginOk = false;
+
+  if (isHttps) {
+    secureClient.setInsecure();
+    secureClient.setBufferSizes(512, 512);
+    secureClient.setTimeout(4000);
+    beginOk = http.begin(secureClient, probeUrl);
+  } else {
+    beginOk = http.begin(plainClient, probeUrl);
+  }
+#else
+  static WiFiClientSecure secureClient;
+  static WiFiClient plainClient;
+  bool beginOk = false;
+
+  if (isHttps) {
+    secureClient.setInsecure();
+    secureClient.setTimeout(4000);
+    beginOk = http.begin(secureClient, probeUrl);
+  } else {
+    beginOk = http.begin(plainClient, probeUrl);
+  }
+#endif
+
+  if (!beginOk) {
+    return false;
+  }
+
+  http.setTimeout(4000);
+  int code = http.GET();
+  http.end();
+  return code == 200;
+}
+
+String discoverBackendUrlOnLocalSubnet() {
+  if (WiFi.status() != WL_CONNECTED) {
+    return "";
+  }
+
+  IPAddress localIp = WiFi.localIP();
+  IPAddress subnetMask = WiFi.subnetMask();
+  IPAddress networkBase(
+    localIp[0] & subnetMask[0],
+    localIp[1] & subnetMask[1],
+    localIp[2] & subnetMask[2],
+    0
+  );
+
+  Serial.print("🔎 Procurando backend na sub-rede ");
+  Serial.println(localIp.toString());
+
+  for (int host = 1; host <= 254; host++) {
+    IPAddress candidate = networkBase;
+    candidate[3] = host;
+    String candidateUrl = buildBackendUrlFromIp(candidate);
+
+    if (probeBackendUrl(candidateUrl)) {
+      Serial.print("✅ Backend localizado em ");
+      Serial.println(candidateUrl);
+      return candidateUrl;
+    }
+  }
+
+  Serial.println("⚠️ Nenhum backend local encontrado na sub-rede.");
+  return "";
+}
+
+int postHeartbeatJson(const String &heartbeatUrl, const String &jsonBody, String &responseOut) {
+  HTTPClient http;
+  String heartbeatUrlLower = heartbeatUrl;
+  heartbeatUrlLower.toLowerCase();
+  bool isHttps = heartbeatUrlLower.startsWith("https://");
+
+#if defined(ESP8266)
+  static BearSSL::WiFiClientSecure secureClient;
+  static WiFiClient plainClient;
+  bool beginOk = false;
+
+  if (isHttps) {
+    secureClient.setInsecure();
+    secureClient.setBufferSizes(512, 512);
+    secureClient.setTimeout(15000);
+    beginOk = http.begin(secureClient, heartbeatUrl);
+  } else {
+    beginOk = http.begin(plainClient, heartbeatUrl);
+  }
+#else
+  static WiFiClientSecure secureClient;
+  static WiFiClient plainClient;
+  bool beginOk = false;
+
+  if (isHttps) {
+    secureClient.setInsecure();
+    secureClient.setTimeout(15000);
+    beginOk = http.begin(secureClient, heartbeatUrl);
+  } else {
+    beginOk = http.begin(plainClient, heartbeatUrl);
+  }
+#endif
+
+  if (!beginOk) {
+    return -1;
+  }
+
+  http.setTimeout(15000);
+  http.addHeader("Content-Type", "application/json");
+  int httpCode = http.POST(jsonBody);
+
+  if (httpCode == 200) {
+    responseOut = http.getString();
+  } else if (httpCode < 0) {
+    responseOut = http.errorToString(httpCode);
+  }
+
+  http.end();
+  return httpCode;
+}
+
 void processBackendPolling() {
   static unsigned long lastHeartbeat = 0;
   static unsigned long lastWifiConnectedTime = 0;
@@ -634,52 +708,17 @@ void processBackendPolling() {
     return;
   }
 
-  HTTPClient http;
-  String heartbeatUrl = String(backendURL) + "/api/heartbeat";
-  String heartbeatUrlLower = heartbeatUrl;
-  heartbeatUrlLower.toLowerCase();
-  bool isHttps = heartbeatUrlLower.startsWith("https://");
-
-#if defined(ESP8266)
-  static BearSSL::WiFiClientSecure secureClient;
-  static WiFiClient plainClient;
-  bool beginOk = false;
-
-  if (isHttps) {
-    secureClient.setInsecure();
-    secureClient.setTimeout(15000);
-    beginOk = http.begin(secureClient, heartbeatUrl);
-  } else {
-    beginOk = http.begin(plainClient, heartbeatUrl);
-  }
-#else
-  static WiFiClientSecure secureClient;
-  static WiFiClient plainClient;
-  bool beginOk = false;
-
-  if (isHttps) {
-    secureClient.setInsecure();
-    secureClient.setTimeout(15000);
-    beginOk = http.begin(secureClient, heartbeatUrl);
-  } else {
-    beginOk = http.begin(plainClient, heartbeatUrl);
-  }
-#endif
-
-  if (!beginOk) {
-    Serial.println("❌ Falha ao iniciar conexão HTTP");
-    return;
-  }
-
-  http.setTimeout(15000);
-  http.addHeader("Content-Type", "application/json");
-
   DynamicJsonDocument doc(4096);
   doc["deviceId"] = deviceId;
   doc["status"] = powerStateOn ? "ligado" : "desligado";
   doc["deviceType"] = "IR_CONTROLLER";
   doc["signalsStored"] = learnedSignals.size();
   doc["learningActive"] = learningActive;
+
+  float ambientTemperature = lerTemperaturaC();
+  if (!isnan(ambientTemperature)) {
+    doc["temperature"] = roundf(ambientTemperature * 10.0f) / 10.0f;
+  }
 
   if (learningActive) {
     JsonObject learning = doc.createNestedObject("learning");
@@ -705,12 +744,31 @@ void processBackendPolling() {
   String jsonBody;
   serializeJson(doc, jsonBody);
 
+  if (!isnan(ambientTemperature)) {
+    Serial.println("🌡️ Temperatura ambiente: " + String(doc["temperature"].as<float>(), 1) + "°C");
+  }
+
   Serial.println("⏳ Enviando heartbeat para backend...");
-  int httpCode = http.POST(jsonBody);
+  String response;
+  String heartbeatUrl = String(activeBackendURL) + "/api/heartbeat";
+  int httpCode = postHeartbeatJson(heartbeatUrl, jsonBody, response);
+
+  if (httpCode < 0) {
+    unsigned long now = millis();
+    if (now - lastBackendDiscoveryAttempt >= BACKEND_DISCOVERY_INTERVAL_MS) {
+      lastBackendDiscoveryAttempt = now;
+      String discoveredUrl = discoverBackendUrlOnLocalSubnet();
+      if (discoveredUrl.length() > 0) {
+        activeBackendURL = discoveredUrl;
+        heartbeatUrl = discoveredUrl + "/api/heartbeat";
+        httpCode = postHeartbeatJson(heartbeatUrl, jsonBody, response);
+      }
+    }
+  }
+
   Serial.println("📡 Resposta heartbeat: " + String(httpCode));
 
   if (httpCode == 200) {
-    String response = http.getString();
     Serial.println("📥 Body (" + String(response.length()) + "b): " + response.substring(0, 120));
     // O payload pode carregar learnedSignal.raw com centenas de bytes.
     // Usamos capacidade dinâmica para evitar NoMemory em respostas maiores.
@@ -807,13 +865,14 @@ void processBackendPolling() {
       }
     }
   } else {
-    Serial.println("⚠️ Erro no heartbeat: " + String(httpCode) + " (" + http.errorToString(httpCode) + ")");
+    Serial.println("⚠️ Erro no heartbeat: " + String(httpCode));
+    if (response.length() > 0) {
+      Serial.println("   HTTPClient: " + response);
+    }
     Serial.println("   URL: " + heartbeatUrl);
     Serial.println("   WiFi SSID: " + WiFi.SSID());
     Serial.println("   WiFi IP: " + WiFi.localIP().toString());
   }
-
-  http.end();
 
   if (pendingWifiResetPortal) {
     pendingWifiResetPortal = false;

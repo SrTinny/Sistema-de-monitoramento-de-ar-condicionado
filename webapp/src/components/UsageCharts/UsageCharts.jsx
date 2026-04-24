@@ -37,14 +37,25 @@ export default function UsageCharts({ rooms = [], schedules = [] }) {
   const parallaxY = useTransform(scrollYProgress, [0, 1], [0, -60]);
 
   const tempData = useMemo(() => {
-    // Dados sintéticos semanais; se houver leituras reais, podem ser conectadas aqui
+    const readings = rooms
+      .map((room, idx) => ({
+        day: room.name ? truncateName(room.name, 15) : `Sala ${idx + 1}`,
+        temp: typeof room.temperature === 'number' && Number.isFinite(room.temperature) ? room.temperature : null,
+        setpoint: typeof room.setpoint === 'number' && Number.isFinite(room.setpoint) ? room.setpoint : null,
+      }))
+      .filter((reading) => reading.temp !== null);
+
+    if (readings.length > 0) {
+      return readings;
+    }
+
     const base = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
     return base.map((day, idx) => ({
       day,
       temp: 21 + (idx % 3),
       setpoint: 22 + ((idx + 1) % 2),
     }));
-  }, []);
+  }, [rooms]);
 
   const usageData = useMemo(() => {
     if (rooms.length === 0) {
@@ -90,9 +101,9 @@ export default function UsageCharts({ rooms = [], schedules = [] }) {
       <div className={styles.grid}>
         <div className={styles.card}>
           <p className={styles.cardTitle}>
-            Temperatura x Setpoint
+            Leitura atual do ambiente
             <span className={styles.legend}>
-              <span className={styles.dotPrimary} /> Temp
+              <span className={styles.dotPrimary} /> Temperatura
               <span className={styles.dotAccent} /> Setpoint
             </span>
           </p>

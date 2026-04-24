@@ -47,18 +47,5 @@ float lerTemperaturaC() {
   return steinhart - 273.15f;
 }
 
-void setup() {
-  Serial.begin(115200);
-  delay(200);
-  Serial.println("Leitura do KY-013 iniciada");
-}
-
-void loop() {
-  float temperaturaC = lerTemperaturaC();
-
-  Serial.print("Temperatura ambiente: ");
-  Serial.print(temperaturaC, 1);
-  Serial.println(" C");
-
-  delay(2000);
-}
+// Este arquivo agora expõe apenas a rotina de leitura para uso pelo firmware.
+// O ponto de entrada do projeto continua em src/main.cpp.
