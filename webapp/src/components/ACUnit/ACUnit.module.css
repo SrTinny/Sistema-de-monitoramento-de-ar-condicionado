@@ -142,8 +142,9 @@
 .location {
   font-size: 0.9rem;
   color: var(--text-secondary); /* ANTES: --highlight-color */
-  margin-top: -12px;
-  margin-bottom: 0.5rem;
+  margin: 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .statusText {
@@ -162,13 +163,41 @@
 
 .contentGrid {
   display: grid;
-  gap: 1rem;
+  gap: 1.2rem;
 }
 
 .infoCol {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.7rem;
+}
+
+.operationRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.metricLabel {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.temperatureBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.temperatureValue {
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .controlCol {
@@ -335,6 +364,14 @@
   }
   .location {
     font-size: 0.8rem;
+  }
+
+  .temperatureValue {
+    font-size: 1.6rem;
+  }
+
+  .operationRow {
+    padding: 0.35rem 0;
   }
   .mainButton {
     padding: 10px;
