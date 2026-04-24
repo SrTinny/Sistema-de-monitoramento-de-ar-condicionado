@@ -37,6 +37,10 @@ export default function Home() {
     () => rooms.filter((room) => !isRemovedRoom(room) && isControlReady(room)),
     [rooms]
   );
+  const dashboardRooms = useMemo(
+    () => rooms.filter((room) => !isRemovedRoom(room)),
+    [rooms]
+  );
   const availableRooms = useMemo(
     () => rooms.filter((room) => !isRemovedRoom(room) && isPendingConfiguration(room)),
     [rooms]
@@ -73,7 +77,7 @@ export default function Home() {
   return (
     <main className={styles.container}>
       {/* Dashboard Header com estatísticas */}
-      <DashboardHeader rooms={controlRooms} schedules={schedules} />
+      <DashboardHeader rooms={dashboardRooms} schedules={schedules} />
 
       {/* Gráficos históricos */}
       <section className={styles.chartsSection}>

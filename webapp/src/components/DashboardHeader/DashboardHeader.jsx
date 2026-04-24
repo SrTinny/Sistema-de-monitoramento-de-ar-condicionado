@@ -2,10 +2,19 @@ import React from 'react';
 import { Cloud, AlertCircle, TrendingUp, Clock } from 'lucide-react';
 import styles from './DashboardHeader.module.css';
 
+const HEARTBEAT_ONLINE_WINDOW_MS = 35000;
+
 /**
  * Header do Dashboard com cumprimento, resumo e hora
  */
 export default function DashboardHeader({ rooms = [], schedules = [] }) {
+  const isRoomOnline = (room) => {
+    if (!room.lastHeartbeat) return false;
+    const heartbeatTime = new Date(room.lastHeartbeat).getTime();
+    if (Number.isNaN(heartbeatTime)) return false;
+    return (Date.now() - heartbeatTime) < HEARTBEAT_ONLINE_WINDOW_MS;
+  };
+
   // Obter cumprimento baseado na hora
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -15,15 +24,28 @@ export default function DashboardHeader({ rooms = [], schedules = [] }) {
   };
 
   // Calcular estatísticas
-  const onlineRooms = rooms.filter(r => r.status === 'ligado').length;
+  const onlineRooms = rooms.filter(isRoomOnline).length;
   const totalRooms = rooms.length;
-  const tempSamples = rooms
-    .map((room) => room.temperature)
-    .filter((temperature) => typeof temperature === 'number' && Number.isFinite(temperature));
-  const averageTemp = tempSamples.length > 0
-    ? (tempSamples.reduce((sum, temperature) => sum + temperature, 0) / tempSamples.length).toFixed(1)
-    : '--';
+  const acLigadosAgora = rooms.filter((room) => room.status === 'ligado').length;
+  const acLigadosComHeartbeat = rooms.filter((room) => room.status === 'ligado' && isRoomOnline(room)).length;
+  const acLigadosSemHeartbeat = acLigadosAgora - acLigadosComHeartbeat;
   const pendingSchedules = schedules.length;
+
+  const healthLabel = totalRooms === 0
+    ? '—'
+    : acLigadosSemHeartbeat > 0
+      ? `⚠ ${acLigadosSemHeartbeat} sem heartbeat`
+      : '✓ Estável';
+  const healthColor = totalRooms === 0
+    ? 'secondary'
+    : acLigadosSemHeartbeat > 0
+      ? 'warning'
+      : 'success';
+  const healthTooltip = totalRooms === 0
+    ? 'Nenhuma sala cadastrada no momento'
+    : acLigadosSemHeartbeat > 0
+      ? `${acLigadosSemHeartbeat} AC(s) ligados não possuem heartbeat recente`
+      : 'Todos os AC ligados possuem heartbeat recente';
 
   // Obter hora e data formatadas
   const now = new Date();
@@ -50,17 +72,16 @@ export default function DashboardHeader({ rooms = [], schedules = [] }) {
           value={onlineRooms}
           total={totalRooms}
           color="success"
-          tooltip={`${onlineRooms} de ${totalRooms} salas ligadas`}
+          tooltip={`${onlineRooms} de ${totalRooms} salas com heartbeat recente`}
         />
 
-        {/* Stat Card: Temperatura Média */}
+        {/* Stat Card: AC ligados agora */}
         <StatCard
           icon={<TrendingUp size={20} />}
-          label="Temp. Ambiente"
-          value={averageTemp}
-          unit="°C"
+          label="AC Ligados Agora"
+          value={acLigadosAgora}
           color="info"
-          tooltip="Média das leituras de temperatura recebidas no último heartbeat"
+          tooltip={`${acLigadosAgora} AC(s) estão ligados neste momento`}
         />
 
         {/* Stat Card: Agendamentos */}
@@ -72,13 +93,13 @@ export default function DashboardHeader({ rooms = [], schedules = [] }) {
           tooltip={`${pendingSchedules} agendamento(s) pendente(s)`}
         />
 
-        {/* Stat Card: Status Geral */}
+        {/* Stat Card: Saúde do sistema */}
         <StatCard
           icon={<AlertCircle size={20} />}
-          label="Status Geral"
-          value={totalRooms === onlineRooms ? '✓ Ótimo' : '⚠ Atenção'}
-          color={totalRooms === onlineRooms ? 'success' : 'warning'}
-          tooltip="Status geral dos equipamentos"
+          label="Saúde do Sistema"
+          value={healthLabel}
+          color={healthColor}
+          tooltip={healthTooltip}
         />
       </div>
     </header>
