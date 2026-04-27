@@ -9,13 +9,17 @@
   overflow: hidden;
 }
 
-.videoBackground {
+.backgroundPicture {
   position: absolute;
   inset: 0;
+  z-index: 1;
+}
+
+.backgroundImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: 1;
+  object-position: center;
 }
 
 .overlay {
@@ -27,8 +31,8 @@
 
 .formCard {
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 
@@ -39,6 +43,35 @@
   position: relative;
   z-index: 3;
   animation: slideUp 0.6s ease-out;
+}
+
+@media (max-width: 768px) {
+  .formCard {
+    padding: 2rem 1.5rem;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  .logoPicture {
+    width: min(168px, 58vw);
+  }
+
+  .logo {
+    width: 100%;
+    height: auto;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+  }
+}
+
+@media (min-width: 769px) {
+  .backgroundImage {
+    object-position: center center;
+  }
 }
 
 @keyframes slideUp {
@@ -64,6 +97,12 @@ html.dark-mode .formCard {
   animation: fadeIn 0.8s ease-out;
 }
 
+.logoPicture {
+  display: block;
+  width: 200px;
+  max-width: 100%;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -74,8 +113,8 @@ html.dark-mode .formCard {
 }
 
 .logo {
-  height: 70px;
-  width: auto;
+  width: 100%;
+  height: auto;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }

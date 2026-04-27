@@ -1,15 +1,17 @@
-import React, { useContext } from 'react';
+import React, { Suspense, useContext, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthContext } from './contexts/AuthContext';
 
 // Layout
-import Layout from './components/Layout/Layout';
 import EnvWarning from './components/EnvWarning/EnvWarning';
 
-// Páginas
-import Home from './pages/home/Home';
-import Login from './pages/Login/Login';
-import Agendamentos from './pages/agendamentos/Agendamentos';
+// Páginas carregadas sob demanda
+const Home = lazy(() => import('./pages/home/Home'));
+const Login = lazy(() => import('./pages/Login/Login'));
+const Agendamentos = lazy(() => import('./pages/agendamentos/Agendamentos'));
+const Layout = lazy(() => import('./components/Layout/Layout'));
+
+const RouteFallback = () => <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }} />;
 
 // Componente para proteger rotas
 const ProtectedRoute = ({ children }) => {
@@ -21,23 +23,25 @@ function App() {
   return (
   <>
     <EnvWarning />
-    <Routes>
-      <Route path="/login" element={<Login />} />
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
 
-      {/* Rotas Protegidas que usarão o Layout */}
-      <Route 
-        path="/" 
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        {/* Rotas filhas do Layout. O "index" é a rota padrão "/" */}
-        <Route index element={<Home />} />
-        <Route path="agendamentos" element={<Agendamentos />} />
-      </Route>
-    </Routes>
+        {/* Rotas Protegidas que usarão o Layout */}
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          {/* Rotas filhas do Layout. O "index" é a rota padrão "/" */}
+          <Route index element={<Home />} />
+          <Route path="agendamentos" element={<Agendamentos />} />
+        </Route>
+      </Routes>
+    </Suspense>
   </>
   );
 }

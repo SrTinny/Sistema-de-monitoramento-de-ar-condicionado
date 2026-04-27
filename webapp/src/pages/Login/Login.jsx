@@ -1,8 +1,10 @@
 import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import styles from './Login.module.css';
 
 const Login = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,7 +18,7 @@ const Login = () => {
     setLoading(true); // Inicia o carregamento
     try {
       await login(email, password);
-      // O redirecionamento ocorre no AuthContext
+      navigate('/');
     } catch (err) {
       setError('Falha no login. Verifique suas credenciais.');
     } finally {
@@ -26,22 +28,63 @@ const Login = () => {
 
   return (
     <div className={styles.container}>
-      {/* Vídeo de background */}
-      <video 
-        autoPlay 
-        muted 
-        loop 
-        className={styles.videoBackground}
-      >
-        <source src="/video_background.mp4?v=1" type="video/mp4" />
-      </video>
+      <picture className={styles.backgroundPicture} aria-hidden="true">
+        <source
+          media="(max-width: 768px)"
+          type="image/avif"
+          srcSet="/background-mobile-768.avif"
+        />
+        <source
+          media="(max-width: 768px)"
+          type="image/webp"
+          srcSet="/background-mobile-768.webp"
+        />
+        <source
+          media="(min-width: 769px)"
+          type="image/avif"
+          srcSet="/background-desktop-1200.avif"
+        />
+        <source
+          media="(min-width: 769px)"
+          type="image/webp"
+          srcSet="/background-desktop-1200.webp"
+        />
+        <img
+          src="/background-mobile-768.png"
+          alt=""
+          className={styles.backgroundImage}
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+        />
+      </picture>
       
-      {/* Overlay para melhorar legibilidade */}
       <div className={styles.overlay}></div>
       
       <form onSubmit={handleSubmit} className={styles.formCard}>
         <div className={styles.logoContainer}>
-          <img src="/logo_name.png?v=1" alt="Intelifri" className={styles.logo} />
+          <picture className={styles.logoPicture}>
+            <source
+              type="image/avif"
+              srcSet="/logo_name-200.avif 200w, /logo_name-400.avif 400w"
+              sizes="(max-width: 768px) 168px, 200px"
+            />
+            <source
+              type="image/webp"
+              srcSet="/logo_name-200.webp 200w, /logo_name-400.webp 400w"
+              sizes="(max-width: 768px) 168px, 200px"
+            />
+            <img
+              src="/logo_name.png?v=1"
+              alt="Intelifri"
+              className={styles.logo}
+              width="200"
+              height="70"
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+            />
+          </picture>
         </div>
         <p className={styles.subtitle}>Faça login para continuar</p>
         

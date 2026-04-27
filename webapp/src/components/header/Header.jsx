@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useContext } from "react";
 import styles from "./Header.module.css";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
 import { FiLogOut, FiHome, FiCalendar } from "react-icons/fi";
 
 export default function Header() {
+  const navigate = useNavigate();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { user, logout } = useContext(AuthContext);
 
@@ -71,7 +72,15 @@ export default function Header() {
           </button>
 
           {user && (
-            <button onClick={logout} className={styles.actionButton} aria-label="Sair" title="Sair">
+            <button
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+              className={styles.actionButton}
+              aria-label="Sair"
+              title="Sair"
+            >
               <FiLogOut className={styles.icon} />
             </button>
           )}
