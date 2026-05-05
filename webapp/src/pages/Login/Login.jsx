@@ -50,7 +50,7 @@ const Login = () => {
           srcSet="/background-desktop-1200.webp"
         />
         <img
-          src="/background-mobile-768.png"
+          src="/background.png"
           alt=""
           className={styles.backgroundImage}
           loading="eager"
