@@ -22,6 +22,14 @@ const HIDDEN_REMOVED_ROOM_LABEL = '__removed__';
 app.use(cors());
 app.use(express.json());
 
+// Startup sanity checks to help debugging in hosted environments
+if (!process.env.DATABASE_URL) {
+  console.warn('[startup] WARNING: DATABASE_URL is not set. Prisma will fail to connect.');
+}
+if (!process.env.JWT_SECRET) {
+  console.warn('[startup] WARNING: JWT_SECRET is not set. Authentication will fail.');
+}
+
 function normalizeIrButton(button) {
   if (!button || typeof button !== 'string') return null;
   const normalized = button.trim().toLowerCase();
@@ -382,6 +390,7 @@ app.get('/api/rooms', authenticateToken, async (req, res) => {
     });
     res.status(200).json(allACs);
   } catch (error) {
+    console.error('[rooms:list] erro ao buscar salas:', error && error.stack ? error.stack : error);
     res.status(500).json({ error: 'Não foi possível buscar as salas.' });
   }
 });

@@ -20,7 +20,12 @@ const Login = () => {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      setError('Falha no login. Verifique suas credenciais.');
+      const isNetworkError = err?.code === 'ERR_NETWORK' || err?.message === 'Network Error';
+      setError(
+        isNetworkError
+          ? 'Não foi possível conectar ao servidor de autenticação. Verifique se o backend está rodando em http://localhost:3001.'
+          : 'Falha no login. Verifique suas credenciais.'
+      );
     } finally {
       setLoading(false); // Finaliza o carregamento, independentemente do resultado
     }
@@ -50,12 +55,12 @@ const Login = () => {
           srcSet="/background-desktop-1200.webp"
         />
         <img
-          src="/background.png"
+          src="/background-mobile-768.png"
           alt=""
           className={styles.backgroundImage}
           loading="eager"
           decoding="async"
-          fetchPriority="high"
+          fetchpriority="high"
         />
       </picture>
       
@@ -82,7 +87,7 @@ const Login = () => {
               height="70"
               loading="eager"
               decoding="async"
-              fetchPriority="high"
+              fetchpriority="high"
             />
           </picture>
         </div>
